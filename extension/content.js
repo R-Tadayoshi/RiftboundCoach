@@ -30,6 +30,32 @@
   let lastSequence = null;
   let settleTimer = null;
   let lastStatus = "";
+  let observer = null;
+
+  /* Reloading the extension without refreshing the page leaves the old content
+   * script's world alive: its observer and listeners keep firing, but its
+   * chrome.runtime is gone. Several reloads leave several of them, which is
+   * why the console's context list fills up with copies of this extension —
+   * and why the sidecar could receive the same snapshot from each of them.
+   *
+   * An orphan cannot clean itself up on a signal it never receives, so it
+   * checks whether it still belongs to a live extension and stands down when
+   * it does not. The copy injected by the refresh is the one that keeps
+   * working. */
+  function isOrphaned() {
+    try {
+      return !chrome?.runtime?.id;
+    } catch (_) {
+      return true; // "Extension context invalidated" throws on access
+    }
+  }
+
+  function standDown() {
+    observer?.disconnect();
+    clearTimeout(settleTimer);
+    root.document.getElementById("rbc-status")?.remove();
+    console.info("[rbc] superseded by a newer copy; this one has stood down.");
+  }
 
   function status(text) {
     if (text === lastStatus) return;
@@ -61,6 +87,11 @@
   }
 
   function capture() {
+    if (isOrphaned()) {
+      standDown();
+      return;
+    }
+
     const board = root.RBCBoard.gameRoot();
     if (!board) {
       status("no board");
@@ -98,7 +129,7 @@
   }
 
   function start() {
-    const observer = new MutationObserver(schedule);
+    observer = new MutationObserver(schedule);
     observer.observe(root.document.body, {
       subtree: true,
       childList: true,

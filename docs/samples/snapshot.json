@@ -30,6 +30,24 @@
       "champion": "Lux"
     }
   },
+  "resources": {
+    "self": {
+      "energy": 2,
+      "power": 1
+    },
+    "opponent": {
+      "energy": 0,
+      "power": 0
+    }
+  },
+  "battlefields": {
+    "battlefieldA": {
+      "name": "Targon's Peak"
+    },
+    "battlefieldB": {
+      "name": "Dragon Roost"
+    }
+  },
   "zones": {
     "self": {
       "hand": {

@@ -205,3 +205,49 @@ test("a second rendering of the log does not duplicate its entries", () => {
   assert.equal(log.length, 3, "the richest single list, not both concatenated");
   assert.deepEqual(log.map((e) => e.actor), ["system", "self", "opponent"]);
 });
+
+/* Battlefields and the floating resource readout, from the solo_lab capture
+ * (room 3SUWS). Both sit outside the zone roots, which is why reading a zone
+ * found the units standing on a battlefield but never the battlefield. */
+
+test("reads a battlefield's name out of its aria-label", () => {
+  fixture.build();
+  assert.equal(Board.battlefieldName("battlefieldA"), "Targon's Peak");
+  assert.equal(Board.battlefieldName("battlefieldB"), "Dragon Roost");
+});
+
+test("both label shapes the live board uses are understood", () => {
+  assert.equal(Board.nameFromLabel("Choose target from Dragon Roost"), "Dragon Roost");
+  assert.equal(Board.nameFromLabel("Dragon Roost card preview"), "Dragon Roost");
+  // The apostrophe case, which a narrower filter used to blank entirely.
+  assert.equal(Board.nameFromLabel("Choose target from Targon's Peak"), "Targon's Peak");
+  assert.equal(Board.nameFromLabel("Open token panel for Battlefield A."), null);
+  assert.equal(Board.nameFromLabel(""), null);
+});
+
+test("an unnamed battlefield is null, not a guess", () => {
+  fixture.build();
+  for (const el of globalThis.document.querySelectorAll("[aria-label]")) {
+    el.removeAttribute("aria-label");
+  }
+  assert.equal(Board.battlefieldName("battlefieldA"), null);
+});
+
+test("reads floating energy and power per side", () => {
+  fixture.build();
+  const r = Board.resources();
+  assert.deepEqual(r.self, { energy: 2, power: 1 });
+  assert.deepEqual(r.opponent, { energy: 0, power: 0 });
+});
+
+test("the readouts are attributed by ownership, not document order", () => {
+  // Swapping which side comes first in the DOM must not swap the readings.
+  fixture.build({ selfEnergy: 7, selfPower: 3, opponentEnergy: 1, opponentPower: 0 });
+  const doc = globalThis.document;
+  const sections = [...doc.querySelectorAll("section[data-zone-owner]")];
+  sections[0].parentElement.insertBefore(sections[1], sections[0]);
+
+  const r = Board.resources();
+  assert.deepEqual(r.self, { energy: 7, power: 3 }, "still yours after the swap");
+  assert.deepEqual(r.opponent, { energy: 1, power: 0 });
+});

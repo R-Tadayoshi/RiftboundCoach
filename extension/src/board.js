@@ -256,6 +256,108 @@
     return out;
   }
 
+  // ---------- battlefields ----------
+  //
+  // The battlefield card itself is drawn in the battlefield area but sits
+  // outside the zone root, so reading the zone finds the units standing there
+  // and never the place they stand. Its name is in an aria-label instead, in
+  // one of two shapes seen on a live board:
+  //
+  //   "Choose target from Dragon Roost"
+  //   "Dragon Roost card preview"
+  const BF_LABEL_RES = [
+    /^Choose target from (.+)$/i,
+    /^(.+)\s+card preview$/i,
+  ];
+
+  function nameFromLabel(label) {
+    for (const re of BF_LABEL_RES) {
+      const hit = re.exec((label || "").trim());
+      if (hit && hit[1]) return hit[1].trim();
+    }
+    return null;
+  }
+
+  /** Which battlefield `zone` is, e.g. "Targon's Peak". Null when unnamed. */
+  function battlefieldName(zone) {
+    let marker;
+    try {
+      // The value is the zone name here. Log rows also carry
+      // data-battlefield-marker, but with the value "true", so they can't
+      // match and don't need excluding.
+      marker = doc().querySelector(`[data-battlefield-marker="${zone}"]`);
+    } catch (_) {
+      return null;
+    }
+    if (!marker) return null;
+
+    const own = nameFromLabel(marker.getAttribute("aria-label"));
+    if (own) return own;
+
+    const container = marker.closest("[data-drop-zone-root]") || marker.parentElement;
+    for (const el of container?.querySelectorAll("[aria-label]") || []) {
+      const name = nameFromLabel(el.getAttribute("aria-label"));
+      if (name) return name;
+    }
+    return null;
+  }
+
+  // ---------- floating resources ----------
+  //
+  // The "FLOATING — Energy / Power" readout, under [data-player-area="resources"].
+  // Its text runs together with the stepper buttons: "Floating-Energy0+-Power0+".
+  const ENERGY_RE = /Energy[^\d-]*(-?\d+)/i;
+  const POWER_RE = /Power[^\d-]*(-?\d+)/i;
+
+  /* Which side a node belongs to, by climbing until an ancestor holds one
+   * side's zone roots and not the other's. The readouts carry no owner of
+   * their own, and guessing from document order would silently swap the two
+   * whenever the layout changed. */
+  function ownerOf(node) {
+    let el = node?.parentElement;
+    while (el) {
+      let hasSelf = false;
+      let hasOpponent = false;
+      try {
+        hasSelf = !!el.querySelector('[data-zone-owner="self"]');
+        hasOpponent = !!el.querySelector('[data-zone-owner="opponent"]');
+      } catch (_) {
+        return null;
+      }
+      if (hasSelf !== hasOpponent) return hasSelf ? "self" : "opponent";
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function readNumber(re, text) {
+    const hit = re.exec(text || "");
+    return hit ? parseInt(hit[1], 10) : null;
+  }
+
+  /** Floating energy and power per side. Nulls when the board does not say. */
+  function resources() {
+    const out = { self: { energy: null, power: null }, opponent: { energy: null, power: null } };
+    let nodes;
+    try {
+      nodes = doc().querySelectorAll('[data-player-area="resources"]');
+    } catch (_) {
+      return out;
+    }
+    for (const node of nodes) {
+      // The label span and its container both match; only the one holding
+      // both numbers is the readout.
+      const text = node.textContent || "";
+      const energy = readNumber(ENERGY_RE, text);
+      const power = readNumber(POWER_RE, text);
+      if (energy === null && power === null) continue;
+      const side = ownerOf(node);
+      if (!side) continue;
+      out[side] = { energy, power };
+    }
+    return out;
+  }
+
   /* Log rows: <li><span aria-hidden [actor colour]></span><p>…<span>16:11</span>
    * <span>Conquered X and scored 1.</span>…</p></li>, newest first. */
   function parseLogRow(li) {
@@ -339,6 +441,10 @@
     readFaceDown,
     parseLogRow,
     logEntries,
+    battlefieldName,
+    nameFromLabel,
+    resources,
+    ownerOf,
   };
 })(typeof window !== "undefined" ? window : globalThis);
 

@@ -31,6 +31,17 @@
     return out;
   }
 
+  /* The battlefields in play, which are shared rather than owned: both sides
+   * commit units to the same two places. Named separately from the zones
+   * because the zone holds who is standing there and this holds where. */
+  function battlefieldBlocks() {
+    const out = {};
+    for (const zone of ["battlefieldA", "battlefieldB"]) {
+      out[zone] = { name: root.RBCBoard.battlefieldName(zone) };
+    }
+    return out;
+  }
+
   /* Build a snapshot, or null when there is no board to read — the lobby, the
    * deck builder, any of the site's own pages. */
   function build(options) {
@@ -61,6 +72,17 @@
       );
     }
 
+    const unread = [];
+
+    const bf = battlefieldBlocks();
+    if (Object.values(bf).every((b) => b.name === null)) {
+      unread.push("battlefields.name");
+    }
+    const res = root.RBCBoard.resources();
+    if (res.self.energy === null && res.self.power === null) {
+      unread.push("resources.self");
+    }
+
     const snapshot = {
       schemaVersion: SCHEMA_VERSION,
       capturedAt: new Date(opts.now ?? Date.now()).toISOString(),
@@ -85,9 +107,11 @@
         self: playerBlock(board, "self"),
         opponent: playerBlock(board, "opponent"),
       },
+      resources: root.RBCBoard.resources(),
+      battlefields: battlefieldBlocks(),
       zones,
       log: root.RBCBoard.logEntries(opts.logLimit ?? 40),
-      fieldsUnread: exhaustReadable ? [] : ["exhausted"],
+      fieldsUnread: exhaustReadable ? unread : ["exhausted", ...unread],
       warnings,
     };
 

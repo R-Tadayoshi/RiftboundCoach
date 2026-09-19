@@ -76,6 +76,25 @@ so you can just open that file if curl is awkward.
 The sidecar binds to `127.0.0.1` only. Nothing it holds is reachable from
 outside your machine, and it sends nothing anywhere.
 
+## After changing the extension, always refresh the tab
+
+Reloading the extension on `chrome://extensions` without refreshing the game
+tab leaves the **old copy alive** in the page. Its observer and listeners keep
+firing; only its link to the extension is gone. Reload a few times and you get
+a few of them — which is why the Console's context dropdown fills up with
+copies of "Riftbound Coach — state extractor".
+
+Those copies run the **old code**, so picking one from the dropdown can give
+you results from a version you replaced.
+
+The extension now detects this and stands down, logging
+`superseded by a newer copy`. But the reliable habit is:
+
+> reload the extension → **refresh the game tab** → then use the console
+
+If the dropdown still shows several, pick the **last** one, or just refresh
+again and they collapse to one.
+
 ## Where things can go wrong
 
 **"Load unpacked" is greyed out** — Developer mode isn't on.

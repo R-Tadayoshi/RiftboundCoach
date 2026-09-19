@@ -59,10 +59,32 @@ function markerHtml(zone, owner) {
                role="img" aria-label="Your base area"></div>`;
 }
 
-function zoneHtml(side, zone, cards) {
+/* The battlefield card is drawn in the area but outside the zone root, and
+ * names itself only in an aria-label. The apostrophe in "Targon's Peak" is
+ * load-bearing: it is what a narrower safe-value filter used to blank. */
+function battlefieldMarkerHtml(zone, name) {
+  return `<div data-battlefield-marker="${zone}" data-card-id="battlefield-marker:${zone}"
+               role="button" aria-label="${name} card preview"></div>
+          <button type="button" aria-label="Choose target from ${name}"></button>`;
+}
+
+/* The floating readout, with the stepper buttons that run its text together
+ * exactly as the live board does: "Floating-Energy0+-Power0+". */
+function resourcesHtml(energy, power) {
+  return `<div data-player-area="resources">
+    <span>Floating</span>
+    <button>-</button><span>Energy</span><span>${energy}</span><button>+</button>
+    <button>-</button><span>Power</span><span>${power}</span><button>+</button>
+  </div>`;
+}
+
+function zoneHtml(side, zone, cards, battlefieldName) {
   const marker =
-    zone === "base" || zone === "battlefieldA" || zone === "battlefieldB"
+    zone === "base"
       ? markerHtml(zone, side === "self" ? "plr_self" : "plr_opp")
+      : zone === "battlefieldA" || zone === "battlefieldB"
+      ? markerHtml(zone, side === "self" ? "plr_self" : "plr_opp") +
+        (side === "self" ? battlefieldMarkerHtml(zone, battlefieldName) : "")
       : "";
   return `<div data-drop-zone-root="${zone}" data-zone-owner="${side}">
     ${marker}
@@ -98,6 +120,12 @@ const DEFAULTS = {
   resetToken: "rt-1",
   activeSeat: "seat-a",
   connectionState: "open",
+  battlefieldA: "Targon's Peak",
+  battlefieldB: "Dragon Roost",
+  selfEnergy: 2,
+  selfPower: 1,
+  opponentEnergy: 0,
+  opponentPower: 0,
   roomCode: "QWLM",
   viewerId: "p-self",
   opponentId: "p-opp",
@@ -159,7 +187,15 @@ function build(overrides) {
     <section data-zone-owner="${side}">
       <div data-drop-zone="legend"><img alt="${side === "self" ? o.selfLegend : o.opponentLegend}" src="${ART("OGN-001")}"></div>
       <div data-drop-zone="champion"><img alt="${side === "self" ? o.selfChampion : o.opponentChampion}" src="${ART("OGN-002")}"></div>
-      ${Object.entries(zones[side]).map(([zone, cards]) => zoneHtml(side, zone, cards)).join("\n")}
+      ${Object.entries(zones[side])
+        .map(([zone, cards]) =>
+          zoneHtml(side, zone, cards, zone === "battlefieldA" ? o.battlefieldA : o.battlefieldB)
+        )
+        .join("\n")}
+      ${resourcesHtml(
+        side === "self" ? o.selfEnergy : o.opponentEnergy,
+        side === "self" ? o.selfPower : o.opponentPower
+      )}
     </section>`;
 
   const html = `<!doctype html><html><body>

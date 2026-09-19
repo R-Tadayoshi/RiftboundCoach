@@ -16,7 +16,13 @@
 (function (root) {
   "use strict";
 
-  const SAFE_VALUE_RE = /^[A-Za-z0-9 _:.-]{0,40}$/;
+  /* What may be echoed back verbatim. Deliberately narrow: a dump gets pasted
+   * into a chat, and card identities are not what it is for.
+   *
+   * Apostrophes are allowed because excluding them blanked exactly the label
+   * that mattered — "Choose target from Targon's Peak" came back omitted while
+   * "Choose target from Dragon Roost" came through. */
+  const SAFE_VALUE_RE = /^[A-Za-z0-9 _:.,'()-]{0,60}$/;
 
   function describe(el) {
     const attrs = {};

@@ -13,6 +13,8 @@ One snapshot is emitted per authoritative game action. A worked example is in
 | `match` | object | match-level facts |
 | `connection` | object | how the snapshot was obtained, not what it says |
 | `players` | object | `self` and `opponent` blocks |
+| `resources` | object | floating energy/power per side |
+| `battlefields` | object | the two battlefields in play, which are shared rather than owned |
 | `zones` | object | `self` and `opponent`, each holding the six zones |
 | `log` | array | match log, oldest first, capped to the last 40 by default |
 | `fieldsUnread` | string[] | fields the board did not expose this snapshot |
@@ -73,6 +75,34 @@ that would have paused capture during goldfishing. See
 
 `name`, `score` (the game is to 8), `legend`, `champion`. Every field is
 nullable; null means the board did not say.
+
+## `resources.<side>`
+
+`energy` and `power`, the **floating** pool shown bottom-left, read from
+`[data-player-area="resources"]`. Its text runs together with the stepper
+buttons — `"Floating-Energy0+-Power0+"` — so the numbers are parsed out.
+
+Sides are attributed by climbing to the first ancestor holding one side's zone
+roots and not the other's. Document order is deliberately not used: it would
+silently swap the two whenever the layout changed.
+
+## `battlefields.<battlefieldA|battlefieldB>`
+
+`name`, e.g. `"Targon's Peak"`. Shared rather than owned — both players commit
+units to the same two places, so this sits outside `zones`, which holds *who is
+standing there*.
+
+The battlefield card is drawn in the battlefield area but **outside the zone
+root**, so reading a zone finds the units and never the place. Its name is in
+an aria-label, in one of two shapes the live board uses:
+
+```
+"Choose target from Dragon Roost"
+"Dragon Roost card preview"
+```
+
+Log rows also carry `data-battlefield-marker`, but with the value `"true"`
+rather than the zone name, so they cannot be mistaken for the marker itself.
 
 ## `zones.<side>.<zone>`
 
@@ -193,12 +223,14 @@ Tokens (Gold, and the like) are served from a different path, so they carry a
 - **Might / power modified in play.** Base values come from the card API
   (`stats.energy`, `stats.might`, `stats.power`), so only in-play modifications
   would need the board, and nothing in the capture showed where they live.
-- **Energy / power pool.** The board displays `FLOATING — Energy / Power` in the
-  bottom-left; the attribute behind it has not been located.
-- **Battlefield identity.** `battlefieldA` / `battlefieldB` are read as card
-  containers, but which battlefield each one *is* (e.g. "Rockfall Path") and
-  who is contesting it are not parsed. The match log carries conquests as text
-  in the meantime.
+- **Structured log entities.** Log rows mark card names with
+  `data-log-card-name="true"` and battlefield references with
+  `data-battlefield-marker="true"`, so entries could be parsed into structured
+  events rather than kept as text. Currently they are kept as text.
+- **Deck counts.** Shown on each deck pile (31 / 33 in the capture); not read.
+- **Who is contesting a battlefield**, beyond which units stand in each zone —
+  the conquest thresholds shown on the board (`0/5`, `6/6`, `1/7`) are not
+  parsed.
 - **How a real opponent's hidden hand renders.** Not yet seen, because neither
   solo mode hides anything: a goldfish has no opponent, and Two-Sided Practice
   reveals both hands. Only a true two-player match settles it. Not blocking —
