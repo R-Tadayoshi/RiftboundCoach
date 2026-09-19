@@ -7,8 +7,14 @@
     "phase": "in_game",
     "mode": "constructed",
     "turnNumber": 7,
+    "turnStep": "action",
     "activeSide": "self",
+    "activeSeat": "seat-a",
     "isMyTurn": true
+  },
+  "connection": {
+    "state": "open",
+    "resetToken": "rt-1"
   },
   "players": {
     "self": {

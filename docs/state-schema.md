@@ -11,6 +11,7 @@ One snapshot is emitted per authoritative game action. A worked example is in
 | `capturedAt` | ISO 8601 string | when the snapshot was taken |
 | `sequence` | string \| null | the board's `data-authoritative-sequence` — the server's own action counter |
 | `match` | object | match-level facts |
+| `connection` | object | how the snapshot was obtained, not what it says |
 | `players` | object | `self` and `opponent` blocks |
 | `zones` | object | `self` and `opponent`, each holding the six zones |
 | `log` | array | match log, oldest first, capped to the last 40 by default |
@@ -28,8 +29,29 @@ describe the same game state.
 | `phase` | string \| null | `in_game` while a match is live |
 | `mode` | string \| null | |
 | `turnNumber` | number \| null | |
+| `turnStep` | string \| null | which step of the turn, off `[data-testid="turn-step"]` |
 | `activeSide` | `"self"` \| `"opponent"` \| null | |
+| `activeSeat` | string \| null | |
 | `isMyTurn` | boolean \| null | **null means unknown, not "their turn."** |
+
+## `connection`
+
+| Field | Type | Notes |
+|---|---|---|
+| `state` | string \| null | `idle` / `connecting` / `open` / `closed` / `error` |
+| `resetToken` | string \| null | changes when the server replaces authoritative state wholesale; across a change, sequence numbers no longer compare |
+
+Anything other than `open` means the board may be stale, and a warning saying
+so is attached to the snapshot.
+
+### The `"unknown"` sentinel
+
+The board fills an attribute it cannot answer with the literal string
+`"unknown"` rather than omitting it. Every read rejects it, so an empty seat
+does not read as a seated opponent and `"unknown"` does not read as a turn
+number. This is not cosmetic — it broke the solo-only guard in the direction
+that would have paused capture during goldfishing. See
+[`phase1-recon.md`](phase1-recon.md#the-unknown-sentinel--a-correctness-bug-this-found).
 
 ## `players.<side>`
 
@@ -98,8 +120,11 @@ cannot reach `play.riftatlas.com` and no public source reads them.
 
 ### `exhausted` — not yet readable
 
-The stats tracker never needed exhaustion, so its source says nothing about how
-the site marks one. `extension/src/exhaust.js` probes the markers such a board
+`exhausted` is confirmed as the field name in the site's own state model, along
+with `toggle_exhausted` and `set_rune_exhausted` mutations. What is **not**
+known is the DOM attribute it renders to: the card and zone components live in
+chunks that load only inside an authenticated match, and `/game` is disallowed
+in robots.txt, so they could not be read from outside a real game. `extension/src/exhaust.js` probes the markers such a board
 plausibly uses — `data-exhausted`, `data-state="exhausted"`, a rotation class —
 and answers **`null` when none is present**.
 
@@ -114,7 +139,9 @@ replaces the three guesses.
 
 ### Not yet extracted at all
 
-- **Might / power** on units — location unknown.
+- **Might / power** on units — but base values come from the card API
+  (`stats.energy`, `stats.might`, `stats.power`), so only values *modified in
+  play* need the board at all.
 - **Energy** and per-turn resource availability.
 - **Rune readiness** — which runes are spent vs available. The `runeArea` zone
   is read, but "open runes" in the sense the coach needs (what tricks they can
@@ -123,6 +150,12 @@ replaces the three guesses.
   are read as card containers, but which battlefield they are, and who is
   contesting them, is not yet parsed. The match log carries conquests as text
   in the meantime.
+
+**`data-card-id`, `data-zone-owner` and `data-drop-zone-root` are themselves
+unconfirmed.** They come from the stats tracker's source and do not appear in
+the chunks reachable from outside a match. They may be current, or the tracker
+may be out of date — its own README warns the markup changes without notice.
+If the first live capture returns empty zones, this is why.
 
 `rbcDiscover()` is the tool for all of these. It dumps attribute *names* and
 `data-*` values on card elements, omitting `alt` and `src`, so its output is
