@@ -45,6 +45,13 @@ function cors(res) {
   res.setHeader("access-control-allow-origin", ORIGIN);
   res.setHeader("access-control-allow-methods", "GET, POST, OPTIONS");
   res.setHeader("access-control-allow-headers", "content-type");
+  /* Chrome guards the loopback address space against public sites. The
+   * extension posts through its service worker, which is not subject to it,
+   * so these are a backstop for anything else on the machine that asks —
+   * curl, a script, a future page of our own. Both spellings: the header was
+   * renamed as the proposal became Local Network Access. */
+  res.setHeader("access-control-allow-private-network", "true");
+  res.setHeader("access-control-allow-local-network-access", "true");
 }
 
 function json(res, code, body) {

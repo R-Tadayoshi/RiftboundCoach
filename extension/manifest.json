@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Riftbound Coach \u2014 state extractor",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Reads your own visible Rift Atlas board state during solo practice and hands it to a local process. Passive: never plays for you.",
   "content_scripts": [
     {
@@ -24,5 +24,8 @@
   ],
   "host_permissions": [
     "http://127.0.0.1:8787/*"
-  ]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

@@ -83,3 +83,38 @@ test("rejects a malformed body rather than storing it", async () => {
 test("only binds to loopback", () => {
   assert.equal(server.address().address, "127.0.0.1");
 });
+
+test("answers the loopback preflight, so a direct fetch is not blocked", () => {
+  // Chrome guards the loopback address space against public sites. The
+  // extension posts through its service worker and sidesteps this, but
+  // anything else on the machine needs the headers.
+  return new Promise((resolve, reject) => {
+    const http = require("node:http");
+    const req = http.request(
+      {
+        host: "127.0.0.1",
+        port: server.address().port,
+        path: "/state",
+        method: "OPTIONS",
+        headers: {
+          origin: "https://play.riftatlas.com",
+          "access-control-request-method": "POST",
+          "access-control-request-private-network": "true",
+        },
+      },
+      (res) => {
+        try {
+          assert.equal(res.statusCode, 204);
+          assert.equal(res.headers["access-control-allow-private-network"], "true");
+          assert.equal(res.headers["access-control-allow-local-network-access"], "true");
+          assert.equal(res.headers["access-control-allow-origin"], "https://play.riftatlas.com");
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+});

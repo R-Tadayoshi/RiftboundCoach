@@ -8,8 +8,6 @@
 (function (root) {
   "use strict";
 
-  const SIDECAR = "http://127.0.0.1:8787";
-
   const CONFIG = {
     /* Capture only during solo practice: Goldfish (single_player) and
      * Two-Sided Practice (solo_lab), where both seats are yours.
@@ -77,24 +75,35 @@
     el.textContent = `coach: ${text}`;
   }
 
-  async function send(snapshot) {
+  /* Hand the snapshot to the service worker, which is the only side of this
+   * extension allowed to reach the sidecar: a content script carries the
+   * page's origin, and a public HTTPS page may not fetch the loopback address
+   * space. See background.js. */
+  function send(snapshot) {
     // Still inside a back-off: skip without asking, and without the red line.
-    if (Date.now() < sidecarDownUntil) return false;
-    try {
-      await fetch(`${SIDECAR}/state`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(snapshot),
-        credentials: "omit",
-      });
-      sidecarDownUntil = 0;
-      return true;
-    } catch (_) {
-      // The sidecar not running is the ordinary case, not an error worth
-      // shouting about — the user starts it when they want to capture.
-      sidecarDownUntil = Date.now() + SIDECAR_RETRY_MS;
-      return false;
-    }
+    if (Date.now() < sidecarDownUntil) return Promise.resolve(false);
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = (ok) => {
+        if (settled) return;
+        settled = true;
+        if (ok) sidecarDownUntil = 0;
+        else sidecarDownUntil = Date.now() + SIDECAR_RETRY_MS;
+        resolve(ok);
+      };
+
+      try {
+        chrome.runtime.sendMessage({ type: "rbc:snapshot", snapshot }, (reply) => {
+          // Reading lastError is what stops Chrome logging it as unchecked.
+          if (chrome.runtime.lastError) return done(false);
+          done(!!reply?.ok);
+        });
+      } catch (_) {
+        // The extension was reloaded under us; the orphan check handles it.
+        done(false);
+      }
+    });
   }
 
   function capture() {

@@ -107,8 +107,12 @@ directly inside the folder you picked.
 matches `https://play.riftatlas.com/*`; check you're on that host, and reload
 the tab after loading the extension.
 
-**Status says "sidecar not running"** — expected until you start it. Capture
-still works; it just has nowhere to post.
+**Status says "sidecar not running"** while the sidecar IS running, with
+`blocked by CORS policy: Permission was denied ... loopback address space` in
+the console — that was a real bug, fixed in 0.5.0. A content script carries the
+page's origin, and Chrome does not let a public HTTPS page reach `127.0.0.1`.
+The extension now posts through its own service worker, which is allowed to.
+Pull, reload the extension, refresh the tab.
 
 **Status says "paused — a second player is seated"** — the solo-only guard.
 Expected in a two-tab match. The console helpers still work; see below.

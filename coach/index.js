@@ -105,16 +105,43 @@ async function coach(snapshot) {
   for (const w of snapshot.warnings || []) console.error("[coach] board warning: " + w);
 }
 
-async function tick() {
+/* `quiet` keeps the polling loop from repeating itself every second and a
+ * half; a single --once run says why nothing happened, because silence there
+ * is indistinguishable from a broken install. */
+async function tick(quiet) {
   let snapshot;
   try {
     snapshot = await readState();
   } catch (err) {
-    console.error(`[coach] cannot reach the sidecar at ${SIDECAR} — is it running? (${err.message})`);
+    if (!quiet) {
+      console.error(`[coach] cannot reach the sidecar at ${SIDECAR} — is it running? (${err.message})`);
+    }
     return false;
   }
-  if (!snapshot) return false;
-  if (!shouldCoach(snapshot)) return false;
+
+  if (!snapshot) {
+    if (!quiet) {
+      console.log(
+        "[coach] the sidecar is running but holds no snapshot yet.\n" +
+          "        The extension posts one per game action, so: open a match,\n" +
+          "        take an action, and check the page's status line bottom-right.\n" +
+          "        If it reads \"sidecar not running\", the extension is not\n" +
+          "        reaching it — reload the extension and refresh the tab."
+      );
+    }
+    return false;
+  }
+
+  if (!shouldCoach(snapshot)) {
+    if (!quiet && snapshot.match?.isMyTurn !== true && !EVERY) {
+      console.log(
+        `[coach] holding — it is not your turn (turn ${snapshot.match?.turnNumber ?? "?"}, ` +
+          `${snapshot.match?.turnStep ?? "?"}). Use --every to coach anyway.`
+      );
+    }
+    return false;
+  }
+
   await coach(snapshot);
   return true;
 }
@@ -125,11 +152,17 @@ async function main() {
   console.log(`[coach] ${EVERY ? "coaching every change" : "coaching on my turns"}\n`);
 
   if (ONCE) {
-    await tick();
+    await tick(false);
     return;
   }
+
+  // The first pass reports what it finds; after that only changes are worth
+  // a line, or the terminal fills with the same complaint.
+  let announced = false;
   for (;;) {
-    await tick();
+    const coached = await tick(announced);
+    if (coached) announced = false;
+    else announced = true;
     await new Promise((r) => setTimeout(r, POLL_MS));
   }
 }
