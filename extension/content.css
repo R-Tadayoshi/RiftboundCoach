@@ -1,0 +1,14 @@
+#rbc-status {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2147483647;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #cfe8dd;
+  background: rgba(12, 18, 16, 0.82);
+  border: 1px solid rgba(120, 221, 183, 0.35);
+  pointer-events: none;
+  user-select: none;
+}

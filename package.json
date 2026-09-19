@@ -1,0 +1,14 @@
+{
+  "name": "riftbound-coach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live game-state extractor for RiftAtlas, for solo practice coaching.",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "sidecar": "node sidecar/server.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
+  }
+}

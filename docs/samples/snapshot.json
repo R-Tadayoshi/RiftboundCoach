@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-19T16:11:03.000Z",
+  "sequence": "412",
+  "match": {
+    "roomCode": "QWLM",
+    "phase": "in_game",
+    "mode": "constructed",
+    "turnNumber": 7,
+    "activeSide": "self",
+    "isMyTurn": true
+  },
+  "players": {
+    "self": {
+      "name": "curtyo",
+      "score": 3,
+      "legend": "Yasuo, the Unforgiven",
+      "champion": "Yasuo"
+    },
+    "opponent": {
+      "name": "rival",
+      "score": 5,
+      "legend": "Lux, the Lady of Luminosity",
+      "champion": "Lux"
+    }
+  },
+  "zones": {
+    "self": {
+      "hand": {
+        "count": 2,
+        "visible": [
+          {
+            "cardId": "s-h1",
+            "faceDown": false,
+            "code": "OGN-004",
+            "name": "Sweeping Blade",
+            "exhausted": null
+          },
+          {
+            "cardId": "s-h2",
+            "faceDown": false,
+            "code": "OGN-017",
+            "name": "Windwall",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      },
+      "base": {
+        "count": 1,
+        "visible": [
+          {
+            "cardId": "s-b1",
+            "faceDown": false,
+            "code": "OGN-031",
+            "name": "Steadfast Guard",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      },
+      "battlefieldA": {
+        "count": 1,
+        "visible": [
+          {
+            "cardId": "s-fa1",
+            "faceDown": false,
+            "code": "OGN-052",
+            "name": "Ionian Duelist",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      },
+      "battlefieldB": {
+        "count": 0,
+        "visible": [],
+        "hiddenCount": 0
+      },
+      "runeArea": {
+        "count": 2,
+        "visible": [
+          {
+            "cardId": "s-r1",
+            "faceDown": false,
+            "code": "OGN-201",
+            "name": "Fury Rune",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 1
+      },
+      "trash": {
+        "count": 1,
+        "visible": [
+          {
+            "cardId": "s-t1",
+            "faceDown": false,
+            "code": "OGN-077",
+            "name": "Last Breath",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      }
+    },
+    "opponent": {
+      "hand": {
+        "count": 4,
+        "visible": [],
+        "hiddenCount": 4
+      },
+      "base": {
+        "count": 1,
+        "visible": [
+          {
+            "cardId": "o-b1",
+            "faceDown": false,
+            "code": "OGN-110",
+            "name": "Luminous Acolyte",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      },
+      "battlefieldA": {
+        "count": 1,
+        "visible": [
+          {
+            "cardId": "o-fa1",
+            "faceDown": false,
+            "code": "OGN-121",
+            "name": "Radiant Sentry",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      },
+      "battlefieldB": {
+        "count": 0,
+        "visible": [],
+        "hiddenCount": 0
+      },
+      "runeArea": {
+        "count": 1,
+        "visible": [
+          {
+            "cardId": "o-r1",
+            "faceDown": false,
+            "code": "OGN-210",
+            "name": "Order Rune",
+            "exhausted": null
+          }
+        ],
+        "hiddenCount": 0
+      },
+      "trash": {
+        "count": 0,
+        "visible": [],
+        "hiddenCount": 0
+      }
+    }
+  },
+  "log": [
+    {
+      "at": "16:09",
+      "actor": "system",
+      "text": "Turn 7 begins."
+    },
+    {
+      "at": "16:10",
+      "actor": "self",
+      "text": "Played Ionian Duelist."
+    },
+    {
+      "at": "16:11",
+      "actor": "opponent",
+      "text": "Conquered Ironspire and scored 1."
+    }
+  ],
+  "fieldsUnread": [
+    "exhausted"
+  ],
+  "warnings": [
+    "exhausted/readied state could not be read from any card on this board; every `exhausted` field is null (unknown, not readied). Run discovery.js on a live board to find the real marker."
+  ]
+}
