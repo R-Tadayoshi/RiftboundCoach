@@ -1,0 +1,171 @@
+"use strict";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fixture = require("./fixtures/board.js");
+
+require("../extension/src/exhaust.js");
+require("../extension/src/board.js");
+require("../extension/src/visibility.js");
+const Snapshot = require("../extension/src/snapshot.js");
+const { summarize, readyRunes, runeDomain, knownTrash, codesToResolve } = require("../coach/summarize.js");
+const { buildUserMessage, SYSTEM, describeRunes } = require("../coach/prompt.js");
+const { shouldCoach, SOLO_MODES } = require("../coach/index.js");
+
+const snap = () => {
+  fixture.build();
+  return Snapshot.build();
+};
+
+test("ready runes are counted by domain", () => {
+  const r = readyRunes({
+    count: 4,
+    visible: [
+      { name: "Calm Rune", exhausted: false },
+      { name: "Calm Rune", exhausted: false },
+      { name: "Chaos Rune", exhausted: true },
+      { name: "Body Rune", exhausted: false },
+    ],
+  });
+  assert.equal(r.ready, 3);
+  assert.equal(r.exhausted, 1);
+  assert.deepEqual(r.byDomain, { Calm: 2, Body: 1 });
+});
+
+test("an unreadable rune is not counted as ready", () => {
+  // Reporting it ready would invent a response the opponent may not have.
+  const r = readyRunes({ count: 2, visible: [{ name: "Calm Rune", exhausted: null }, { name: "Calm Rune", exhausted: false }] });
+  assert.equal(r.ready, 1);
+  assert.equal(r.unknown, 1);
+  assert.deepEqual(r.byDomain, { Calm: 1 });
+});
+
+test("rune domains come off the card name", () => {
+  assert.equal(runeDomain({ name: "Chaos Rune" }), "Chaos");
+  assert.equal(runeDomain({ name: "Irelia, Fervent" }), null);
+  assert.equal(runeDomain({}), null);
+});
+
+test("trash is grouped so copies are countable", () => {
+  const t = knownTrash({
+    visible: [
+      { name: "Defy", code: "OGN-045" },
+      { name: "Defy", code: "OGN-045" },
+      { name: "Flash", code: "OGS-011" },
+    ],
+  });
+  assert.deepEqual(t[0], { name: "Defy", code: "OGN-045", count: 2 });
+  assert.equal(t.length, 2);
+});
+
+test("the summary carries their hand count and nothing about its contents", () => {
+  const s = summarize(snap());
+  assert.equal(typeof s.them.handCount, "number");
+  assert.ok(!("hand" in s.them), "no hand list on their side at all");
+  assert.match(s.hiddenFromMe.note, /never from specific cards in hand/);
+});
+
+test("my own hand is carried in full", () => {
+  const s = summarize(snap());
+  assert.equal(s.me.hand.length, 2);
+  assert.ok(s.me.hand.every((c) => c.name));
+});
+
+test("codesToResolve skips tokens, which have no code", () => {
+  fixture.build({
+    zones: { self: { base: [{ id: "t1", code: null, name: "Gold", exhausted: false }] } },
+  });
+  const codes = codesToResolve(Snapshot.build());
+  assert.ok(!codes.includes(null));
+  assert.ok(codes.every((c) => typeof c === "string"));
+});
+
+test("the prompt never contains a card from their hand", () => {
+  fixture.build({
+    mode: "solo_lab",
+    opponentId: "plr_x",
+    zones: {
+      opponent: {
+        // Revealed by the client, as Two-Sided Practice does.
+        hand: [{ id: "o1", code: "OGN-138", name: "Catalyst of Aeons" }],
+      },
+    },
+  });
+  const s = Snapshot.build();
+  const msg = buildUserMessage(summarize(s), {});
+  assert.ok(!msg.includes("Catalyst of Aeons"), "their hand card is absent");
+  assert.ok(!msg.includes("OGN-138"));
+  assert.match(msg, /contents NOT VISIBLE/);
+});
+
+test("the system prompt forbids reasoning about their hand", () => {
+  assert.match(SYSTEM, /CANNOT see the opponent's hand/);
+  assert.match(SYSTEM, /Never name, guess at, or reason about specific\s+cards in their hand/);
+  assert.match(SYSTEM, /null, it is unknown, not zero/);
+});
+
+test("their ready runes are labelled as the response ceiling", () => {
+  const msg = buildUserMessage(summarize(snap()), {});
+  assert.match(msg, /what they can respond with/);
+});
+
+test("describeRunes reports unreadable runes rather than hiding them", () => {
+  assert.match(describeRunes({ total: 3, ready: 1, exhausted: 1, unknown: 1, byDomain: { Calm: 1 } }), /unreadable/);
+  assert.equal(describeRunes({ total: 0 }), "none");
+});
+
+/* The coach refuses the same matches the extractor refuses to capture. */
+
+test("coaches solo practice", () => {
+  for (const mode of ["single_player", "solo_lab"]) {
+    assert.ok(SOLO_MODES.has(mode), mode);
+    assert.equal(
+      shouldCoach({ sequence: "1", match: { mode, isMyTurn: true }, connection: { state: "open" } }),
+      true,
+      mode
+    );
+  }
+});
+
+test("refuses a real match even if a snapshot reaches it", () => {
+  assert.equal(
+    shouldCoach({ sequence: "2", match: { mode: "multiplayer", isMyTurn: true }, connection: { state: "open" } }),
+    false
+  );
+});
+
+test("holds off while the board may be stale", () => {
+  assert.equal(
+    shouldCoach({ sequence: "3", match: { mode: "solo_lab", isMyTurn: true }, connection: { state: "closed" } }),
+    false
+  );
+});
+
+test("does not coach on their turn", () => {
+  assert.equal(
+    shouldCoach({ sequence: "4", match: { mode: "solo_lab", isMyTurn: false }, connection: { state: "open" } }),
+    false
+  );
+});
+
+test("does not coach twice on the same authoritative state", () => {
+  const s = { sequence: "9", match: { mode: "solo_lab", isMyTurn: true }, connection: { state: "open" } };
+  assert.equal(shouldCoach(s), true);
+});
+
+test("cards in hand are listed without an exhaustion state", () => {
+  // A card in hand cannot be exhausted, so "state unknown" would read as a
+  // gap in the capture rather than a question that does not apply.
+  const { describeHand } = require("../coach/prompt.js");
+  assert.equal(describeHand([{ name: "Defy" }, { name: "Flash" }]), "Defy, Flash");
+  assert.equal(describeHand([]), "empty");
+
+  const msg = buildUserMessage(summarize(snap()), {});
+  const handLine = msg.split("\n").find((l) => l.trim().startsWith("hand:"));
+  assert.ok(!handLine.includes("state unknown"), handLine);
+});
+
+test("board units still report exhaustion, including when unreadable", () => {
+  const { describeUnits } = require("../coach/prompt.js");
+  assert.equal(describeUnits([{ name: "A", exhausted: true }]), "A (exhausted)");
+  assert.equal(describeUnits([{ name: "B", exhausted: null }]), "B (state unknown)");
+});

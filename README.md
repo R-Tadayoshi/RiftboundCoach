@@ -14,7 +14,7 @@ writes to the page.
 | 1 — Recon | Done. [`docs/phase1-recon.md`](docs/phase1-recon.md) |
 | 2 — Protocol capture | **Skipped by design.** See below. |
 | 3 — Extractor | Built. Tested against a synthetic board; **not yet run against the live site.** |
-| 4 — Coaching layer | Not started. |
+| 4 — Coaching layer | Built. Needs an OpenRouter key to run for real. |
 
 ## Why there's no WebSocket capture
 
@@ -42,6 +42,12 @@ extension/          MV3 content script — the extractor
   src/discovery.js    attribute dump, for closing the remaining unknowns
   content.js          observes the board, posts snapshots
 sidecar/server.js   local HTTP server: holds state, serves it on a port
+coach/              the coaching layer
+  summarize.js        snapshot -> the facts a coach reasons about
+  cards.js            card text from RiftScribe, cached on disk
+  prompt.js           what to ask for, and what not to speculate about
+  openrouter.js       the API call
+  index.js            the loop
 docs/               recon notes, schema, sample snapshot
 test/               39 tests over a jsdom board fixture
 ```
@@ -70,6 +76,43 @@ curl -s localhost:8787/state | jq        # newest snapshot
 curl -s 'localhost:8787/history?n=5'     # the last five
 cat state/state.json                     # newest, mirrored to disk
 ```
+
+## Coaching
+
+```bash
+export OPENROUTER_API_KEY=sk-or-...
+node coach/index.js
+```
+
+It watches the sidecar and, when it is your turn, prints a line to the
+terminal. Flags:
+
+| Flag | |
+|---|---|
+| `--dry-run` | build and print the prompt, send nothing — no key needed |
+| `--once` | coach the current state and exit |
+| `--every` | coach on every change, not only your turns |
+
+`RBC_MODEL` picks the model (default `anthropic/claude-sonnet-4.5`).
+
+Card text comes from [RiftScribe](https://riftscribe.gg/api-docs) — free, no
+key — and is cached in `state/cards.json`, so a match after the first is
+almost entirely local.
+
+### What the coach is told it cannot do
+
+The prompt states that the opponent's hand is not visible and gives only its
+size, and forbids naming or reasoning about specific cards in it. Reads are
+meant to come from their trash, deck size, ready runes and what their deck has
+already shown — the same things you can see.
+
+That is belt-and-braces: their hand never reaches the prompt in the first
+place, because the extractor withholds it. A test asserts a revealed hand card
+appears nowhere in the built prompt.
+
+The coach also re-checks the room mode and refuses anything but solo practice,
+even though the extractor already refuses to capture it. The guard that matters
+is the one nearest the thing being guarded.
 
 ## Solo-only, and why
 
