@@ -191,3 +191,45 @@ test("card-back art is face-down even if the alt text is unhelpful", () => {
   assert.equal(hand[0].faceDown, true, "the art path settles it");
   assert.equal(hand[0].code, null);
 });
+
+/* Two-Sided Practice (solo_lab) seats a real opponent id and a real opposing
+ * board, both of them the player's own. Captured live, room 3SUWS. */
+
+test("two-sided practice counts as solo practice", () => {
+  fixture.build({ mode: "solo_lab", opponentId: "plr_4eec6e4d" });
+  const board = globalThis.document.querySelector('[data-testid="game-state"]');
+  assert.equal(Snapshot.hasLiveOpponent(board), true, "a seat is filled");
+  assert.equal(
+    Snapshot.isSoloPractice(board),
+    true,
+    "but both seats are yours, so coaching is not assistance against anyone"
+  );
+});
+
+test("goldfish counts as solo practice", () => {
+  fixture.build({ mode: "single_player", opponentId: "unknown" });
+  const board = globalThis.document.querySelector('[data-testid="game-state"]');
+  assert.equal(Snapshot.isSoloPractice(board), true);
+});
+
+test("a real match against a person does not", () => {
+  fixture.build({ mode: "multiplayer", opponentId: "plr_someone_else" });
+  const board = globalThis.document.querySelector('[data-testid="game-state"]');
+  assert.equal(Snapshot.isSoloPractice(board), false);
+});
+
+test("an unrecognised mode with someone seated is refused, not allowed", () => {
+  fixture.build({ mode: "some_future_mode", opponentId: "plr_someone_else" });
+  const board = globalThis.document.querySelector('[data-testid="game-state"]');
+  assert.equal(
+    Snapshot.isSoloPractice(board),
+    false,
+    "a new mode name should cost a pause, not a silent coaching session"
+  );
+});
+
+test("an unrecognised mode with nobody seated is still solo", () => {
+  fixture.build({ mode: "some_future_mode", opponentId: "unknown" });
+  const board = globalThis.document.querySelector('[data-testid="game-state"]');
+  assert.equal(Snapshot.isSoloPractice(board), true);
+});

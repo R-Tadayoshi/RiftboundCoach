@@ -111,14 +111,46 @@
    *
    * The board writes the literal string "unknown" into
    * data-opponent-player-id when nobody is across the table, so a plain
-   * truthiness check reads an empty seat as a live opponent — which would
-   * pause capture during exactly the solo practice this is built for.
+   * truthiness check reads an empty seat as a live opponent.
    * RBCBoard.playerId rejects the sentinel. */
   function hasLiveOpponent(board) {
     return root.RBCBoard.playerId(board, "opponent") !== null;
   }
 
-  root.RBCSnapshot = { SCHEMA_VERSION, build, hasLiveOpponent };
+  /* Room modes where both seats belong to the person playing.
+   *
+   *   single_player - Goldfish, no opponent at all
+   *   solo_lab      - Two-Sided Practice: a real opponent id and a real
+   *                   opposing board, both of them yours
+   *
+   * `solo_lab` seats an opponent, so an opponent-presence check alone reads
+   * it as a live match and pauses. That is wrong: two-sided practice IS solo
+   * practice, and it is where most of this tool's value is. The mode is what
+   * distinguishes it from `multiplayer`. */
+  const SOLO_MODES = new Set(["single_player", "solo_lab"]);
+
+  /* May the coaching pipeline run on this board?
+   *
+   * Yes when both seats are the player's own, or when nobody is across the
+   * table. No in a real match against another person: live advice there is
+   * assistance they do not have and did not agree to.
+   *
+   * An unrecognised mode with an opponent seated is refused rather than
+   * allowed. A new mode name should cost a pause and a question, not a
+   * silent coaching session in somebody else's game. */
+  function isSoloPractice(board) {
+    const mode = root.RBCBoard.mode(board);
+    if (mode && SOLO_MODES.has(mode)) return true;
+    return !hasLiveOpponent(board);
+  }
+
+  root.RBCSnapshot = {
+    SCHEMA_VERSION,
+    SOLO_MODES,
+    build,
+    hasLiveOpponent,
+    isSoloPractice,
+  };
 })(typeof window !== "undefined" ? window : globalThis);
 
 if (typeof module !== "undefined" && module.exports) {

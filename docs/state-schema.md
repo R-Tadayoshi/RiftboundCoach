@@ -44,6 +44,22 @@ describe the same game state.
 Anything other than `open` means the board may be stale, and a warning saying
 so is attached to the snapshot.
 
+### Room modes and the solo guard
+
+| `data-room-mode` | What it is | Coaching |
+|---|---|---|
+| `single_player` | Goldfish, no opponent seated | allowed |
+| `solo_lab` | Two-Sided Practice, both seats yours | allowed |
+| `multiplayer` | a real match | **paused** |
+
+`solo_lab` seats a real opponent id and a real opposing board, so a check for
+"is someone across the table" reads it as a live match and pauses — wrong, and
+wrong where most of the tool's value is. The mode is what distinguishes it.
+
+An unrecognised mode with someone seated is refused rather than allowed: a new
+mode name should cost a pause and a question, not a silent coaching session in
+somebody else's game.
+
 ### The `"unknown"` sentinel
 
 The board fills an attribute it cannot answer with the literal string
@@ -81,6 +97,26 @@ tests.
 | `code` | string \| null | e.g. `OGN-004`; null when face-down, and for tokens |
 | `name` | string \| null | localised — prefer `code` for lookups |
 | `exhausted` | boolean \| null | from `data-exhausted`. `null` is *unknown*, never *readied* — a card in hand legitimately reads null, since it carries no exhaustion |
+
+## Proven against a live board
+
+Two-Sided Practice reveals both hands outright; the board captions it
+**"OPPONENT HAND REVEALED"**. So the live capture from room 3SUWS is the exact
+case this design was chosen to survive — the client handing over four opponent
+hand cards, face-up, with codes and names attached.
+
+What came out:
+
+```json
+"opponent": { "hand": { "count": 4, "visible": [], "hiddenCount": 4 } }
+```
+
+plus four warnings naming each withheld card. No code or name from that hand
+appears anywhere in the snapshot, while the opponent's base, runes and trash —
+all genuinely public — came through intact.
+
+Every zone count in that capture matches the board exactly. Pinned by
+`test/visibility.test.js`.
 
 ## The visibility rule
 
@@ -163,9 +199,9 @@ Tokens (Gold, and the like) are served from a different path, so they carry a
   containers, but which battlefield each one *is* (e.g. "Rockfall Path") and
   who is contesting it are not parsed. The match log carries conquests as text
   in the meantime.
-- **How a real opponent's hidden hand renders.** A goldfish has no opponent at
-  all — every opponent zone came back empty — and in Two-Sided Practice you are
-  meant to see both hands. Only a true two-player match settles this. It is not
-  blocking: the filter withholds an opponent's hand whatever is rendered there.
+- **How a real opponent's hidden hand renders.** Not yet seen, because neither
+  solo mode hides anything: a goldfish has no opponent, and Two-Sided Practice
+  reveals both hands. Only a true two-player match settles it. Not blocking —
+  see below.
 
 `rbcDiscover()` (Ctrl+Shift+D) is the tool for all of these.

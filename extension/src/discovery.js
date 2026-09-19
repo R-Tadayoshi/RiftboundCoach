@@ -70,6 +70,51 @@
     return out;
   }
 
+  /* The battlefield card itself — "Targon's Peak", "Dragon Roost" — is drawn
+   * in the battlefield area but is not inside the zone root, so the zone read
+   * finds the units standing there and not the place they are standing. This
+   * walks up from the battlefield marker and describes what shares its
+   * container, which is where that card has to be. */
+  function battlefieldArea() {
+    const out = [];
+    for (const marker of root.document.querySelectorAll("[data-battlefield-marker]")) {
+      const which = marker.getAttribute("data-battlefield-marker");
+      const container = marker.closest("[data-drop-zone-root]") || marker.parentElement;
+      const siblings = [];
+      for (const el of (container?.querySelectorAll("*") || [])) {
+        // Only elements that look like they could name the battlefield.
+        const hasText = (el.textContent || "").trim().length > 0;
+        const isLeafish = el.children.length <= 2;
+        if (!hasText || !isLeafish) continue;
+        const described = describe(el);
+        described.text = (el.textContent || "").trim().slice(0, 60);
+        siblings.push(described);
+        if (siblings.length >= 8) break;
+      }
+      out.push({ which, containerTag: container?.tagName?.toLowerCase(), siblings });
+    }
+    return out;
+  }
+
+  /* The "FLOATING — Energy / Power" readout, and the deck counts. Located by
+   * the words beside them, since no attribute for either has turned up. */
+  function resourceReadouts() {
+    const hits = [];
+    for (const el of root.document.querySelectorAll("*")) {
+      if (el.children.length > 3) continue;
+      const text = (el.textContent || "").trim();
+      if (!/^(floating|energy|power)\b/i.test(text) || text.length > 40) continue;
+      const described = describe(el);
+      described.text = text.slice(0, 60);
+      described.parentAttrs = el.parentElement
+        ? describe(el.parentElement).attrs
+        : null;
+      hits.push(described);
+      if (hits.length >= 10) break;
+    }
+    return hits;
+  }
+
   /** Everything at once, ready to paste. */
   function report() {
     return {
@@ -78,6 +123,8 @@
       selfBattlefieldA: sampleZone("self", "battlefieldA", 3),
       selfBase: sampleZone("self", "base", 3),
       selfRunes: sampleZone("self", "runeArea", 3),
+      battlefieldArea: battlefieldArea(),
+      resourceReadouts: resourceReadouts(),
       zonesPresent: [
         ...new Set(
           [...root.document.querySelectorAll("[data-drop-zone-root]")].map((el) =>
@@ -93,6 +140,8 @@
     cardAttributeSurface,
     boardSurface,
     sampleZone,
+    battlefieldArea,
+    resourceReadouts,
     report,
   };
 })(typeof window !== "undefined" ? window : globalThis);

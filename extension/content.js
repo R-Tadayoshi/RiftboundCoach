@@ -11,12 +11,13 @@
   const SIDECAR = "http://127.0.0.1:8787";
 
   const CONFIG = {
-    /* Capture only when no second player is seated.
+    /* Capture only during solo practice: Goldfish (single_player) and
+     * Two-Sided Practice (solo_lab), where both seats are yours.
      *
-     * The extractor is for solo practice. Live advice in a real match is
-     * assistance the other player doesn't have and didn't agree to, and Rift
-     * Atlas's terms ask users not to interfere with other users. Enforcing it
-     * here means no downstream consumer can quietly opt out of it.
+     * Live advice in a real match is assistance the other player doesn't have
+     * and didn't agree to, and Rift Atlas's terms ask users not to interfere
+     * with other users. Enforcing it here means no downstream consumer can
+     * quietly opt out of it.
      *
      * Flip it knowing exactly what you are flipping. */
     soloOnly: true,
@@ -66,8 +67,9 @@
       return;
     }
 
-    if (CONFIG.soloOnly && root.RBCSnapshot.hasLiveOpponent(board)) {
-      status("paused — a second player is seated (solo-only)");
+    if (CONFIG.soloOnly && !root.RBCSnapshot.isSoloPractice(board)) {
+      const mode = root.RBCBoard.mode(board) || "unknown mode";
+      status(`paused — ${mode} is not solo practice (solo-only)`);
       return;
     }
 

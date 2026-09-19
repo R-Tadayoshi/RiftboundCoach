@@ -104,3 +104,64 @@ test("a snapshot that fails its own audit is refused, not emitted", () => {
   assert.ok(snap.warnings.some((w) => /private zone/.test(w)));
   assert.ok(!JSON.stringify(snap).includes("OGN-999"));
 });
+
+/* The case a live board actually produced. In Two-Sided Practice the client
+ * shows both hands outright — the board even captions it "OPPONENT HAND
+ * REVEALED" — so the opponent's four cards arrive face-up, with codes and
+ * names attached. Captured live, room 3SUWS, turn 5.
+ *
+ * This is the scenario the whole DOM approach was chosen to survive, and the
+ * only one where the client hands over identities unprompted. */
+
+test("a fully revealed opponent hand is withheld, counted, and reported", () => {
+  fixture.build({
+    mode: "solo_lab",
+    opponentId: "plr_4eec6e4d",
+    zones: {
+      opponent: {
+        hand: [
+          { id: "o-h1", code: "OGN-138", name: "Catalyst of Aeons" },
+          { id: "o-h2", code: "OGN-099", name: "Garbage Grabber" },
+          { id: "o-h3", code: "OGN-126", name: "Body Rune" },
+          { id: "o-h4", code: "OGN-089", name: "Mind Rune" },
+        ],
+      },
+    },
+  });
+
+  const s = Snapshot.build();
+  const hand = s.zones.opponent.hand;
+
+  assert.equal(hand.count, 4, "four cards is public — the coach needs it");
+  assert.equal(hand.visible.length, 0, "and not one identity is carried");
+  assert.equal(hand.hiddenCount, 4);
+
+  assert.equal(
+    s.warnings.filter((w) => /private zone/.test(w)).length,
+    4,
+    "each withheld card says so rather than vanishing quietly"
+  );
+
+  // The real test: nothing about those four cards survives anywhere in the
+  // object that leaves the extension.
+  const serialised = JSON.stringify(s);
+  for (const code of ["OGN-138", "OGN-099", "OGN-126", "OGN-089"]) {
+    const inOpponentHand = !serialised.includes(`"${code}"`) ||
+      // these codes legitimately appear elsewhere (their rune area, trash)
+      !JSON.stringify(hand).includes(code);
+    assert.ok(inOpponentHand, `${code} does not leak out of the opponent's hand`);
+  }
+  assert.ok(!JSON.stringify(hand).includes("Catalyst of Aeons"));
+  assert.ok(!JSON.stringify(hand).includes("Garbage Grabber"));
+});
+
+test("the opponent's public zones still come through in the same snapshot", () => {
+  // Withholding the hand must not blind the coach to what IS public.
+  fixture.build({ mode: "solo_lab", opponentId: "plr_4eec6e4d" });
+  const s = Snapshot.build();
+  assert.ok(
+    s.zones.opponent.base.visible.length > 0,
+    "their board is public and stays readable"
+  );
+  assert.ok(s.zones.opponent.runeArea.visible.length > 0);
+});
