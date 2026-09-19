@@ -56,7 +56,8 @@
       warnings.push(
         "exhausted/readied state could not be read from any card on this " +
           "board; every `exhausted` field is null (unknown, not readied). " +
-          "Run discovery.js on a live board to find the real marker."
+          "The board normally marks it with data-exhausted, so this means " +
+          "the markup moved - run rbcDiscover() and check the card button."
       );
     }
 

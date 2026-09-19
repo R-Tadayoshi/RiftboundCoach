@@ -37,6 +37,7 @@
         "visible": [
           {
             "cardId": "s-h1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-004",
             "name": "Sweeping Blade",
@@ -44,6 +45,7 @@
           },
           {
             "cardId": "s-h2",
+            "index": 1,
             "faceDown": false,
             "code": "OGN-017",
             "name": "Windwall",
@@ -57,10 +59,11 @@
         "visible": [
           {
             "cardId": "s-b1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-031",
             "name": "Steadfast Guard",
-            "exhausted": null
+            "exhausted": false
           }
         ],
         "hiddenCount": 0
@@ -70,10 +73,11 @@
         "visible": [
           {
             "cardId": "s-fa1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-052",
             "name": "Ionian Duelist",
-            "exhausted": null
+            "exhausted": true
           }
         ],
         "hiddenCount": 0
@@ -88,10 +92,11 @@
         "visible": [
           {
             "cardId": "s-r1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-201",
             "name": "Fury Rune",
-            "exhausted": null
+            "exhausted": true
           }
         ],
         "hiddenCount": 1
@@ -101,6 +106,7 @@
         "visible": [
           {
             "cardId": "s-t1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-077",
             "name": "Last Breath",
@@ -121,6 +127,7 @@
         "visible": [
           {
             "cardId": "o-b1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-110",
             "name": "Luminous Acolyte",
@@ -134,6 +141,7 @@
         "visible": [
           {
             "cardId": "o-fa1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-121",
             "name": "Radiant Sentry",
@@ -152,6 +160,7 @@
         "visible": [
           {
             "cardId": "o-r1",
+            "index": 0,
             "faceDown": false,
             "code": "OGN-210",
             "name": "Order Rune",
@@ -184,10 +193,6 @@
       "text": "Conquered Ironspire and scored 1."
     }
   ],
-  "fieldsUnread": [
-    "exhausted"
-  ],
-  "warnings": [
-    "exhausted/readied state could not be read from any card on this board; every `exhausted` field is null (unknown, not readied). Run discovery.js on a live board to find the real marker."
-  ]
+  "fieldsUnread": [],
+  "warnings": []
 }

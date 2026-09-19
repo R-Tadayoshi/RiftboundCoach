@@ -76,10 +76,11 @@ tests.
 | Field | Type | Notes |
 |---|---|---|
 | `cardId` | string \| null | the board's own element id; stable within a match |
-| `faceDown` | boolean | |
+| `index` | number \| null | position within the zone, off `data-drop-index` |
+| `faceDown` | boolean | from `data-face-down`, falling back to the art path and alt text |
 | `code` | string \| null | e.g. `OGN-004`; null when face-down, and for tokens |
 | `name` | string \| null | localised — prefer `code` for lookups |
-| `exhausted` | boolean \| null | **see Unknowns** |
+| `exhausted` | boolean \| null | from `data-exhausted`. `null` is *unknown*, never *readied* — a card in hand legitimately reads null, since it carries no exhaustion |
 
 ## The visibility rule
 
@@ -113,50 +114,58 @@ site continuing to behave:
    error rather than sent. It should never fire; that's exactly why it runs
    every time rather than once.
 
-## Unknowns — what still needs a live board
+## How a card is read
 
-These could not be confirmed, because the environment this was written in
-cannot reach `play.riftatlas.com` and no public source reads them.
+Confirmed against a live board (goldfish, room YR6KC, turn 3).
 
-### `exhausted` — not yet readable
+A card is rendered as a nest of elements, **two or three of which repeat the
+same `data-card-id`**: a hover-preview anchor, the drawn card button, and in
+hand a further wrapper. Reading every `[data-card-id]` counted one card two or
+three times — the first live capture reported 12 cards in a hand holding 4, 11
+in a base holding 5, and 10 runes where 5 were on the table.
 
-`exhausted` is confirmed as the field name in the site's own state model, along
-with `toggle_exhausted` and `set_rune_exhausted` mutations. What is **not**
-known is the DOM attribute it renders to: the card and zone components live in
-chunks that load only inside an authenticated match, and `/game` is disallowed
-in robots.txt, so they could not be read from outside a real game. `extension/src/exhaust.js` probes the markers such a board
-plausibly uses — `data-exhausted`, `data-state="exhausted"`, a rotation class —
-and answers **`null` when none is present**.
+So elements are grouped by `data-card-id` and one is chosen per card, preferring
+`[data-board-card-visual="true"]` — the card button, and the element that
+carries `data-exhausted` and `data-face-down`.
 
-**`null` means "could not read", not "readied."** A coach told a blocker is
-ready when it is exhausted gives worse advice than one told nothing. While the
-field is unread, `fieldsUnread` contains `"exhausted"` and a warning is
-attached to every snapshot.
+Zones also contain **furniture with a `data-card-id`** but no card:
+`base-area-marker:<playerId>` and `battlefield-marker:battlefieldA|B`. These
+have no image, so they were being counted as face-down cards — an empty base
+reported one hidden card. They are excluded by id.
 
-To close it: open a board with something exhausted and run `rbcDiscover()` in
-the console. The output names the attribute that differs. One real rule then
-replaces the three guesses.
+### Attributes on the card button
 
-### Not yet extracted at all
+| Attribute | Use |
+|---|---|
+| `data-card-id` | identity within the match |
+| `data-drop-zone` | which zone it is in |
+| `data-drop-index` | position within the zone |
+| `data-board-card-visual` | marks the real card element |
+| `data-visual-owner` | `self` / `opponent` |
+| `data-exhausted` | `true` / `false`; absent in hand |
+| `data-face-down` | `true` / `false` |
 
-- **Might / power** on units — but base values come from the card API
-  (`stats.energy`, `stats.might`, `stats.power`), so only values *modified in
-  play* need the board at all.
-- **Energy** and per-turn resource availability.
-- **Rune readiness** — which runes are spent vs available. The `runeArea` zone
-  is read, but "open runes" in the sense the coach needs (what tricks they can
-  still hold up) depends on the exhaustion marker above.
-- **Battlefield identity and conquest state** — `battlefieldA`/`battlefieldB`
-  are read as card containers, but which battlefield they are, and who is
-  contesting them, is not yet parsed. The match log carries conquests as text
+Zone containers carry `data-drop-zone-root` and `data-zone-owner`; the zones
+present on a live board are `battlefieldA`, `battlefieldB`, `runeArea`, `base`,
+`hand`, `trash`, `champion`, plus `legend` as a drop zone.
+
+Tokens (Gold, and the like) are served from a different path, so they carry a
+`name` but `code` is null. That is correct — they were never cards in a deck.
+
+## Still unknown
+
+- **Might / power modified in play.** Base values come from the card API
+  (`stats.energy`, `stats.might`, `stats.power`), so only in-play modifications
+  would need the board, and nothing in the capture showed where they live.
+- **Energy / power pool.** The board displays `FLOATING — Energy / Power` in the
+  bottom-left; the attribute behind it has not been located.
+- **Battlefield identity.** `battlefieldA` / `battlefieldB` are read as card
+  containers, but which battlefield each one *is* (e.g. "Rockfall Path") and
+  who is contesting it are not parsed. The match log carries conquests as text
   in the meantime.
+- **How a real opponent's hidden hand renders.** A goldfish has no opponent at
+  all — every opponent zone came back empty — and in Two-Sided Practice you are
+  meant to see both hands. Only a true two-player match settles this. It is not
+  blocking: the filter withholds an opponent's hand whatever is rendered there.
 
-**`data-card-id`, `data-zone-owner` and `data-drop-zone-root` are themselves
-unconfirmed.** They come from the stats tracker's source and do not appear in
-the chunks reachable from outside a match. They may be current, or the tracker
-may be out of date — its own README warns the markup changes without notice.
-If the first live capture returns empty zones, this is why.
-
-`rbcDiscover()` is the tool for all of these. It dumps attribute *names* and
-`data-*` values on card elements, omitting `alt` and `src`, so its output is
-safe to paste into a chat without handing over anyone's hand.
+`rbcDiscover()` (Ctrl+Shift+D) is the tool for all of these.

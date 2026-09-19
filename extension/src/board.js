@@ -144,13 +144,17 @@
     return fromRoot === null ? trackScore(side) : fromRoot;
   }
 
-  const MENU_SUFFIX_RE = /\s*menu$/i;
+  /* The badge spells its purpose into the label after the name: "Zarkhil
+   * profile and actions" on the live board, "… menu" in an older build. Both
+   * are stripped, longest first, so "profile and actions" is not left behind
+   * as part of somebody's name. */
+  const LABEL_SUFFIX_RE = /\s*(?:profile and actions|menu)$/i;
 
   function playerName(side) {
     const label = doc()
       .querySelector(SEL.badge[side])
       ?.getAttribute("aria-label");
-    const name = (label || "").replace(MENU_SUFFIX_RE, "").trim();
+    const name = (label || "").replace(LABEL_SUFFIX_RE, "").trim();
     return name || null;
   }
 
@@ -168,7 +172,41 @@
     return hit ? hit[1] : null;
   };
 
-  /* Every card element in one side's zone, face-up and face-down alike.
+  /* Pseudo-cards: zone furniture that carries a data-card-id without being a
+   * card. Counting the base-area marker as a face-down card is how a goldfish
+   * board reported one hidden card in an empty base. */
+  const MARKER_ID_RE = /^(?:battlefield|base-area)-marker:/;
+
+  /* Cards are rendered as a small nest of elements, several of which repeat
+   * the same data-card-id: a hover-preview anchor, the drawn card button, and
+   * in hand a further wrapper. Taking every match counted one card two or
+   * three times, so the elements are grouped by id and one is chosen.
+   *
+   * The card button is the one worth having — it is the element carrying
+   * data-exhausted and data-face-down — so it is preferred, with the richest
+   * remaining element as the fallback if the markup moves again. */
+  function bestElementFor(elements) {
+    return (
+      elements.find((el) => el.getAttribute("data-board-card-visual") === "true") ||
+      elements.find(
+        (el) =>
+          el.hasAttribute("data-exhausted") || el.hasAttribute("data-face-down")
+      ) ||
+      elements[0]
+    );
+  }
+
+  /* Face-down, in order of authority: the board says so outright, or the art
+   * is a card back, or the alt text names one. The first is the real answer
+   * and the other two are what we had before finding it. */
+  function readFaceDown(el, img, alt, src) {
+    const declared = el.getAttribute("data-face-down");
+    if (declared !== null) return declared !== "false";
+    return !img || FACE_DOWN_RE.test(alt) || CARD_BACK_SRC_RE.test(src);
+  }
+
+  /* Every card in one side's zone, face-up and face-down alike, one entry per
+   * card.
    *
    * Face-down cards are returned rather than dropped, carrying no identity.
    * How many cards sit in a zone is public — you can see your opponent holding
@@ -176,33 +214,45 @@
    * here to be leaked: `code` and `name` stay null. The split is enforced
    * again in visibility.js rather than trusted to this one place. */
   function zoneCards(side, zone) {
-    const out = [];
     let roots;
     try {
       roots = doc().querySelectorAll(
         `[data-drop-zone-root="${zone}"][data-zone-owner="${side}"]`
       );
     } catch (_) {
-      return out;
+      return [];
     }
+
+    // Insertion order is DOM order, which the drop index then refines.
+    const byId = new Map();
     for (const zoneRoot of roots) {
       for (const el of zoneRoot.querySelectorAll("[data-card-id]")) {
-        const img = el.querySelector("img[alt]");
-        const alt = img?.alt || "";
-        const src = img ? img.currentSrc || img.src || "" : "";
-        // Either signal is enough: the alt text is localised and the art path
-        // is not, so neither is trustworthy alone.
-        const faceDown =
-          !img || FACE_DOWN_RE.test(alt) || CARD_BACK_SRC_RE.test(src);
-        out.push({
-          cardId: el.getAttribute("data-card-id") || null,
-          faceDown,
-          code: faceDown ? null : codeFromSrc(src),
-          name: faceDown ? null : alt || null,
-          exhausted: root.RBCExhaust.read(el),
-        });
+        const id = el.getAttribute("data-card-id");
+        if (!id || MARKER_ID_RE.test(id)) continue;
+        if (!byId.has(id)) byId.set(id, []);
+        byId.get(id).push(el);
       }
     }
+
+    const out = [];
+    for (const [id, elements] of byId) {
+      const el = bestElementFor(elements);
+      const img = el.querySelector("img[alt]");
+      const alt = img?.alt || "";
+      const src = img ? img.currentSrc || img.src || "" : "";
+      const faceDown = readFaceDown(el, img, alt, src);
+      const index = parseInt(el.getAttribute("data-drop-index") ?? "", 10);
+      out.push({
+        cardId: id,
+        index: Number.isFinite(index) ? index : null,
+        faceDown,
+        code: faceDown ? null : codeFromSrc(src),
+        name: faceDown ? null : alt || null,
+        exhausted: root.RBCExhaust.read(el),
+      });
+    }
+
+    out.sort((a, b) => (a.index ?? 1e9) - (b.index ?? 1e9));
     return out;
   }
 
@@ -230,21 +280,33 @@
     return { at, actor, text };
   }
 
-  /** The log oldest-first, or an empty array when there is nothing to read. */
+  /* The log oldest-first, or an empty array when there is nothing to read.
+   *
+   * Reading every `ul li` on the page collected the same entry more than once,
+   * because the panel is rendered more than once — which put duplicate
+   * "Ended their turn." lines into the history. Each list is parsed on its own
+   * and the one with the most rows wins, so a second rendering is ignored
+   * rather than concatenated. */
   function logEntries(limit) {
-    let rows;
+    let lists;
     try {
-      rows = doc().querySelectorAll("ul li");
+      lists = doc().querySelectorAll("ul");
     } catch (_) {
       return [];
     }
-    const entries = [];
-    for (const li of rows) {
-      const entry = parseLogRow(li);
-      if (entry) entries.push(entry);
+
+    let best = [];
+    for (const list of lists) {
+      const entries = [];
+      for (const li of list.querySelectorAll("li")) {
+        const entry = parseLogRow(li);
+        if (entry) entries.push(entry);
+      }
+      if (entries.length > best.length) best = entries;
     }
-    entries.reverse(); // the panel renders newest-first
-    return typeof limit === "number" ? entries.slice(-limit) : entries;
+
+    best.reverse(); // the panel renders newest-first
+    return typeof limit === "number" ? best.slice(-limit) : best;
   }
 
   root.RBCBoard = {
@@ -272,6 +334,9 @@
     cardAlt,
     codeFromSrc,
     zoneCards,
+    MARKER_ID_RE,
+    bestElementFor,
+    readFaceDown,
     parseLogRow,
     logEntries,
   };

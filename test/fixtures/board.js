@@ -15,20 +15,58 @@ const ART = (code) =>
   `https://assets.riftatlas-workers.com/riftbound/cards/small-v2/${code}.webp`;
 const CARD_BACK = "https://assets.riftatlas-workers.com/riftbound/static/cardback-blue.png";
 
-function cardHtml(card) {
-  if (card.faceDown) {
-    return `<div data-card-id="${card.id}"${card.attrs || ""}>
-      <img alt="Hidden card" src="${CARD_BACK}">
-    </div>`;
-  }
-  return `<div data-card-id="${card.id}"${card.attrs || ""}>
-    <img alt="${card.name}" src="${ART(card.code)}">
-  </div>`;
+/* One card, as the live board actually nests it: a hover-preview anchor and
+ * the drawn card button BOTH carry the same data-card-id, and hand adds a
+ * third wrapper. Reproducing that is the point — reading every [data-card-id]
+ * counted one card two or three times, and a fixture with one element per card
+ * could never have caught it.
+ *
+ * The button is the element carrying data-exhausted and data-face-down. */
+function cardHtml(card, zone, index) {
+  const faceDown = !!card.faceDown;
+  const img = faceDown
+    ? `<img alt="Hidden card" src="${CARD_BACK}">`
+    : `<img alt="${card.name}" src="${ART(card.code)}">`;
+  // Cards in hand cannot be exhausted, so the board omits the attribute.
+  const exhausted =
+    zone === "hand" || card.exhausted === undefined
+      ? ""
+      : ` data-exhausted="${card.exhausted}"`;
+  const outerWrapper =
+    zone === "hand"
+      ? `<div data-card-id="${card.id}" data-drop-zone="${zone}">`
+      : "";
+  const closeOuter = zone === "hand" ? "</div>" : "";
+
+  return `${outerWrapper}
+    <div class="relative w-full h-full" data-hover-preview-anchor="true"
+         data-card-id="${card.id}" data-drop-zone="${zone}">
+      <button type="button" data-card-id="${card.id}" data-drop-zone="${zone}"
+              data-drop-index="${index}" data-board-card-visual="true"
+              data-visual-owner="self"${exhausted}
+              data-face-down="${faceDown}"${card.attrs || ""}>
+        ${img}
+      </button>
+    </div>${closeOuter}`;
+}
+
+/* Zone furniture that carries a data-card-id without being a card. Counting
+ * one as a face-down card is how an empty base reported a hidden card. */
+function markerHtml(zone, owner) {
+  const id =
+    zone === "base" ? `base-area-marker:${owner}` : `battlefield-marker:${zone}`;
+  return `<div data-card-id="${id}" data-drop-zone="${zone}"
+               role="img" aria-label="Your base area"></div>`;
 }
 
 function zoneHtml(side, zone, cards) {
+  const marker =
+    zone === "base" || zone === "battlefieldA" || zone === "battlefieldB"
+      ? markerHtml(zone, side === "self" ? "plr_self" : "plr_opp")
+      : "";
   return `<div data-drop-zone-root="${zone}" data-zone-owner="${side}">
-    ${cards.map(cardHtml).join("\n")}
+    ${marker}
+    ${cards.map((c, i) => cardHtml(c, zone, i)).join("\n")}
   </div>`;
 }
 
@@ -78,12 +116,12 @@ const DEFAULTS = {
         { id: "s-h1", code: "OGN-004", name: "Sweeping Blade" },
         { id: "s-h2", code: "OGN-017", name: "Windwall" },
       ],
-      base: [{ id: "s-b1", code: "OGN-031", name: "Steadfast Guard" }],
-      battlefieldA: [{ id: "s-fa1", code: "OGN-052", name: "Ionian Duelist" }],
+      base: [{ id: "s-b1", code: "OGN-031", name: "Steadfast Guard", exhausted: false }],
+      battlefieldA: [{ id: "s-fa1", code: "OGN-052", name: "Ionian Duelist", exhausted: true }],
       battlefieldB: [],
       runeArea: [
-        { id: "s-r1", code: "OGN-201", name: "Fury Rune" },
-        { id: "s-r2", faceDown: true },
+        { id: "s-r1", code: "OGN-201", name: "Fury Rune", exhausted: true },
+        { id: "s-r2", faceDown: true, exhausted: false },
       ],
       trash: [{ id: "s-t1", code: "OGN-077", name: "Last Breath" }],
     },
@@ -140,8 +178,8 @@ function build(overrides) {
       <div data-testid="room-code" data-room-code="${o.roomCode}"></div>
       <span data-testid="turn-step" data-turn-step="${o.turnStep}">${o.turnStep}</span>
       <div data-testid="realtime-status" data-status="${o.connectionState}"></div>
-      <button data-player-identity-trigger="player" aria-label="${o.selfName} menu"></button>
-      <button data-player-identity-trigger="opponent" aria-label="${o.opponentName} menu"></button>
+      <button data-player-identity-trigger="player" aria-label="${o.selfName} profile and actions"></button>
+      <button data-player-identity-trigger="opponent" aria-label="${o.opponentName} profile and actions"></button>
       ${sideHtml("self")}
       ${sideHtml("opponent")}
       ${logHtml(o.log)}

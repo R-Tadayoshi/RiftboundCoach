@@ -128,3 +128,80 @@ test("no board means no reading, not an exception", () => {
   assert.deepEqual(Board.logEntries(), []);
   assert.equal(Board.roomCode(), null);
 });
+
+/* Regressions from the first live goldfish capture (room YR6KC, turn 3).
+ * The board reported 12 cards in a hand holding 4, 11 in a base holding 5, and
+ * 10 runes where 5 were on the table. */
+
+test("one card yields one entry, however many elements repeat its id", () => {
+  fixture.build();
+  const hand = Board.zoneCards("self", "hand");
+  assert.equal(hand.length, 2, "two cards in hand, not two times the nesting");
+  assert.equal(
+    new Set(hand.map((c) => c.cardId)).size,
+    hand.length,
+    "every entry is a distinct card"
+  );
+});
+
+test("the chosen element is the card button, so its state comes with it", () => {
+  fixture.build();
+  const base = Board.zoneCards("self", "base");
+  assert.equal(base.length, 1);
+  assert.equal(
+    base[0].exhausted,
+    false,
+    "the preview-anchor wrapper would have answered null here"
+  );
+});
+
+test("zone furniture is not counted as a card", () => {
+  fixture.build();
+  // The base carries a base-area marker element with a data-card-id.
+  const base = Board.zoneCards("self", "base");
+  assert.ok(
+    !base.some((c) => Board.MARKER_ID_RE.test(c.cardId)),
+    "no marker survives into the card list"
+  );
+  assert.ok(!base.some((c) => c.faceDown), "and none is reported as a hidden card");
+
+  // An empty battlefield still carries its marker, and must read as empty.
+  assert.deepEqual(Board.zoneCards("self", "battlefieldB"), []);
+});
+
+test("data-face-down outranks the art and the alt text", () => {
+  fixture.build();
+  const btn = globalThis.document.querySelector(
+    '[data-drop-zone-root="hand"][data-zone-owner="self"] [data-board-card-visual="true"]'
+  );
+  btn.setAttribute("data-face-down", "true");
+  const card = Board.zoneCards("self", "hand")[0];
+  assert.equal(card.faceDown, true, "the board's own answer wins");
+  assert.equal(card.code, null, "and no identity comes with it");
+});
+
+test("cards come back in drop-index order", () => {
+  fixture.build();
+  const runes = Board.zoneCards("self", "runeArea");
+  assert.deepEqual(runes.map((c) => c.index), [0, 1]);
+});
+
+test("the player name drops the label's trailing purpose", () => {
+  fixture.build();
+  assert.equal(
+    Board.playerName("self"),
+    "curtyo",
+    '"<name> profile and actions" is a label, not a name'
+  );
+});
+
+test("a second rendering of the log does not duplicate its entries", () => {
+  fixture.build();
+  const doc = globalThis.document;
+  const original = doc.querySelector("ul");
+  original.parentElement.appendChild(original.cloneNode(true));
+
+  const log = Board.logEntries();
+  assert.equal(log.length, 3, "the richest single list, not both concatenated");
+  assert.deepEqual(log.map((e) => e.actor), ["system", "self", "opponent"]);
+});

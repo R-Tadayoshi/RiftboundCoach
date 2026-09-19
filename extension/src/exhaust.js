@@ -1,27 +1,25 @@
-/* Exhausted / readied state — the one field we could not confirm off-site.
+/* Exhausted / readied state.
  *
- * Neither public extension reads it: the stats tracker never needed to know
- * whether a unit was exhausted, so its source says nothing about how the site
- * marks one. Rather than invent a selector and report confident nonsense, this
- * probe tries the markers such a board plausibly uses and answers `null` when
- * none of them is present.
+ * The board marks it with `data-exhausted="true"|"false"` on the card button —
+ * confirmed against a live goldfish board, where the runes spent that turn
+ * read true and an untapped unit read false. That is the real rule; the rest
+ * below are kept only as fallbacks against a future restyle.
  *
- * `null` means "could not read", not "readied". Callers must treat it as
- * unknown and say so, because a coach told a blocker is ready when it is
- * exhausted gives worse advice than one told nothing.
- *
- * To close this: run discovery.js on a live board with something exhausted and
- * read what actually changes. Then the guesses below become one real rule.
+ * `null` still means "could not read", never "readied". Two cases produce it
+ * legitimately: a card in hand, which carries no exhaustion because it cannot
+ * have any, and an element that is not the card button. Callers must not read
+ * null as ready — a coach told a blocker is available when it is exhausted
+ * gives worse advice than one told nothing.
  */
 (function (root) {
   "use strict";
 
   /* Ordered most to least likely. Each answers true, false, or null, and the
-   * first non-null answer wins, so a board that marks exhaustion explicitly is
-   * never second-guessed by a weaker signal further down. */
+   * first non-null answer wins, so the confirmed attribute is never
+   * second-guessed by a weaker signal further down. */
   const PROBES = [
-    // An explicit attribute is what a board with this much data-* markup
-    // would most likely use.
+    // data-exhausted is the live board's own marker. The other two names are
+    // speculative siblings, kept cheap in case it is ever renamed.
     function attr(el) {
       for (const name of ["data-exhausted", "data-is-exhausted", "data-tapped"]) {
         const v = el.getAttribute(name);

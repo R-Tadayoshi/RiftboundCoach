@@ -68,32 +68,31 @@ test("no board means no snapshot", () => {
   assert.equal(Snapshot.build(), null);
 });
 
-test("flags exhaustion as unread when the board carries no marker", () => {
+test("reads exhaustion off data-exhausted, the board's own marker", () => {
   fixture.build();
   const s = Snapshot.build();
-  assert.deepEqual(s.fieldsUnread, ["exhausted"]);
-  assert.ok(s.warnings.some((w) => /exhausted\/readied state could not be read/.test(w)));
-  for (const card of s.zones.self.base.visible) {
-    assert.equal(card.exhausted, null, "null means unknown, not readied");
+  assert.equal(s.zones.self.base.visible[0].exhausted, false);
+  assert.equal(s.zones.self.battlefieldA.visible[0].exhausted, true);
+  assert.deepEqual(s.fieldsUnread, [], "readable, so nothing is flagged unread");
+  assert.deepEqual(s.warnings, []);
+});
+
+test("a card in hand reads null, because it carries no exhaustion", () => {
+  fixture.build();
+  for (const card of Snapshot.build().zones.self.hand.visible) {
+    assert.equal(card.exhausted, null, "absent is unknown, never readied");
   }
 });
 
-test("reads exhaustion when the board does mark it", () => {
-  fixture.build({
-    zones: {
-      self: {
-        base: [
-          { id: "s-b1", code: "OGN-031", name: "Steadfast Guard", attrs: ' data-exhausted="true"' },
-          { id: "s-b2", code: "OGN-032", name: "Fresh Recruit", attrs: ' data-exhausted="false"' },
-        ],
-      },
-    },
-  });
+test("flags exhaustion as unread when the marker disappears entirely", () => {
+  // What a restyle that renames data-exhausted would look like.
+  fixture.build();
+  for (const el of globalThis.document.querySelectorAll("[data-exhausted]")) {
+    el.removeAttribute("data-exhausted");
+  }
   const s = Snapshot.build();
-  const base = s.zones.self.base.visible;
-  assert.equal(base[0].exhausted, true);
-  assert.equal(base[1].exhausted, false);
-  assert.deepEqual(s.fieldsUnread, [], "no longer unread once a marker is present");
+  assert.deepEqual(s.fieldsUnread, ["exhausted"]);
+  assert.ok(s.warnings.some((w) => /the markup moved/.test(w)));
 });
 
 test("exhaust probe answers null rather than guessing", () => {

@@ -83,10 +83,17 @@ test("a snapshot that fails its own audit is refused, not emitted", () => {
   // Make the board hand us an opponent hand card rendered face-up.
   const doc = globalThis.document;
   const oppHand = doc.querySelector('[data-drop-zone-root="hand"][data-zone-owner="opponent"]');
-  oppHand.querySelector("[data-card-id] img").setAttribute("alt", "Their Secret");
+  // The board declaring it face-up is the case that matters: that is the
+  // client handing us something it should not have.
   oppHand
-    .querySelector("[data-card-id] img")
-    .setAttribute("src", "https://assets.riftatlas-workers.com/cards/OGN/OGN-999.webp");
+    .querySelector('[data-board-card-visual="true"]')
+    .setAttribute("data-face-down", "false");
+  const img = oppHand.querySelector("img");
+  img.setAttribute("alt", "Their Secret");
+  img.setAttribute(
+    "src",
+    "https://assets.riftatlas-workers.com/riftbound/cards/OGN-999.webp"
+  );
 
   const snap = Snapshot.build();
   // filterZone already withheld it, so this emits cleanly with a warning
