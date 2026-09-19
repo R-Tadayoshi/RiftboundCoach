@@ -69,8 +69,16 @@
         phase: root.RBCBoard.phase(board),
         mode: root.RBCBoard.mode(board),
         turnNumber: root.RBCBoard.turnNumber(board),
+        turnStep: root.RBCBoard.turnStep(),
         activeSide: active,
+        activeSeat: root.RBCBoard.activeSeat(board),
         isMyTurn: active === null ? null : active === "self",
+      },
+      /* How the snapshot was obtained, rather than what it says. A consumer
+       * that cares whether the state is current reads this. */
+      connection: {
+        state: root.RBCBoard.connectionState(),
+        resetToken: root.RBCBoard.resetToken(board),
       },
       players: {
         self: playerBlock(board, "self"),
@@ -82,6 +90,14 @@
       warnings,
     };
 
+    const conn = snapshot.connection.state;
+    if (conn && conn !== "open") {
+      warnings.push(
+        `the realtime connection is "${conn}", not "open" — this board may be ` +
+          `stale and should not be treated as the current game state.`
+      );
+    }
+
     const leaks = root.RBCVisibility.audit(snapshot);
     if (leaks.length) {
       // Refuse to emit rather than emit something that failed its own check.
@@ -90,10 +106,15 @@
     return snapshot;
   }
 
-  /** Is this opponent a real second player, or an empty seat / goldfish? */
+  /* Is a second player seated, or is this a goldfish?
+   *
+   * The board writes the literal string "unknown" into
+   * data-opponent-player-id when nobody is across the table, so a plain
+   * truthiness check reads an empty seat as a live opponent — which would
+   * pause capture during exactly the solo practice this is built for.
+   * RBCBoard.playerId rejects the sentinel. */
   function hasLiveOpponent(board) {
-    const id = board?.dataset?.opponentPlayerId;
-    return typeof id === "string" && id.length > 0;
+    return root.RBCBoard.playerId(board, "opponent") !== null;
   }
 
   root.RBCSnapshot = { SCHEMA_VERSION, build, hasLiveOpponent };

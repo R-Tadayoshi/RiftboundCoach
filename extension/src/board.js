@@ -44,10 +44,14 @@
    * opponent's hand however hard it tries. */
   const FACE_DOWN_RE = /hidden card|card back|rune back/i;
 
-  /* Card art is served under a per-set path, and the file name is the card
-   * code. Tokens come from a different path and yield no code, which is right:
-   * they were never cards in a deck. */
-  const CODE_RE = /\/cards\/[^/]+\/([A-Za-z0-9]+-[A-Za-z0-9]+)\.webp/;
+  /* Card art is served from assets.riftatlas-workers.com/riftbound/cards as
+   * <CODE>.webp, optionally behind a size-variant segment ("small-v2",
+   * "original"). Both shapes are accepted; tokens and UI art live elsewhere
+   * and yield no code, which is right — they were never cards in a deck. */
+  const CODE_RE = /\/cards\/(?:[a-z0-9-]+\/)?([A-Za-z]{2,4}-\d{1,4})\.webp/i;
+
+  /* The card-back art, as a second opinion on face-down alongside alt text. */
+  const CARD_BACK_SRC_RE = /cardback[a-z-]*\.(?:png|webp|jpg)/i;
 
   // Match-log rows carry a coloured bar naming who acted.
   const ACTOR_SELF = "120,221,183"; // green
@@ -60,30 +64,60 @@
     return doc().querySelector(SEL.root);
   }
 
+  /* The board fills an attribute it cannot answer with the literal string
+   * "unknown" rather than leaving it off, so every read has to reject it. A
+   * missed one is not a missing value but a confident wrong one: `"unknown"`
+   * is a non-empty string, and reads as a seated opponent, a live player id,
+   * a real room code. */
+  const UNKNOWN = "unknown";
+
+  function strAttr(el, key) {
+    const v = el?.dataset?.[key];
+    return typeof v === "string" && v !== "" && v !== UNKNOWN ? v : null;
+  }
+
   function intAttr(board, key) {
-    const n = parseInt(board?.dataset?.[key] ?? "", 10);
+    const raw = strAttr(board, key);
+    const n = parseInt(raw ?? "", 10);
     return Number.isFinite(n) ? n : null;
   }
 
-  const phase = (board) => board?.dataset?.roomPhase || null;
-  const mode = (board) => board?.dataset?.roomMode || null;
+  const phase = (board) => strAttr(board, "roomPhase");
+  const mode = (board) => strAttr(board, "roomMode");
   const turnNumber = (board) => intAttr(board, "turnNumber");
+
+  /* Which step of the turn we are in. Rendered on its own element rather than
+   * the board root. */
+  const turnStep = () =>
+    strAttr(doc().querySelector('[data-testid="turn-step"]'), "turnStep");
+
+  /* The realtime socket's state: idle | connecting | open | closed | error.
+   * A snapshot taken while this is not "open" may be stale. */
+  const connectionState = () =>
+    strAttr(doc().querySelector('[data-testid="realtime-status"]'), "status");
+
+  /* Bumps when the server replaces authoritative state wholesale. A change
+   * means the previous snapshot's sequence numbers no longer compare. */
+  const resetToken = (board) => strAttr(board, "authoritativeResetToken");
+
+  const activeSeat = (board) => strAttr(board, "activePlayerSeat");
 
   /* Bumps once per authoritative game action. It is the change trigger the
    * whole extractor runs on: one snapshot per real event, no polling. */
-  const sequence = (board) => board?.dataset?.authoritativeSequence ?? null;
+  const sequence = (board) => strAttr(board, "authoritativeSequence");
 
-  const roomCode = () =>
-    doc().querySelector(SEL.roomCode)?.dataset?.roomCode || null;
+  const roomCode = () => strAttr(doc().querySelector(SEL.roomCode), "roomCode");
+
+  /** The id naming one side, or null when the board says "unknown". */
+  const playerId = (board, side) =>
+    strAttr(board, side === "self" ? "viewerPlayerId" : "opponentPlayerId");
 
   /** "self", "opponent", or null when the board names nobody we know. */
   function activeSide(board) {
-    const d = board?.dataset;
-    if (!d || !d.activePlayerId) return null;
-    if (d.viewerPlayerId && d.activePlayerId === d.viewerPlayerId) return "self";
-    if (d.opponentPlayerId && d.activePlayerId === d.opponentPlayerId) {
-      return "opponent";
-    }
+    const active = strAttr(board, "activePlayerId");
+    if (!active) return null;
+    if (active === playerId(board, "self")) return "self";
+    if (active === playerId(board, "opponent")) return "opponent";
     return null;
   }
 
@@ -155,11 +189,15 @@
       for (const el of zoneRoot.querySelectorAll("[data-card-id]")) {
         const img = el.querySelector("img[alt]");
         const alt = img?.alt || "";
-        const faceDown = !img || FACE_DOWN_RE.test(alt);
+        const src = img ? img.currentSrc || img.src || "" : "";
+        // Either signal is enough: the alt text is localised and the art path
+        // is not, so neither is trustworthy alone.
+        const faceDown =
+          !img || FACE_DOWN_RE.test(alt) || CARD_BACK_SRC_RE.test(src);
         out.push({
           cardId: el.getAttribute("data-card-id") || null,
           faceDown,
-          code: faceDown ? null : codeFromSrc(img.currentSrc || img.src),
+          code: faceDown ? null : codeFromSrc(src),
           name: faceDown ? null : alt || null,
           exhausted: root.RBCExhaust.read(el),
         });
@@ -214,12 +252,20 @@
     ZONES,
     SIDES,
     FACE_DOWN_RE,
+    CARD_BACK_SRC_RE,
+    UNKNOWN,
+    strAttr,
     gameRoot,
     phase,
     mode,
     turnNumber,
+    turnStep,
+    connectionState,
+    resetToken,
+    activeSeat,
     sequence,
     roomCode,
+    playerId,
     activeSide,
     score,
     playerName,

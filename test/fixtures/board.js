@@ -9,12 +9,16 @@
 
 const { JSDOM } = require("jsdom");
 
-const ART = (code) => `https://assets.riftatlas-workers.com/cards/OGN/${code}.webp`;
+// The real shape, read out of the site's own bundle: a flat <CODE>.webp under
+// /riftbound/cards, optionally behind a size variant ("small-v2", "original").
+const ART = (code) =>
+  `https://assets.riftatlas-workers.com/riftbound/cards/small-v2/${code}.webp`;
+const CARD_BACK = "https://assets.riftatlas-workers.com/riftbound/static/cardback-blue.png";
 
 function cardHtml(card) {
   if (card.faceDown) {
     return `<div data-card-id="${card.id}"${card.attrs || ""}>
-      <img alt="Hidden card" src="https://assets.riftatlas-workers.com/ui/card-back.webp">
+      <img alt="Hidden card" src="${CARD_BACK}">
     </div>`;
   }
   return `<div data-card-id="${card.id}"${card.attrs || ""}>
@@ -51,7 +55,11 @@ const DEFAULTS = {
   phase: "in_game",
   mode: "constructed",
   turnNumber: 7,
+  turnStep: "action",
   sequence: "412",
+  resetToken: "rt-1",
+  activeSeat: "seat-a",
+  connectionState: "open",
   roomCode: "QWLM",
   viewerId: "p-self",
   opponentId: "p-opp",
@@ -122,12 +130,16 @@ function build(overrides) {
          data-room-mode="${o.mode}"
          data-turn-number="${o.turnNumber}"
          data-authoritative-sequence="${o.sequence}"
+         data-authoritative-reset-token="${o.resetToken}"
+         data-active-player-seat="${o.activeSeat}"
          data-viewer-player-id="${o.viewerId}"
          data-opponent-player-id="${o.opponentId}"
          data-active-player-id="${o.activeId}"
          data-viewer-score="${o.selfScore}"
          data-opponent-score="${o.opponentScore}">
       <div data-testid="room-code" data-room-code="${o.roomCode}"></div>
+      <span data-testid="turn-step" data-turn-step="${o.turnStep}">${o.turnStep}</span>
+      <div data-testid="realtime-status" data-status="${o.connectionState}"></div>
       <button data-player-identity-trigger="player" aria-label="${o.selfName} menu"></button>
       <button data-player-identity-trigger="opponent" aria-label="${o.opponentName} menu"></button>
       ${sideHtml("self")}
@@ -148,4 +160,15 @@ function buildEmpty() {
   return dom;
 }
 
-module.exports = { build, buildEmpty, DEFAULTS, ART };
+/* A goldfish: the board stamps the string "unknown" into every field it
+ * cannot fill, rather than leaving the attribute off. */
+function buildGoldfish() {
+  return build({
+    opponentId: "unknown",
+    activeId: "unknown",
+    opponentScore: "unknown",
+    turnNumber: "unknown",
+  });
+}
+
+module.exports = { build, buildEmpty, buildGoldfish, DEFAULTS, ART, CARD_BACK };
