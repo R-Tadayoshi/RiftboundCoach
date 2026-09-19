@@ -227,7 +227,15 @@ Tokens (Gold, and the like) are served from a different path, so they carry a
   `data-log-card-name="true"` and battlefield references with
   `data-battlefield-marker="true"`, so entries could be parsed into structured
   events rather than kept as text. Currently they are kept as text.
-- **Deck counts.** Shown on each deck pile (31 / 33 in the capture); not read.
+- **Deck counts.** Shown on each deck pile (31 / 33 in the capture); not read
+  yet, and wanted specifically. Knowing the opponent's deck is down to 15 cards
+  with two copies of a trick already in their trash is most of the read on
+  whether the third is in hand — thinning math is a large part of what playing
+  around a card means. A live board shows two piles per player, a large count
+  (main deck) and a small one (rune deck); neither is a drop zone and neither
+  carries a `data-card-id`, so `deckPiles()` locates them by their card-back
+  art instead. Which pile is which must come from the markup, not from
+  comparing magnitudes.
 - **Who is contesting a battlefield**, beyond which units stand in each zone —
   the conquest thresholds shown on the board (`0/5`, `6/6`, `1/7`) are not
   parsed.

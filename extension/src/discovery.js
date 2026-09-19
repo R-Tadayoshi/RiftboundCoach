@@ -121,6 +121,53 @@
     return hits;
   }
 
+  /* The deck piles and their counts.
+   *
+   * Neither pile is a drop zone and neither carries a data-card-id, so nothing
+   * in the zone or card census reaches them. They are found instead by their
+   * art: each is drawn as a card back with a number beside it.
+   *
+   * A live board shows two piles per player — a large count (the main deck)
+   * and a small one (the rune deck) — but which is which cannot be settled by
+   * size, so this reports the structure around each and lets the answer come
+   * from the markup rather than from a guess about magnitudes.
+   *
+   * Emits the numbers and the attributes around them, never card identities. */
+  function deckPiles() {
+    const out = [];
+    let imgs;
+    try {
+      imgs = root.document.querySelectorAll("img");
+    } catch (_) {
+      return out;
+    }
+
+    for (const img of imgs) {
+      const src = img.currentSrc || img.src || "";
+      if (!/cardback/i.test(src)) continue;
+
+      // Climb a few levels, recording what each one says. The count is
+      // usually a sibling of the art rather than inside it.
+      const chain = [];
+      let el = img;
+      for (let depth = 0; depth < 4 && el; depth += 1) {
+        const text = (el.textContent || "").trim();
+        chain.push({
+          depth,
+          tag: el.tagName?.toLowerCase(),
+          attrs: describe(el).attrs,
+          text: text.length <= 40 ? text : `${text.slice(0, 40)}…`,
+          numbers: (text.match(/\d+/g) || []).slice(0, 4),
+          ariaLabel: el.getAttribute?.("aria-label") || null,
+        });
+        el = el.parentElement;
+      }
+      out.push({ art: /cardback[a-z-]*/i.exec(src)?.[0] || "cardback", chain });
+      if (out.length >= 8) break;
+    }
+    return out;
+  }
+
   /** Everything at once, ready to paste. */
   function report() {
     return {
@@ -131,6 +178,7 @@
       selfRunes: sampleZone("self", "runeArea", 3),
       battlefieldArea: battlefieldArea(),
       resourceReadouts: resourceReadouts(),
+      deckPiles: deckPiles(),
       zonesPresent: [
         ...new Set(
           [...root.document.querySelectorAll("[data-drop-zone-root]")].map((el) =>
@@ -148,6 +196,7 @@
     sampleZone,
     battlefieldArea,
     resourceReadouts,
+    deckPiles,
     report,
   };
 })(typeof window !== "undefined" ? window : globalThis);
