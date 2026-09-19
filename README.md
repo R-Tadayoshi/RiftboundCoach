@@ -99,6 +99,28 @@ Card text comes from [RiftScribe](https://riftscribe.gg/api-docs) — free, no
 key — and is cached in `state/cards.json`, so a match after the first is
 almost entirely local.
 
+### Archetype memory
+
+There is no public meta or decklist API for Riftbound, and a hand-written meta
+file would be invented rather than known. So the coach learns instead: every
+public card an opponent commits to the board is recorded against their
+champion, in `state/archetypes.json`.
+
+Play against Jayce four times and the file knows what Jayce decks *in your pod*
+are playing — grounded in what you actually face, improving on its own, with
+nothing fabricated. It is plain JSON, so you can correct it or seed it by hand
+with cards you know an archetype plays but have not yet met.
+
+Only public cards are learned — base, battlefields, runes and trash. A hand is
+never learned, because it was withheld before this layer saw it. Runes are
+skipped, since every deck of a domain runs them.
+
+The prior enters the prompt labelled as a prior, with its sample size
+(`seen in 2 of 4`), and the model is told to say "they have shown X before",
+never "they have X" — and that this game's board overrides it. A prior is not
+read from the current game before it is used, so a card first seen a moment ago
+is not handed back as if history had established it.
+
 ### What the coach is told it cannot do
 
 The prompt states that the opponent's hand is not visible and gives only its

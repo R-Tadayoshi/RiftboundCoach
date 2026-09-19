@@ -20,6 +20,11 @@ How to think:
 - Use their trash and deck count for card-availability reads. Two copies of a
   trick already spent and a thin deck makes the third less likely; an untouched
   deck makes it more so.
+- If you are given PREVIOUSLY SEEN cards for their champion, treat it as a
+  prior from past games, not as their current list. It is evidence about what
+  the archetype tends to play, weakened by how few games it rests on, and
+  overridden by this game's board. Say "they have shown X before" — never
+  "they have X".
 - Say what to hold up defensively, and what it costs to hold it.
 
 Hard rules:
@@ -29,6 +34,7 @@ Hard rules:
   ready runes and what their deck has already shown.
 - If a field reads null, it is unknown, not zero and not ready. Say you cannot
   tell rather than filling the gap.
+- Never invent a card. Only name cards given to you in this message.
 - Be brief. Six sentences at most, no preamble, no restating the board.`;
 
 function describeRunes(runes) {
@@ -77,7 +83,18 @@ function describeCard(card) {
   return card.text ? `${head}: ${card.text}` : head;
 }
 
-function buildUserMessage(summary, cardText) {
+function describePrior(prior) {
+  if (!prior) return "";
+  const lines = prior.cards
+    .slice(0, 14)
+    .map((c) => `  - ${c.name} (seen in ${c.seen} of ${c.of})`)
+    .join("\n");
+  return `\nPREVIOUSLY SEEN FROM ${prior.champion.toUpperCase()} — across ${
+    prior.matchesPlayed
+  } past game(s), public cards only. A prior, not their list:\n${lines}\n`;
+}
+
+function buildUserMessage(summary, cardText, prior) {
   const { me, them, battlefields, turn } = summary;
 
   const relevant = new Set();
@@ -95,6 +112,7 @@ function buildUserMessage(summary, cardText) {
     .map((card) => `- ${describeCard(card)}`)
     .join("\n");
 
+  const priorBlock = describePrior(prior);
   return `TURN ${turn.number ?? "?"} (${turn.step ?? "?"}) — ${
     turn.isMyTurn === true ? "my turn" : turn.isMyTurn === false ? "their turn" : "turn owner unknown"
   }
@@ -120,6 +138,7 @@ THEM — ${them.name ?? "?"} (${them.champion ?? them.legend ?? "?"})
       : "nothing yet"
   }
 
+${priorBlock}
 BATTLEFIELDS
   A — ${battlefields.A.name ?? "?"}: mine = ${describeUnits(battlefields.A.mine)}; theirs = ${describeUnits(battlefields.A.theirs)}
   B — ${battlefields.B.name ?? "?"}: mine = ${describeUnits(battlefields.B.mine)}; theirs = ${describeUnits(battlefields.B.theirs)}
@@ -131,4 +150,12 @@ ${summary.fieldsUnread.length ? `\nUNREADABLE THIS TURN: ${summary.fieldsUnread.
 What is the line?`;
 }
 
-module.exports = { SYSTEM, buildUserMessage, describeRunes, describeUnits, describeHand, describeCard };
+module.exports = {
+  SYSTEM,
+  buildUserMessage,
+  describeRunes,
+  describeUnits,
+  describeHand,
+  describeCard,
+  describePrior,
+};

@@ -169,3 +169,111 @@ test("board units still report exhaustion, including when unreadable", () => {
   assert.equal(describeUnits([{ name: "A", exhausted: true }]), "A (exhausted)");
   assert.equal(describeUnits([{ name: "B", exhausted: null }]), "B (state unknown)");
 });
+
+/* Archetype memory: what this champion has actually shown, across matches. */
+
+const archetypes = require("../coach/archetypes.js");
+
+/* The fixture merges an override onto its defaults, so every zone is blanked
+ * explicitly here: otherwise the default board's cards are learned too and the
+ * assertion is about the fixture rather than the code. */
+const EMPTY_ZONES = {
+  hand: [], base: [], battlefieldA: [], battlefieldB: [], runeArea: [], trash: [],
+};
+
+const vsJayce = (roomCode, oppZones) => {
+  fixture.build({
+    mode: "solo_lab",
+    opponentId: "plr_x",
+    roomCode,
+    opponentChampion: "Jayce, Brilliant Inventor",
+    zones: { opponent: { ...EMPTY_ZONES, ...oppZones } },
+  });
+  return Snapshot.build();
+};
+
+test("records only the opponent's public cards", () => {
+  const store = {};
+  archetypes.observe(
+    vsJayce("AAA", {
+      base: [{ id: "b1", code: "OGN-099", name: "Garbage Grabber" }],
+      hand: [{ id: "h1", code: "OGN-138", name: "Catalyst of Aeons" }],
+    }),
+    store
+  );
+  const serialised = JSON.stringify(store);
+  assert.ok(serialised.includes("OGN-099"), "a card on their board is learned");
+  assert.ok(!serialised.includes("OGN-138"), "a card in their hand is never learned");
+});
+
+test("runes are not recorded — every deck of a domain has them", () => {
+  const store = {};
+  archetypes.observe(vsJayce("AAA", { runeArea: [{ id: "r", code: "OGN-126", name: "Body Rune" }] }), store);
+  const key = Object.keys(store)[0];
+  assert.deepEqual(store[key].cards, {});
+});
+
+test("a card played twice in one game counts as one game", () => {
+  const store = {};
+  const snap = vsJayce("AAA", {
+    base: [
+      { id: "b1", code: "OGN-099", name: "Garbage Grabber" },
+      { id: "b2", code: "OGN-099", name: "Garbage Grabber" },
+    ],
+  });
+  archetypes.observe(snap, store);
+  archetypes.observe(snap, store); // same match, captured again
+  const prior = archetypes.priorFor(snap, store);
+  assert.equal(prior.matchesPlayed, 1);
+  assert.equal(prior.cards[0].seen, 1);
+});
+
+test("frequency builds across matches", () => {
+  const store = {};
+  archetypes.observe(vsJayce("AAA", { base: [{ id: "b", code: "OGN-099", name: "Garbage Grabber" }] }), store);
+  archetypes.observe(vsJayce("BBB", { base: [{ id: "b", code: "OGN-099", name: "Garbage Grabber" }] }), store);
+  archetypes.observe(vsJayce("CCC", { base: [{ id: "c", code: "VEN-075", name: "Platewyrm Egg" }] }), store);
+
+  // Three past games. The current one (DDD) is deliberately NOT counted: the
+  // loop reads the prior before folding this game in, so a card first seen a
+  // moment ago is not handed back as if history had established it.
+  const prior = archetypes.priorFor(vsJayce("DDD", {}), store);
+  assert.equal(prior.matchesPlayed, 3);
+  assert.deepEqual(prior.cards[0], {
+    code: "OGN-099",
+    name: "Garbage Grabber",
+    seen: 2,
+    of: 3,
+  });
+});
+
+test("the current game is not counted into its own prior", () => {
+  const store = {};
+  const snap = vsJayce("NOW", { base: [{ id: "b", code: "OGN-099", name: "Garbage Grabber" }] });
+  assert.equal(archetypes.priorFor(snap, store), null, "nothing known before this game");
+  archetypes.observe(snap, store);
+  assert.equal(archetypes.priorFor(snap, store).matchesPlayed, 1, "known only afterwards");
+});
+
+test("no history means no prior, rather than an empty one", () => {
+  // "You have seen nothing" invites reading absence as evidence.
+  assert.equal(archetypes.priorFor(vsJayce("ZZZ", {}), {}), null);
+});
+
+test("the prior is labelled as a prior, with its sample size", () => {
+  const { describePrior } = require("../coach/prompt.js");
+  const text = describePrior({
+    champion: "Jayce, Brilliant Inventor",
+    matchesPlayed: 4,
+    cards: [{ code: "OGN-099", name: "Garbage Grabber", seen: 2, of: 4 }],
+  });
+  assert.match(text, /A prior, not their list/);
+  assert.match(text, /seen in 2 of 4/);
+  assert.equal(describePrior(null), "", "no prior adds nothing to the prompt");
+});
+
+test("the model is told how to weigh a prior, and not to invent cards", () => {
+  assert.match(SYSTEM, /treat it as a\s+prior from past games, not as their current list/);
+  assert.match(SYSTEM, /never\s+"they have X"/);
+  assert.match(SYSTEM, /Never invent a card/);
+});

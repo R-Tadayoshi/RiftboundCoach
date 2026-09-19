@@ -15,6 +15,7 @@ const { summarize, codesToResolve } = require("./summarize.js");
 const { SYSTEM, buildUserMessage } = require("./prompt.js");
 const { ask, DEFAULT_MODEL } = require("./openrouter.js");
 const cards = require("./cards.js");
+const archetypes = require("./archetypes.js");
 
 const SIDECAR = process.env.RBC_SIDECAR || "http://127.0.0.1:8787";
 const POLL_MS = Number(process.env.RBC_POLL_MS || 1500);
@@ -75,8 +76,14 @@ async function coach(snapshot) {
   lastSequence = snapshot.sequence;
 
   const summary = summarize(snapshot);
+
+  /* Read the prior BEFORE folding this game in, so a card first seen a moment
+   * ago is not handed back as if past games had established it. */
+  const prior = archetypes.priorFor(snapshot);
+  archetypes.observe(snapshot);
+
   const cardText = await cards.resolve(codesToResolve(snapshot));
-  const user = buildUserMessage(summary, cardText);
+  const user = buildUserMessage(summary, cardText, prior);
 
   console.log(banner(snapshot));
 
