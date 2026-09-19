@@ -48,6 +48,9 @@ test/               39 tests over a jsdom board fixture
 
 ## Running it
 
+See [SETUP.md](SETUP.md) for the step-by-step, including the console-only path
+that needs no sidecar.
+
 Start the sidecar:
 
 ```bash

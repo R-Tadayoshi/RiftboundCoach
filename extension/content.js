@@ -111,9 +111,23 @@
       ],
     });
     schedule();
-    // Expose the discovery helper for the console, nothing else.
+
+    /* Console helpers, for working out the markup. Both are read-only and
+     * neither posts anywhere, so they work during a two-player match without
+     * touching `soloOnly`: that guard gates what reaches the coaching
+     * pipeline, not what you can look at on your own screen.
+     *
+     * `rbcSnapshot()` runs the same visibility filter as a real capture, so
+     * what it returns is already safe to paste — an opponent's hand is a
+     * count and nothing else. */
     root.rbcDiscover = () => root.RBCDiscovery.report();
-    console.info("[rbc] watching. Run rbcDiscover() for the attribute surface.");
+    root.rbcSnapshot = () => root.RBCSnapshot.build({ logLimit: CONFIG.logLimit });
+
+    console.info(
+      "[rbc] watching.\n" +
+        "  rbcDiscover()  - attribute surface, for finding selectors\n" +
+        "  rbcSnapshot()  - the state as it would be captured (never sent)"
+    );
   }
 
   if (root.document.readyState === "loading") {
