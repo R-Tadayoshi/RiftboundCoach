@@ -21,14 +21,27 @@ Then in Chrome:
 3. Click **Load unpacked** and select the **`extension/`** folder inside the
    folder you just cloned — not the top-level folder
 4. Open play.riftatlas.com and start a game
-5. Press F12 for the console and run:
+5. Play a few turns, exhaust a unit, then press:
 
-```js
-rbcDiscover()    // attribute surface — what the board actually carries
-rbcSnapshot()    // the state as it would be captured, without sending it
-```
+| Keys | What it does |
+|---|---|
+| **Ctrl+Shift+D** | attribute surface — what the board actually carries |
+| **Ctrl+Shift+S** | the state as it would be captured, without sending it |
 
-Right-click the result → **Copy object**, and paste it back to me.
+Each one prints to the console **and copies itself to your clipboard**, so
+paste it straight back to me.
+
+### Why keys and not `rbcDiscover()`
+
+A content script runs in an *isolated world*. Anything it defines is invisible
+to the DevTools console's default page context, so typing `rbcDiscover()` there
+gives `ReferenceError: rbcDiscover is not defined` even though the extension is
+working perfectly.
+
+The keystrokes are handled inside the extension's own world, so they always
+work. If you'd rather type the function names, switch the Console's context
+dropdown (the one reading **`top`**) to **"Riftbound Coach — state extractor"**
+first.
 
 `rbcDiscover()` omits `alt` and `src`, and `rbcSnapshot()` runs the same
 visibility filter as a real capture, so neither output contains card

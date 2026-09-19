@@ -112,21 +112,58 @@
     });
     schedule();
 
-    /* Console helpers, for working out the markup. Both are read-only and
-     * neither posts anywhere, so they work during a two-player match without
-     * touching `soloOnly`: that guard gates what reaches the coaching
-     * pipeline, not what you can look at on your own screen.
+    /* Discovery helpers, for working out the markup.
      *
-     * `rbcSnapshot()` runs the same visibility filter as a real capture, so
-     * what it returns is already safe to paste — an opponent's hand is a
-     * count and nothing else. */
+     * These are bound to keystrokes rather than left as console globals
+     * because a content script runs in an isolated world: anything it hangs
+     * on `window` is invisible to the console's default page context, so
+     * `rbcDiscover()` there is a ReferenceError that looks like a broken
+     * install. A keypress is handled by this script, in its own world, and
+     * its console.log lands in the one console the user is already looking
+     * at.
+     *
+     * They are still exposed as globals for anyone who does switch the
+     * console's context, but nothing depends on that.
+     *
+     * Both are read-only and neither posts anywhere, so they work during a
+     * two-sided or two-player match without touching `soloOnly`: that guard
+     * gates what reaches the coaching pipeline, not what you may look at on
+     * your own screen. `rbcSnapshot()` runs the same visibility filter as a
+     * real capture, so its output is already safe to paste. */
     root.rbcDiscover = () => root.RBCDiscovery.report();
     root.rbcSnapshot = () => root.RBCSnapshot.build({ logLimit: CONFIG.logLimit });
 
+    async function dump(label, value) {
+      const text = JSON.stringify(value, null, 2);
+      console.log(`[rbc] ${label}:`, value);
+      console.log(`[rbc] ${label} as text (copy from here):\n${text}`);
+      try {
+        // A keypress is a user gesture, so the clipboard is available.
+        await navigator.clipboard.writeText(text);
+        status(`${label} copied to clipboard`);
+      } catch (_) {
+        status(`${label} printed to console`);
+      }
+    }
+
+    root.document.addEventListener("keydown", (e) => {
+      if (!e.ctrlKey || !e.shiftKey) return;
+      const key = (e.key || "").toLowerCase();
+      if (key === "d") {
+        e.preventDefault();
+        dump("discovery", root.rbcDiscover());
+      } else if (key === "s") {
+        e.preventDefault();
+        dump("snapshot", root.rbcSnapshot());
+      }
+    });
+
     console.info(
-      "[rbc] watching.\n" +
-        "  rbcDiscover()  - attribute surface, for finding selectors\n" +
-        "  rbcSnapshot()  - the state as it would be captured (never sent)"
+      "[rbc] watching. The console's default context cannot see this script's\n" +
+        "     globals, so use the keys rather than typing the function names:\n" +
+        "       Ctrl+Shift+D  - attribute surface, for finding selectors\n" +
+        "       Ctrl+Shift+S  - the state as it would be captured (never sent)\n" +
+        "     Both print here and copy to the clipboard."
     );
   }
 
