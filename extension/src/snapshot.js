@@ -10,6 +10,11 @@
 
   const SCHEMA_VERSION = 1;
 
+  /* Bumped whenever the reading changes. It rides along in every snapshot so
+   * a capture can be told apart from one taken by an older copy still alive in
+   * the page — several can be, and they are not distinguishable by eye. */
+  const EXTRACTOR_VERSION = "0.4.0";
+
   function playerBlock(board, side) {
     return {
       name: root.RBCBoard.playerName(side),
@@ -83,8 +88,12 @@
       unread.push("resources.self");
     }
 
+    const decks = root.RBCBoard.decks();
+    if (decks.opponent.main === null) unread.push("decks.opponent.main");
+
     const snapshot = {
       schemaVersion: SCHEMA_VERSION,
+      extractorVersion: opts.extractorVersion || EXTRACTOR_VERSION,
       capturedAt: new Date(opts.now ?? Date.now()).toISOString(),
       sequence: root.RBCBoard.sequence(board),
       match: {
@@ -108,6 +117,7 @@
         opponent: playerBlock(board, "opponent"),
       },
       resources: root.RBCBoard.resources(),
+      decks: root.RBCBoard.decks(),
       battlefields: battlefieldBlocks(),
       zones,
       log: root.RBCBoard.logEntries(opts.logLimit ?? 40),
@@ -170,6 +180,7 @@
 
   root.RBCSnapshot = {
     SCHEMA_VERSION,
+    EXTRACTOR_VERSION,
     SOLO_MODES,
     build,
     hasLiveOpponent,

@@ -358,6 +358,88 @@
     return out;
   }
 
+  // ---------- deck piles ----------
+  //
+  // Neither pile is a drop zone and neither carries a data-card-id, so nothing
+  // in the zone read reaches them. Each is an <img data-rift-image-kind=
+  // "card-back"> with its count in an ancestor a few levels up, whose text is
+  // nothing but the number.
+  //
+  // Card backs are drawn elsewhere too, so a card-back image with no numeric
+  // ancestor is not a pile and drops out here.
+  const DECK_ART_RE = /cardback-([a-z]+)/i;
+  const COUNT_ONLY_RE = /^\d{1,3}$/;
+
+  function pileCount(img) {
+    let el = img;
+    for (let depth = 0; depth < 4 && el; depth += 1) {
+      const text = (el.textContent || "").trim();
+      if (COUNT_ONLY_RE.test(text)) return parseInt(text, 10);
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  /** Every card-back pile that states a count, with its art and its side. */
+  function deckPiles() {
+    const out = [];
+    let imgs;
+    try {
+      imgs = doc().querySelectorAll('img[data-rift-image-kind="card-back"]');
+    } catch (_) {
+      return out;
+    }
+    for (const img of imgs) {
+      const count = pileCount(img);
+      if (count === null) continue;
+      const src = img.currentSrc || img.src || "";
+      out.push({
+        count,
+        art: (DECK_ART_RE.exec(src)?.[1] || "").toLowerCase() || null,
+        side: ownerOf(img),
+      });
+    }
+    return out;
+  }
+
+  /* Main deck and rune deck per side.
+   *
+   * Each player has two piles, told apart by their art: the rune deck is drawn
+   * on the white back, the main deck on a coloured one. Where the art does not
+   * settle it, the larger pile is taken as the main deck — a rune deck is at
+   * most twelve, so the two are rarely close — and when neither rule applies
+   * the count is left null rather than guessed.
+   *
+   * Guessing is worth avoiding here specifically. The read this feeds is
+   * "two copies in the trash and fifteen cards left, so the third is probably
+   * in hand", and a rune count passed off as a deck count inverts it. */
+  function decks() {
+    const empty = () => ({ main: null, rune: null });
+    const out = { self: empty(), opponent: empty() };
+    const piles = deckPiles();
+
+    for (const side of SIDES) {
+      const mine = piles.filter((p) => p.side === side);
+      if (!mine.length) continue;
+
+      const rune = mine.filter((p) => p.art === "white");
+      const main = mine.filter((p) => p.art && p.art !== "white");
+
+      if (rune.length === 1 && main.length === 1) {
+        out[side] = { main: main[0].count, rune: rune[0].count };
+        continue;
+      }
+      if (mine.length === 2) {
+        const [bigger, smaller] = [...mine].sort((a, b) => b.count - a.count);
+        out[side] = { main: bigger.count, rune: smaller.count };
+        continue;
+      }
+      if (rune.length === 1) out[side].rune = rune[0].count;
+      if (main.length === 1) out[side].main = main[0].count;
+    }
+    return out;
+  }
+
   /* Log rows: <li><span aria-hidden [actor colour]></span><p>…<span>16:11</span>
    * <span>Conquered X and scored 1.</span>…</p></li>, newest first. */
   function parseLogRow(li) {
@@ -445,6 +527,8 @@
     nameFromLabel,
     resources,
     ownerOf,
+    deckPiles,
+    decks,
   };
 })(typeof window !== "undefined" ? window : globalThis);
 

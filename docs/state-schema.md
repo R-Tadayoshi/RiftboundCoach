@@ -13,7 +13,9 @@ One snapshot is emitted per authoritative game action. A worked example is in
 | `match` | object | match-level facts |
 | `connection` | object | how the snapshot was obtained, not what it says |
 | `players` | object | `self` and `opponent` blocks |
+| `extractorVersion` | string | which copy of the extension read this (several can be alive in one page) |
 | `resources` | object | floating energy/power per side |
+| `decks` | object | main and rune pile counts per side |
 | `battlefields` | object | the two battlefields in play, which are shared rather than owned |
 | `zones` | object | `self` and `opponent`, each holding the six zones |
 | `log` | array | match log, oldest first, capped to the last 40 by default |
@@ -85,6 +87,24 @@ buttons — `"Floating-Energy0+-Power0+"` — so the numbers are parsed out.
 Sides are attributed by climbing to the first ancestor holding one side's zone
 roots and not the other's. Document order is deliberately not used: it would
 silently swap the two whenever the layout changed.
+
+## `decks.<side>`
+
+`main` and `rune`, the two pile counts. This is what supports a read like *two
+copies already in the trash and fifteen cards left, so the third is probably in
+hand* — thinning math the coach should be doing rather than the player.
+
+Neither pile is a drop zone nor carries a `data-card-id`. Each is an
+`<img data-rift-image-kind="card-back">` with its count in an ancestor whose
+text is nothing but the number. Card backs are drawn elsewhere too, so one with
+no numeric ancestor is not a pile.
+
+The two are told apart **by their art**: the rune deck uses the white back, the
+main deck a coloured one. Where the art does not settle it, the larger pile is
+taken as the main deck — a rune deck is at most twelve — and where neither rule
+applies the count is `null` rather than guessed. Size alone would be wrong
+exactly when it matters, since a thinned main deck can fall below the rune
+deck; there is a test for that case.
 
 ## `battlefields.<battlefieldA|battlefieldB>`
 
@@ -220,6 +240,12 @@ Tokens (Gold, and the like) are served from a different path, so they carry a
 
 ## Still unknown
 
+- **Attachments.** Equipment reads as a separate card in the battlefield rather
+  than as attached to the unit it modifies: a capture with "Equipped Guardian
+  Angel to Irelia, Fervent" in the log shows both in `battlefieldB`, Irelia
+  with a `drop-index` and Guardian Angel with `index: null`. That is a hint,
+  not a marker, so the relationship is currently not modelled — the coach sees
+  two cards where the board has one unit wearing one piece of equipment.
 - **Might / power modified in play.** Base values come from the card API
   (`stats.energy`, `stats.might`, `stats.power`), so only in-play modifications
   would need the board, and nothing in the capture showed where they live.

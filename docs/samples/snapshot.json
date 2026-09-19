@@ -1,5 +1,6 @@
 {
   "schemaVersion": 1,
+  "extractorVersion": "0.4.0",
   "capturedAt": "2026-09-19T16:11:03.000Z",
   "sequence": "412",
   "match": {
@@ -38,6 +39,16 @@
     "opponent": {
       "energy": 0,
       "power": 0
+    }
+  },
+  "decks": {
+    "self": {
+      "main": 32,
+      "rune": 8
+    },
+    "opponent": {
+      "main": 33,
+      "rune": 6
     }
   },
   "battlefields": {

@@ -251,3 +251,46 @@ test("the readouts are attributed by ownership, not document order", () => {
   assert.deepEqual(r.self, { energy: 7, power: 3 }, "still yours after the swap");
   assert.deepEqual(r.opponent, { energy: 1, power: 0 });
 });
+
+/* Deck piles, from the solo_lab capture (room QJJJ3). Neither pile is a drop
+ * zone nor carries a data-card-id, so the zone read never reached them. */
+
+test("reads the main deck and rune deck per side", () => {
+  fixture.build();
+  const d = Board.decks();
+  assert.deepEqual(d.self, { main: 32, rune: 8 });
+  assert.deepEqual(d.opponent, { main: 33, rune: 6 });
+});
+
+test("a card back with no count is not a deck pile", () => {
+  fixture.build();
+  // The fixture puts a loose card back on each side; four piles, not six.
+  assert.equal(Board.deckPiles().length, 4);
+});
+
+test("the art tells the piles apart, not their sizes", () => {
+  // A main deck thinned below the rune deck: magnitude would swap them.
+  fixture.build({ selfDeck: 5, selfRunes: 9 });
+  assert.deepEqual(
+    Board.decks().self,
+    { main: 5, rune: 9 },
+    "a five-card deck is still the deck"
+  );
+});
+
+test("falls back to size only when the art does not settle it", () => {
+  fixture.build();
+  for (const img of globalThis.document.querySelectorAll("img[data-rift-image-kind]")) {
+    img.setAttribute("src", "https://x/riftbound/static/cardback-black.png");
+  }
+  const d = Board.decks();
+  assert.deepEqual(d.self, { main: 32, rune: 8 }, "larger pile taken as the deck");
+});
+
+test("a side with no piles reads null, not zero", () => {
+  fixture.build();
+  for (const img of globalThis.document.querySelectorAll("img[data-rift-image-kind]")) {
+    img.remove();
+  }
+  assert.deepEqual(Board.decks().self, { main: null, rune: null });
+});

@@ -32,6 +32,13 @@
   let lastStatus = "";
   let observer = null;
 
+  /* When the sidecar is not running, every game action produced a failed POST
+   * and a red line in the console. The request is what logs it — a caught
+   * rejection does not stop the browser reporting the network failure — so the
+   * only way to stop the noise is to stop asking for a while. */
+  const SIDECAR_RETRY_MS = 30000;
+  let sidecarDownUntil = 0;
+
   /* Reloading the extension without refreshing the page leaves the old content
    * script's world alive: its observer and listeners keep firing, but its
    * chrome.runtime is gone. Several reloads leave several of them, which is
@@ -71,6 +78,8 @@
   }
 
   async function send(snapshot) {
+    // Still inside a back-off: skip without asking, and without the red line.
+    if (Date.now() < sidecarDownUntil) return false;
     try {
       await fetch(`${SIDECAR}/state`, {
         method: "POST",
@@ -78,10 +87,12 @@
         body: JSON.stringify(snapshot),
         credentials: "omit",
       });
+      sidecarDownUntil = 0;
       return true;
     } catch (_) {
       // The sidecar not running is the ordinary case, not an error worth
       // shouting about — the user starts it when they want to capture.
+      sidecarDownUntil = Date.now() + SIDECAR_RETRY_MS;
       return false;
     }
   }
@@ -164,7 +175,18 @@
      * your own screen. `rbcSnapshot()` runs the same visibility filter as a
      * real capture, so its output is already safe to paste. */
     root.rbcDiscover = () => root.RBCDiscovery.report();
-    root.rbcSnapshot = () => root.RBCSnapshot.build({ logLimit: CONFIG.logLimit });
+    root.rbcSnapshot = () =>
+      root.RBCSnapshot.build({
+        logLimit: CONFIG.logLimit,
+        // The manifest is the truth about which copy this is.
+        extractorVersion: (() => {
+          try {
+            return chrome.runtime.getManifest().version;
+          } catch (_) {
+            return undefined;
+          }
+        })(),
+      });
 
     async function dump(label, value) {
       const text = JSON.stringify(value, null, 2);

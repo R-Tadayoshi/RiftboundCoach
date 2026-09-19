@@ -68,6 +68,23 @@ function battlefieldMarkerHtml(zone, name) {
           <button type="button" aria-label="Choose target from ${name}"></button>`;
 }
 
+/* A deck pile: a card-back image with its count in an ancestor whose text is
+ * nothing but the number. The rune deck is drawn on the white back, the main
+ * deck on a coloured one — that art is what tells the two apart. */
+function deckPileHtml(art, count) {
+  return `<div><div class="relative" aria-hidden="true"><div>
+    <img data-rift-image-kind="card-back"
+         src="https://assets.riftatlas-workers.com/riftbound/static/cardback-${art}.png">
+  </div></div><div>${count}</div></div>`;
+}
+
+/* A card back that is NOT a pile: no count anywhere above it. Reading these as
+ * piles would invent decks that do not exist. */
+function looseCardBackHtml() {
+  return `<div><img data-rift-image-kind="card-back"
+    src="https://assets.riftatlas-workers.com/riftbound/static/cardback-white.png"></div>`;
+}
+
 /* The floating readout, with the stepper buttons that run its text together
  * exactly as the live board does: "Floating-Energy0+-Power0+". */
 function resourcesHtml(energy, power) {
@@ -126,6 +143,10 @@ const DEFAULTS = {
   selfPower: 1,
   opponentEnergy: 0,
   opponentPower: 0,
+  selfDeck: 32,
+  selfRunes: 8,
+  opponentDeck: 33,
+  opponentRunes: 6,
   roomCode: "QWLM",
   viewerId: "p-self",
   opponentId: "p-opp",
@@ -196,6 +217,9 @@ function build(overrides) {
         side === "self" ? o.selfEnergy : o.opponentEnergy,
         side === "self" ? o.selfPower : o.opponentPower
       )}
+      ${deckPileHtml("blue", side === "self" ? o.selfDeck : o.opponentDeck)}
+      ${deckPileHtml("white", side === "self" ? o.selfRunes : o.opponentRunes)}
+      ${looseCardBackHtml()}
     </section>`;
 
   const html = `<!doctype html><html><body>
