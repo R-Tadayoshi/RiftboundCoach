@@ -27,17 +27,30 @@ const ONCE = args.has("--once");
 const EVERY = args.has("--every");
 const COMPARE = args.has("--compare");
 
-/* Whether a bigger model is worth it here is a question about THIS prompt on
- * YOUR boards, and no amount of reasoning about it substitutes for running the
- * same turn through a few and reading the answers. Override with RBC_COMPARE
- * as a comma-separated list of slugs. */
+/* Whether a bigger model — or a harder think — is worth it here is a question
+ * about THIS prompt on YOUR boards, and no amount of arguing about it
+ * substitutes for running the same turn through a few and reading the answers.
+ *
+ * An entry is a slug, optionally with an effort after an "@":
+ *
+ *   anthropic/claude-sonnet-5           the default effort
+ *   anthropic/claude-sonnet-5@high      the same model, thinking harder
+ *   anthropic/claude-sonnet-5@off       no thinking at all
+ *
+ * "@" rather than ":" because OpenRouter slugs use ":" themselves (:batch). */
 const COMPARE_MODELS = (
   process.env.RBC_COMPARE ||
   "anthropic/claude-haiku-4.5,anthropic/claude-sonnet-5,anthropic/claude-opus-5"
 )
   .split(",")
   .map((m) => m.trim())
-  .filter(Boolean);
+  .filter(Boolean)
+  .map((entry) => {
+    const at = entry.lastIndexOf("@");
+    return at > 0
+      ? { model: entry.slice(0, at), effort: entry.slice(at + 1), label: entry }
+      : { model: entry, effort: undefined, label: entry };
+  });
 
 /* Solo practice only, checked again here.
  *
@@ -109,18 +122,18 @@ async function coach(snapshot) {
   if (COMPARE) {
     // Sequential, not parallel: the point is to read them side by side, and a
     // rate limit hit halfway through a race tells you nothing.
-    for (const model of COMPARE_MODELS) {
+    for (const { model, effort, label } of COMPARE_MODELS) {
       const started = Date.now();
       try {
-        const { text, usage, reasoningTokens } = await ask({ system: SYSTEM, user, model });
+        const { text, usage, reasoningTokens } = await ask({ system: SYSTEM, user, model, effort });
         const secs = ((Date.now() - started) / 1000).toFixed(1);
         const thinking = reasoningTokens ? `, ${reasoningTokens} thinking` : "";
         console.log(
-          `\n### ${model}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok${thinking}` : ""})\n`
+          `\n### ${label}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok${thinking}` : ""})\n`
         );
         console.log(text + "\n");
       } catch (err) {
-        console.error(`\n### ${model} — failed: ${err.message}\n`);
+        console.error(`\n### ${label} — failed: ${err.message}\n`);
       }
     }
     return;

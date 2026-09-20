@@ -23,12 +23,27 @@ const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-5";
  * The cap is not what you pay — usage is — so it is set well clear of both. */
 const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 2000);
 
-/* Enough thought to check its arithmetic, not so much that advice arrives
- * after the turn is over. "none" for the fastest possible answer on models
- * that allow it; "medium" or "high" to let it work harder. */
+/* How hard the model thinks before answering.
+ *
+ * "low" is a GUESS, not a finding. The case for it: a turn has a clock, and
+ * the board handed to the model is small and fully specified, so there may not
+ * be much to think about. The case against it: the work that matters here is
+ * arithmetic — summing might at a battlefield, checking what a rune spread can
+ * actually pay for — and that is exactly what thinking buys.
+ *
+ * Reasoning tokens bill at the output rate, so effort costs real money on the
+ * larger models, though still cents per session. Settle it with
+ * `--compare` and RBC_COMPARE carrying "@effort" entries rather than taking
+ * this default's word for it. */
 const REASONING_EFFORT = process.env.RBC_REASONING || "low";
 
-async function ask({ system, user, model = DEFAULT_MODEL, apiKey = process.env.OPENROUTER_API_KEY }) {
+async function ask({
+  system,
+  user,
+  model = DEFAULT_MODEL,
+  effort = REASONING_EFFORT,
+  apiKey = process.env.OPENROUTER_API_KEY,
+}) {
   if (!apiKey) {
     throw new Error(
       "OPENROUTER_API_KEY is not set. Export it (or `set` it on Windows), or run with --dry-run to see the prompt without sending it."
@@ -43,7 +58,7 @@ async function ask({ system, user, model = DEFAULT_MODEL, apiKey = process.env.O
     ],
     max_tokens: MAX_TOKENS,
   };
-  if (REASONING_EFFORT !== "off") body.reasoning = { effort: REASONING_EFFORT };
+  if (effort && effort !== "off") body.reasoning = { effort };
 
   const res = await fetch(ENDPOINT, {
     method: "POST",

@@ -124,10 +124,39 @@ three with their latency and how much of it was thinking, for about two cents.
 
 Sonnet 5 and Opus 5 are reasoning models: they think before answering, and the
 thinking comes out of the same token budget as the reply. `RBC_MAX_TOKENS`
-(2000) is the budget and `RBC_REASONING` (`low`) is how hard they think —
-`off` for the fastest answer, `medium` or `high` to let them work. A budget too
-small for the thinking returns an empty message, and the error says so rather
-than reporting no answer.
+(2000) is the budget. A budget too small for the thinking returns an empty
+message, and the error says so rather than reporting no answer.
+
+### How hard should it think?
+
+`RBC_REASONING` defaults to `low`. **That is a guess, not a finding.**
+
+The case for low: a turn has a clock, and the board handed to the model is
+small and fully specified — there may not be much to think about.
+
+The case against: the work that matters here is *arithmetic* — summing might at
+a battlefield, checking what a rune spread can actually pay for — and getting
+it wrong is the failure that matters most. Thinking is exactly what buys that.
+
+Compare them on one board rather than guessing, with `@effort` entries:
+
+```bash
+set RBC_COMPARE=anthropic/claude-sonnet-5@off,anthropic/claude-sonnet-5@low,anthropic/claude-sonnet-5@high
+node coach/index.js --compare
+```
+
+Reasoning tokens bill at the output rate, so effort costs real money — though
+still cents. Per 40-turn session, at list prices:
+
+| | off | low | medium | high |
+|---|---|---|---|---|
+| haiku-4.5 | $0.10 | $0.16 | $0.34 | $0.70 |
+| sonnet-5 | $0.20 | $0.32 | $0.68 | $1.40 |
+| opus-5 | $0.50 | $0.80 | $1.70 | $3.50 |
+
+The thing to watch is whether high effort *counts better*, not whether it
+writes better. If the numbers are right at `low`, the extra thinking is buying
+prose.
 
 What to look for: does it **count correctly** — ready runes, might, what you
 can actually pay for — and does it commit to a line rather than listing
