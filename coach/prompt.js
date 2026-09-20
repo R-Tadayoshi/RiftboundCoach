@@ -20,7 +20,13 @@ How to think:
 - Use their trash and deck count for card-availability reads. Two copies of a
   trick already spent and a thin deck makes the third less likely; an untouched
   deck makes it more so.
-- If you are given PREVIOUSLY SEEN cards for their champion, treat it as a
+- When several POSSIBLE BUILDs are listed, the opponent is on at most one of
+  them. Use the EVIDENCE THIS GAME line to weigh them: a card they have played
+  that is absent from a build is evidence against it, not proof — tech cards
+  and sideboard swaps exist. If the evidence points one way, say which build
+  you are playing against and how confident that is. If it does not, say the
+  matchup is still open and name what would tell them apart.
+- If you are given cards SEEN BEFORE for their champion, treat it as a
   prior from past games, not as their current list. It is evidence about what
   the archetype tends to play, weakened by how few games it rests on, and
   overridden by this game's board. Say "they have shown X before" — never
@@ -104,6 +110,29 @@ function describePrior(prior) {
       `SEEN BEFORE FROM ${prior.champion.toUpperCase()} — across ${
         prior.matchesPlayed
       } past game(s), public cards only. A prior, not their list:\n${lines}`
+    );
+  }
+
+  for (const build of prior.variants || []) {
+    const { matches, sideOnly, absent } = build.evidence;
+    const evidence = [];
+    if (matches.length) evidence.push(`played so far and in this build: ${matches.join(", ")}`);
+    if (sideOnly.length) evidence.push(`in its sideboard only: ${sideOnly.join(", ")}`);
+    if (absent.length) evidence.push(`played but NOT in this build: ${absent.join(", ")}`);
+
+    const lines = build.cards
+      .slice(0, 26)
+      .map((c) => `  - ${c.name}${c.copies > 1 ? ` x${c.copies}` : ""}`)
+      .join("\n");
+
+    blocks.push(
+      `POSSIBLE BUILD "${build.name.toUpperCase()}" for ${prior.champion} — a list ` +
+        `you supplied, NOT confirmed for this opponent:\n${lines}` +
+        (build.battlefields.length ? `\n  battlefields: ${build.battlefields.join(", ")}` : "") +
+        (build.runes.length
+          ? `\n  runes: ${build.runes.map((r) => `${r.copies} ${r.name}`).join(", ")}`
+          : "") +
+        (evidence.length ? `\n  EVIDENCE THIS GAME: ${evidence.join("; ")}` : "\n  EVIDENCE THIS GAME: none yet")
     );
   }
 

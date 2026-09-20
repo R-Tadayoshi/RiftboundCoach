@@ -18,6 +18,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { baseCode } = require("./cards.js");
 
 const STORE =
   process.env.RBC_ARCHETYPES || path.resolve(__dirname, "..", "state", "archetypes.json");
@@ -61,7 +62,8 @@ function publicCards(snapshot) {
     for (const card of zones[zone]?.visible || []) {
       if (!card.code || !card.name) continue; // tokens carry no code
       if (RUNE_NAME_RE.test(card.name)) continue;
-      out.push({ code: card.code, name: card.name });
+      // An alternate printing is the same card; normalise before comparing.
+      out.push({ code: baseCode(card.code), name: card.name });
     }
   }
   return out;
@@ -122,8 +124,60 @@ function priorFor(snapshot, store, minMatches = 0) {
     .filter((c) => c.seeded && c.seen === 0)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  if (!observed.length && !seeded.length) return null;
-  return { champion: key, matchesPlayed: played, cards: observed, seeded };
+  const variants = variantsFor(entry, snapshot);
+
+  if (!observed.length && !seeded.length && !variants.length) return null;
+  return { champion: key, matchesPlayed: played, cards: observed, seeded, variants };
 }
 
-module.exports = { observe, priorFor, publicCards, archetypeKey, load, save, STORE, PUBLIC_ZONES };
+/* Which seeded build the cards on the table are consistent with.
+ *
+ * A champion can be piloted as more than one deck — the Heron build and the
+ * Protect-the-Queen build share a champion and little else — so builds are
+ * stored separately and never merged. A prior that says "they might have any
+ * of these eighty cards" is not a prior.
+ *
+ * What makes them useful is that this game narrows them. Every public card an
+ * opponent plays either appears in a build or does not, so a card outside a
+ * build is evidence against it. Reported as evidence, not as a verdict: a
+ * tech card or a sideboard swap should shade a read, not overturn it, and
+ * ruling a build out on one card would do more harm than the prior does good.
+ */
+function variantsFor(entry, snapshot) {
+  const builds = Object.values(entry.variants || {});
+  if (!builds.length) return [];
+
+  const seenNow = publicCards(snapshot || {});
+  return builds.map((build) => {
+    const inMain = (code) => code in (build.main || {});
+    const inSide = (code) => code in (build.sideboard || {});
+
+    const matches = seenNow.filter((c) => inMain(c.code)).map((c) => c.name);
+    const sideOnly = seenNow.filter((c) => !inMain(c.code) && inSide(c.code)).map((c) => c.name);
+    const absent = seenNow.filter((c) => !inMain(c.code) && !inSide(c.code)).map((c) => c.name);
+
+    return {
+      name: build.name,
+      legend: build.legend || null,
+      cards: Object.values(build.main || {})
+        .map((c) => ({ name: c.name, copies: c.copies }))
+        .sort((a, b) => b.copies - a.copies || a.name.localeCompare(b.name)),
+      battlefields: Object.values(build.battlefields || {}).map((c) => c.name),
+      runes: build.runes || [],
+      sideboard: Object.values(build.sideboard || {}).map((c) => c.name),
+      evidence: { matches: [...new Set(matches)], sideOnly: [...new Set(sideOnly)], absent: [...new Set(absent)] },
+    };
+  });
+}
+
+module.exports = {
+  observe,
+  priorFor,
+  variantsFor,
+  publicCards,
+  archetypeKey,
+  load,
+  save,
+  STORE,
+  PUBLIC_ZONES,
+};

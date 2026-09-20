@@ -413,3 +413,112 @@ test("the prompt shows the pairing and says it came from the log", () => {
   const msg = buildUserMessage(summarize(s), {});
   assert.match(msg, /Guardian Angel \(ready, equipped to Irelia, Fervent per the log\)/);
 });
+
+/* Decklists in the format Rift Atlas exports, and several builds per champion. */
+
+test("the exported decklist format parses into its sections", () => {
+  const d = seed.parseDeck(`
+Legend:
+1 Jayce, Defender of Tomorrow
+
+Champion:
+1 Jayce, Brilliant Inventor
+
+MainDeck:
+3 Promising Future
+2 Garbage Grabber
+
+Battlefields:
+1 Dragon Roost
+
+Runes:
+7 Body Rune
+
+Sideboard:
+2 Disposal Order
+`);
+  assert.deepEqual(d.champion, [{ count: 1, token: "Jayce, Brilliant Inventor" }]);
+  assert.equal(d.main.length, 2);
+  assert.deepEqual(d.battlefields, [{ count: 1, token: "Dragon Roost" }]);
+  assert.deepEqual(d.runes, [{ count: 7, token: "Body Rune" }]);
+  assert.deepEqual(d.sideboard, [{ count: 2, token: "Disposal Order" }]);
+});
+
+test("a list with no headings is still read as a main deck", () => {
+  const d = seed.parseDeck("3 OGN-099\n2 Dredge Up\n");
+  assert.equal(d.main.length, 2);
+  assert.equal(d.champion.length, 0);
+});
+
+test("an unrecognised heading keeps its cards rather than dropping them", () => {
+  assert.equal(seed.sectionFor("Tokens"), "main");
+  assert.equal(seed.sectionFor("MainDeck"), "main");
+  assert.equal(seed.sectionFor("  main deck  "), "main");
+});
+
+test("alternate printings normalise to one code", () => {
+  const { baseCode } = require("../coach/cards.js");
+  assert.equal(baseCode("VEN-068a"), "VEN-068", "alt art is the same card");
+  assert.equal(baseCode("VEN-068"), "VEN-068");
+  assert.equal(baseCode("OGN-004"), "OGN-004");
+});
+
+test("builds stay separate and are narrowed by what has been played", () => {
+  const store = {
+    "Jayce, Brilliant Inventor": {
+      matches: [],
+      cards: {},
+      variants: {
+        Control: {
+          name: "Control",
+          main: { "VEN-056": { name: "Clairvoyance", copies: 3 }, "OGN-134": { name: "Mobilize", copies: 3 } },
+          battlefields: {}, sideboard: {}, runes: [],
+        },
+        Heron: {
+          name: "Heron",
+          main: { "OGN-134": { name: "Mobilize", copies: 3 } },
+          battlefields: {}, sideboard: {}, runes: [],
+        },
+      },
+    },
+  };
+
+  const snap = vsJayce("NOW", {
+    trash: [
+      { id: "t1", code: "VEN-056", name: "Clairvoyance" },
+      { id: "t2", code: "OGN-134", name: "Mobilize" },
+    ],
+  });
+  const prior = archetypes.priorFor(snap, store);
+
+  const control = prior.variants.find((v) => v.name === "Control");
+  const heron = prior.variants.find((v) => v.name === "Heron");
+
+  assert.deepEqual(control.evidence.matches.sort(), ["Clairvoyance", "Mobilize"]);
+  assert.deepEqual(control.evidence.absent, [], "everything played fits Control");
+  assert.deepEqual(heron.evidence.absent, ["Clairvoyance"], "Clairvoyance is evidence against Heron");
+});
+
+test("a sideboard card is evidence of its own kind, not an absence", () => {
+  const store = {
+    "Jayce, Brilliant Inventor": {
+      matches: [], cards: {},
+      variants: {
+        Control: {
+          name: "Control", main: {}, battlefields: {},
+          sideboard: { "VEN-056": { name: "Clairvoyance", copies: 1 } }, runes: [],
+        },
+      },
+    },
+  };
+  const snap = vsJayce("NOW", { trash: [{ id: "t1", code: "VEN-056", name: "Clairvoyance" }] });
+  const build = archetypes.priorFor(snap, store).variants[0];
+  assert.deepEqual(build.evidence.sideOnly, ["Clairvoyance"]);
+  assert.deepEqual(build.evidence.absent, []);
+});
+
+test("the model is told a build is evidence, not a verdict", () => {
+  assert.match(SYSTEM, /the opponent is on at most one of\s+them/);
+  assert.match(SYSTEM, /evidence against it, not proof/);
+  assert.match(SYSTEM, /tech cards\s+and sideboard swaps exist/);
+});

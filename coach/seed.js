@@ -23,22 +23,62 @@
 "use strict";
 
 const fs = require("node:fs");
+const path = require("node:path");
 const cards = require("./cards.js");
 const archetypes = require("./archetypes.js");
 
 const CODE_RE = /^([A-Za-z]{2,4}-\d{1,4})$/;
 const LINE_RE = /^\s*(?:(\d+)\s*[xX]?\s+)?(.+?)\s*$/;
+const SECTION_RE = /^\s*([A-Za-z][A-Za-z ]*?)\s*:\s*$/;
 
-function parseList(text) {
-  const entries = [];
+/* Section headings as Rift Atlas exports them, mapped to where each belongs.
+ * Anything unrecognised is kept under `main` rather than dropped, so an export
+ * that grows a section does not silently lose cards. */
+const SECTIONS = {
+  legend: "legend",
+  champion: "champion",
+  maindeck: "main",
+  "main deck": "main",
+  deck: "main",
+  battlefields: "battlefields",
+  battlefield: "battlefields",
+  runes: "runes",
+  rune: "runes",
+  sideboard: "sideboard",
+};
+
+function sectionFor(heading) {
+  return SECTIONS[heading.trim().toLowerCase().replace(/\s+/g, " ")] ?? "main";
+}
+
+/* Parse a decklist into its sections.
+ *
+ * A list with no headings at all is read as a main deck, so the simple form
+ * (one card per line) still works. */
+function parseDeck(text) {
+  const out = { legend: [], champion: [], main: [], battlefields: [], runes: [], sideboard: [] };
+  let section = "main";
+
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.replace(/#.*$/, "").trim();
     if (!line) continue;
+
+    const heading = SECTION_RE.exec(line);
+    if (heading) {
+      section = sectionFor(heading[1]);
+      continue;
+    }
+
     const hit = LINE_RE.exec(line);
     if (!hit) continue;
-    entries.push({ count: Number(hit[1] || 1), token: hit[2].trim() });
+    out[section].push({ count: Number(hit[1] || 1), token: hit[2].trim() });
   }
-  return entries;
+  return out;
+}
+
+/** Kept for the plain one-card-per-line form. */
+function parseList(text) {
+  return parseDeck(text).main;
 }
 
 async function resolveEntry(token) {
@@ -57,39 +97,89 @@ async function resolveEntry(token) {
   return { card: found };
 }
 
-async function seed(champion, file) {
-  const entries = parseList(fs.readFileSync(file, "utf8"));
-  if (!entries.length) {
-    console.error(`[seed] ${file} has no card lines.`);
+async function resolveSection(entries, report) {
+  const out = {};
+  for (const { token, count } of entries) {
+    const { card, error } = await resolveEntry(token);
+    if (error) {
+      report.failures.push(error);
+      continue;
+    }
+    out[card.code] = { name: card.name, copies: count };
+    report.resolved += 1;
+  }
+  return out;
+}
+
+/* A variant's name: what was passed, else the file's own name. Two builds of
+ * one champion are different decks and must not be merged — a prior that says
+ * "they might have any of these eighty cards" is no prior at all. */
+function variantNameFor(explicit, file) {
+  if (explicit) return explicit;
+  const base = path.basename(file).replace(/\.[^.]+$/, "");
+  return base.replace(/[-_]+/g, " ").trim() || "unnamed";
+}
+
+async function seed(file, options = {}) {
+  const deck = parseDeck(fs.readFileSync(file, "utf8"));
+  const report = { resolved: 0, failures: [] };
+
+  /* The champion names the archetype, and the list already says who it is, so
+   * it is read from the file rather than retyped on the command line. */
+  let champion = options.champion || null;
+  if (!champion && deck.champion.length) {
+    const { card, error } = await resolveEntry(deck.champion[0].token);
+    if (error) report.failures.push(`champion: ${error}`);
+    else champion = card.name;
+  }
+  if (!champion) {
+    console.error(
+      "[seed] no champion. Give the list a `Champion:` section, or pass --champion \"Name\"."
+    );
     process.exitCode = 1;
     return;
   }
 
+  const variant = variantNameFor(options.variant, file);
   const store = archetypes.load();
   const entry = (store[champion] = store[champion] || { matches: [], cards: {} });
-  const failures = [];
-  let added = 0;
+  entry.variants = entry.variants || {};
 
-  for (const { token, count } of entries) {
-    const { card, error } = await resolveEntry(token);
-    if (error) {
-      failures.push(error);
-      continue;
-    }
-    const code = card.code;
-    const held = (entry.cards[code] = entry.cards[code] || { name: card.name, matches: [] });
-    held.name = card.name;
-    held.seeded = true;
-    held.copies = count;
-    added += 1;
-    console.log(`  + ${card.name.padEnd(28)} ${code}${count > 1 ? `  x${count}` : ""}`);
-  }
+  const [main, battlefields, sideboard] = [
+    await resolveSection(deck.main, report),
+    await resolveSection(deck.battlefields, report),
+    await resolveSection(deck.sideboard, report),
+  ];
+
+  entry.variants[variant] = {
+    name: variant,
+    source: path.basename(file),
+    legend: deck.legend[0]?.token || null,
+    main,
+    battlefields,
+    sideboard,
+    // Runes are not cards an opponent might surprise you with, but the split
+    // says which domains the deck can pay, which is worth carrying.
+    runes: deck.runes.map((r) => ({ name: r.token, copies: r.count })),
+  };
 
   archetypes.save(store);
-  console.log(`\n[seed] ${added} card(s) seeded for "${champion}".`);
-  if (failures.length) {
-    console.error(`[seed] ${failures.length} line(s) not stored:`);
-    for (const f of failures) console.error(`  - ${f}`);
+
+  const counts = [
+    `${Object.keys(main).length} main`,
+    `${Object.keys(battlefields).length} battlefield`,
+    `${Object.keys(sideboard).length} sideboard`,
+  ].join(", ");
+  console.log(`[seed] "${variant}" stored for ${champion} — ${counts}.`);
+  if (entry.variants && Object.keys(entry.variants).length > 1) {
+    console.log(
+      `[seed] ${champion} now has ${Object.keys(entry.variants).length} builds: ` +
+        Object.keys(entry.variants).join(", ")
+    );
+  }
+  if (report.failures.length) {
+    console.error(`[seed] ${report.failures.length} line(s) not stored:`);
+    for (const f of report.failures) console.error(`  - ${f}`);
     process.exitCode = 1;
   }
 }
@@ -100,12 +190,15 @@ function list() {
   if (!names.length) return console.log("[seed] nothing known yet.");
   for (const name of names) {
     const entry = store[name];
-    const all = Object.values(entry.cards);
-    const seeded = all.filter((c) => c.seeded).length;
-    console.log(
-      `${name}\n  ${entry.matches.length} game(s) played, ${all.length} card(s) known` +
-        `${seeded ? ` (${seeded} seeded from a list)` : ""}`
-    );
+    const observed = Object.values(entry.cards || {}).length;
+    console.log(`${name}`);
+    console.log(`  ${entry.matches.length} game(s) played, ${observed} card(s) seen`);
+    for (const v of Object.values(entry.variants || {})) {
+      console.log(
+        `  build "${v.name}" — ${Object.keys(v.main).length} main, ` +
+          `${Object.keys(v.sideboard).length} sideboard  (${v.source})`
+      );
+    }
   }
 }
 
@@ -121,22 +214,31 @@ function forget(champion) {
   console.log(`[seed] forgot "${champion}".`);
 }
 
+function flag(argv, name) {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : undefined;
+}
+
 async function main() {
-  const [a, b] = process.argv.slice(2);
-  if (a === "--list") return list();
-  if (a === "--forget") return forget(b);
-  if (!a || !b) {
+  const argv = process.argv.slice(2);
+  if (argv[0] === "--list") return list();
+  if (argv[0] === "--forget") return forget(argv[1]);
+
+  const file = argv.find((a) => !a.startsWith("--") && argv[argv.indexOf(a) - 1]?.startsWith("--") !== true);
+  if (!file) {
     console.error(
-      'usage: node coach/seed.js "<Champion>" <decklist.txt>\n' +
+      "usage: node coach/seed.js <decklist.txt> [--name \"Heron\"] [--champion \"Name\"]\n" +
         "       node coach/seed.js --list\n" +
-        '       node coach/seed.js --forget "<Champion>"'
+        '       node coach/seed.js --forget "<Champion>"\n\n' +
+        "The champion is read from the list's `Champion:` section.\n" +
+        "The build is named after the file unless --name says otherwise."
     );
     process.exitCode = 1;
     return;
   }
-  await seed(a, b);
+  await seed(file, { variant: flag(argv, "--name"), champion: flag(argv, "--champion") });
 }
 
 if (require.main === module) main();
 
-module.exports = { parseList, resolveEntry, seed };
+module.exports = { parseDeck, parseList, sectionFor, resolveEntry, seed };

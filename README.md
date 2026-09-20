@@ -113,40 +113,83 @@ nothing fabricated. ### Seeding a decklist
 Waiting to face a deck four times is slow, so you can hand it a list:
 
 ```bash
-node coach/seed.js "Jayce, Brilliant Inventor" decks/jayce.txt
+node coach/seed.js decks/jayce-control.txt --name "Control"
 node coach/seed.js --list
 node coach/seed.js --forget "Jayce, Brilliant Inventor"
 ```
 
-The file is read the way decklists are written — one card per line, optional
-count, `#` comments ignored. Codes and names both work:
+The filename doesn't matter, and you don't name the champion — it's read from
+the list's own `Champion:` section. It takes the format Rift Atlas exports:
 
 ```
-3 Dredge Up
-2 OGN-099
-Platewyrm Egg
+Legend:
+1 Jayce, Defender of Tomorrow
+
+Champion:
+1 Jayce, Brilliant Inventor
+
+MainDeck:
+3 Promising Future
+2 Garbage Grabber
+
+Battlefields:
+1 Dragon Roost
+
+Runes:
+7 Body Rune
+5 Mind Rune
+
+Sideboard:
+2 Disposal Order
 ```
+
+Sections are kept apart: main deck, battlefields, runes and sideboard each mean
+something different to a coach. A plain one-card-per-line file still works and
+is read as a main deck, and an unrecognised heading keeps its cards rather than
+dropping them.
 
 Every line is resolved against the card API, so a typo is **reported rather
 than stored**. `Dredge Upp` is refused; `Dredge` is refused for matching two
-cards. Nothing invented gets in.
+cards. Alternate printings (`VEN-068` and `VEN-068a` are both Jayce, Brilliant
+Inventor) collapse to one code, so a list and a board using different printings
+still match.
 
-Seeded and observed cards stay separate in the prompt, because they are
-different evidence. A decklist says what the archetype plays; a sighting says
-what *this* opponent played. Seeded cards are labelled "NOT confirmed for this
-opponent — they may be on a different build", and a seeded card that then shows
-up in a game moves over to the observed list, where the sighting outranks the
-list it came from.
+### Several builds per champion
 
-Only public cards are learned — base, battlefields, runes and trash. A hand is
-never learned, because it was withheld before this layer saw it. Runes are
-skipped, since every deck of a domain runs them.
+A champion is not a deck. Irelia Heron and Irelia Protect-the-Queen share a
+champion and little else, so builds are stored **separately and never merged** —
+a prior saying "they might have any of these eighty cards" is not a prior.
 
-The prior enters the prompt labelled as a prior, with its sample size
-(`seen in 2 of 4`), and the model is told to say "they have shown X before",
-never "they have X" — and that this game's board overrides it. A prior is not
-read from the current game before it is used, so a card first seen a moment ago
-is not handed back as if history had established it.
+Give each one a name:
+
+```bash
+node coach/seed.js decks/irelia-heron.txt  --name "Heron"
+node coach/seed.js decks/irelia-ptq.txt    --name "Protect the Queen"
+```
+
+What makes several builds useful is that the game narrows them. Every public
+card the opponent plays either appears in a build or doesn't, so the prompt
+carries the evidence per build:
+
+```
+POSSIBLE BUILD "CONTROL" — NOT confirmed for this opponent:
+  EVIDENCE THIS GAME: played so far and in this build: Clairvoyance, Mobilize
+POSSIBLE BUILD "HERON" — NOT confirmed for this opponent:
+  EVIDENCE THIS GAME: played so far and in this build: Mobilize;
+                      played but NOT in this build: Clairvoyance
+```
+
+Reported as evidence, not a verdict. A card outside a build counts against it
+without ruling it out — tech cards and sideboard swaps exist — and a card found
+only in a build's sideboard is recorded as its own kind of evidence rather than
+as an absence. The model is told to name which build it thinks you're facing
+and how confident that is, or to say the matchup is still open and what would
+tell them apart.
+
+Seeded and observed cards also stay separate, because they are different
+evidence: a decklist says what the archetype plays, a sighting says what *this*
+opponent played. A seeded card that then shows up in a game moves to the
+observed list, where the sighting outranks the list it came from.
 
 ### Equipment
 

@@ -38,9 +38,17 @@ function save() {
 /* Only the fields a coach reasons about. The API returns artwork URLs and
  * pagination neighbours too, and carrying those into a prompt would spend
  * tokens on nothing. */
+/* Alternate printings share a name and a card, differing only by a letter on
+ * the collector number: VEN-068 and VEN-068a are both Jayce, Brilliant
+ * Inventor. Codes are normalised to the base so a decklist and a board that
+ * happen to use different printings still match. */
+function baseCode(code) {
+  return (code || "").replace(/^([A-Za-z]{2,4}-\d{1,4})[a-z]+$/, "$1");
+}
+
 function distil(card) {
   return {
-    code: card.public_code?.split("/")[0] || null,
+    code: baseCode(card.public_code?.split("/")[0] || null),
     name: card.name,
     type: card.type,
     domains: card.domains || [],
@@ -99,9 +107,21 @@ async function findByName(name) {
   const wanted = name.trim().toLowerCase();
   const exact = hits.filter((c) => (c.name || "").trim().toLowerCase() === wanted);
   if (exact.length === 1) return distil(exact[0]);
-  if (exact.length > 1) return { ambiguous: exact.map((c) => c.public_code) };
+
+  if (exact.length > 1) {
+    /* Several exact matches are usually one card in several printings. The
+     * base printing carries an empty `variant`; prefer it rather than calling
+     * a card ambiguous with itself. */
+    const base = exact.filter((c) => !c.variant);
+    if (base.length === 1) return distil(base[0]);
+
+    // Genuinely different cards sharing a name: that is ambiguous.
+    const codes = [...new Set(exact.map((c) => baseCode(c.public_code.split("/")[0])))];
+    if (codes.length === 1) return distil(exact[0]);
+    return { ambiguous: exact.map((c) => `${c.public_code} ${c.name}`) };
+  }
   if (hits.length === 1) return distil(hits[0]);
   return { ambiguous: hits.slice(0, 6).map((c) => `${c.public_code} ${c.name}`) };
 }
 
-module.exports = { resolve, fetchCard, findByName, distil, CACHE_FILE, API };
+module.exports = { resolve, fetchCard, findByName, distil, baseCode, CACHE_FILE, API };

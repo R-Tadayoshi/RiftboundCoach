@@ -1,11 +1,43 @@
-# A decklist is read the way you would write one: one card per line, with an
-# optional count. Codes and names both work; comments and blanks are ignored.
-#
-#   node coach/seed.js "Jayce, Brilliant Inventor" decks/example-jayce.txt
-#
-# Every line is resolved against the card API, so a typo is reported rather
-# than quietly stored as a card that does not exist.
+Legend:
+1 Jayce, Defender of Tomorrow
 
+Champion:
+1 Jayce, Brilliant Inventor
+
+MainDeck:
+3 Promising Future
+3 Mobilize
+3 Catalyst of Aeons
+3 Dazzling Aurora
+3 Bellows Breath
+3 Elder Dragon
 3 Dredge Up
-2 OGN-099
-Platewyrm Egg
+3 Clairvoyance
+3 Platewyrm Egg
+2 Garbage Grabber
+2 Flurry of Blades
+2 Sabotage
+2 Sprite Burst
+1 Rocket Barrage
+1 Downstage Dramatics
+1 Deadly Flourish
+1 Gutter Palace
+
+Battlefields:
+1 Sigil of the Storm
+1 Forgotten Monument
+1 Dragon Roost
+
+Runes:
+7 Body Rune
+5 Mind Rune
+
+Sideboard:
+2 Disposal Order
+2 Repulse
+1 Unyielding Spirit
+1 Sabotage
+1 Sprite Burst
+1 Turn to Dust
+1 Deadly Flourish
+1 Decree of Strength
