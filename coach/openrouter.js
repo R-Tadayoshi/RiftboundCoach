@@ -50,6 +50,19 @@ async function ask({
     );
   }
 
+  /* An "@effort" suffix is meant to be split off by the caller. If one reaches
+   * here it has been passed through as part of the slug, and OpenRouter will
+   * answer "not a valid model ID" — which is true, and unhelpful, because the
+   * real fault is a copy of the code from before efforts were parsed. */
+  if (model.includes("@")) {
+    const [slug, effortPart] = [model.slice(0, model.lastIndexOf("@")), model.slice(model.lastIndexOf("@") + 1)];
+    throw new Error(
+      `"${model}" is not a model — "@${effortPart}" is a reasoning effort and should have been ` +
+        `split off before sending. This copy of the code predates that; run \`git pull\`. ` +
+        `(The model is "${slug}".)`
+    );
+  }
+
   const body = {
     model,
     messages: [

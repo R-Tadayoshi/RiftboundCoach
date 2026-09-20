@@ -572,3 +572,18 @@ test("foil and alt-art suffixes normalise to the base code", () => {
   assert.equal(baseCode("SFD-057a"), "SFD-057", "alt art");
   assert.equal(baseCode("VEN-174"), "VEN-174");
 });
+
+test("an unsplit @effort suffix is named as a stale copy, not a bad model", () => {
+  // OpenRouter answers "not a valid model ID", which is true and unhelpful:
+  // the real fault is code from before efforts were parsed out of the slug.
+  const { ask } = require("../coach/openrouter.js");
+  return assert.rejects(
+    () => ask({ system: "s", user: "u", model: "anthropic/claude-sonnet-5@high", apiKey: "sk-test" }),
+    (err) => {
+      assert.match(err.message, /reasoning effort/);
+      assert.match(err.message, /git pull/);
+      assert.match(err.message, /The model is "anthropic\/claude-sonnet-5"/);
+      return true;
+    }
+  );
+});
