@@ -204,6 +204,9 @@ function buildUserMessage(summary, cardText, prior) {
   for (const u of [...me.hand, ...me.base, ...me.battlefieldA, ...me.battlefieldB]) {
     if (u.code) relevant.add(u.code);
   }
+  for (const side of [me, them]) {
+    if (side.championZone.code) relevant.add(side.championZone.code);
+  }
   for (const u of [...them.base, ...them.battlefieldA, ...them.battlefieldB]) {
     if (u.code) relevant.add(u.code);
   }
@@ -216,11 +219,19 @@ function buildUserMessage(summary, cardText, prior) {
     .join("\n");
 
   const priorBlock = describePrior(prior);
+  /* Spelled out as an available play rather than folded into the player's
+   * name, where it read as "who you are" and was never considered. */
+  const championLine = (side) =>
+    side.championZone.available
+      ? `  champion in zone, PLAYABLE THIS TURN: ${side.championZone.name}`
+      : `  champion: already deployed or not in its zone`;
+
   return `TURN ${turn.number ?? "?"} (${turn.step ?? "?"}) — ${
     turn.isMyTurn === true ? "my turn" : turn.isMyTurn === false ? "their turn" : "turn owner unknown"
   }
 
-ME — ${me.name ?? "?"} (${me.champion ?? me.legend ?? "?"})
+ME — ${me.name ?? "?"} (legend: ${me.legend ?? "?"})
+${championLine(me)}
   score ${me.score ?? "?"} of 8
   floating: energy ${me.floating.energy ?? "?"}, power ${me.floating.power ?? "?"}
   runes: ${describeRunes(me.runes)}
@@ -228,7 +239,8 @@ ME — ${me.name ?? "?"} (${me.champion ?? me.legend ?? "?"})
   base: ${describeUnits(me.base)}
   deck: ${me.deck.main ?? "?"} cards, rune deck ${me.deck.rune ?? "?"}
 
-THEM — ${them.name ?? "?"} (${them.champion ?? them.legend ?? "?"})
+THEM — ${them.name ?? "?"} (legend: ${them.legend ?? "?"})
+${championLine(them)}
   score ${them.score ?? "?"} of 8
   floating: energy ${them.floating.energy ?? "?"}, power ${them.floating.power ?? "?"}
   runes: ${describeRunes(them.runes)}   <-- what they can respond with

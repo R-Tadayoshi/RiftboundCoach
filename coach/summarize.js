@@ -118,6 +118,9 @@ function sideSummary(snapshot, side, attachedTo = {}) {
     score: player.score,
     legend: player.legend,
     champion: player.champion,
+    /* Not an identity label: a champion in its zone is a card you can still
+     * play this turn (108.3.d), and the coach was treating it as scenery. */
+    championZone: player.championZone || { name: null, code: null, available: false },
     floating: snapshot.resources?.[side] || { energy: null, power: null },
     runes: readyRunes(zones.runeArea),
     deck: snapshot.decks?.[side] || { main: null, rune: null },
@@ -133,6 +136,11 @@ function sideSummary(snapshot, side, attachedTo = {}) {
  * and are skipped — there is nothing to look up. */
 function codesToResolve(snapshot) {
   const codes = new Set();
+  // The champion is playable from its zone, so its cost and text are needed.
+  for (const side of ["self", "opponent"]) {
+    const code = snapshot.players?.[side]?.championZone?.code;
+    if (code) codes.add(code);
+  }
   for (const sideZones of Object.values(snapshot.zones || {})) {
     for (const zone of Object.values(sideZones)) {
       for (const card of zone.visible || []) {

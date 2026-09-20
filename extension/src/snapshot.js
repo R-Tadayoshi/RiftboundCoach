@@ -16,11 +16,18 @@
   const EXTRACTOR_VERSION = "0.5.1";
 
   function playerBlock(board, side) {
+    /* A champion still in its Champion Zone is a card that can be played from
+     * there (rule 108.3.d) — it is not just a label for who you are. Once
+     * deployed the zone is empty, so its presence IS the availability. */
+    const champion = root.RBCBoard.cardAt(side, "champion");
     return {
       name: root.RBCBoard.playerName(side),
       score: root.RBCBoard.score(board, side),
       legend: root.RBCBoard.cardAlt(side, "legend"),
-      champion: root.RBCBoard.cardAlt(side, "champion"),
+      champion: champion?.name ?? null,
+      championZone: champion
+        ? { name: champion.name, code: champion.code, available: true }
+        : { name: null, code: null, available: false },
     };
   }
 

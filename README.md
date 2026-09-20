@@ -308,12 +308,19 @@ Deliberately not the whole rulebook — timing minutiae would cost tokens on
 every turn and bury the parts that decide what to do. The model is told the
 file is incomplete and to say "if you can do X" rather than assume.
 
-Two consequences it now knows that it previously got wrong:
+Consequences it now knows that it previously got wrong, each found by reading
+its advice against the rules:
 
 - With no units anywhere, **the only legal destination for a unit is your
-  Base** — reaching a battlefield takes a second step.
+  Base** — reaching a battlefield takes a second step. (806.3)
+- **Units enter exhausted** (143.4), so a unit played this turn cannot move
+  this turn — moving costs exhausting it, and it already is.
+- **The champion in its zone is a card you can play** (108.3.d), not a label
+  for who you are. The board state now says `champion in zone, PLAYABLE THIS
+  TURN` when the zone is occupied, and its card text is fetched like any
+  other.
 - **A ready rune is worth 1 Energy or 1 domain Power, not both**, and the pool
-  empties every turn, so floating resources cannot be banked.
+  empties every turn, so floating resources cannot be banked. (164.2, 167)
 
 ### What the coach is told it cannot do
 

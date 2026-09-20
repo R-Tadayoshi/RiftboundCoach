@@ -32,6 +32,34 @@ rules and card-specific interactions.
 **So: with no units anywhere, the only legal destination for a unit is your
 Base.** Reaching a battlefield takes a second step, next turn at the earliest.
 
+## Units enter exhausted
+
+- **"Units enter the Board exhausted."** (143.4) This can be altered by
+  Accelerate or a similar effect (143.4.a, 805), or by a card that says it
+  enters ready.
+- The same holds wherever it lands: "If it is a Unit, it enters the Board
+  exhausted at the Location that was chosen." (359.2.c)
+- **Non-unit gear is the exception — it enters ready, at its controller's
+  Base.** (359.2.d)
+
+**So a unit played this turn cannot move this turn**, because moving costs
+exhausting it (144.2) and it is already exhausted. A body played now is
+available from your next turn, not this one.
+
+## The champion is a card you can play
+
+- Each player has a **Champion Zone** holding their Chosen Champion at the
+  start of the game. (108.3, 108.3.b)
+- **"The Chosen Champion can be played from here as normal, following the
+  rules of Playing a Card."** (108.3.d)
+- It cannot be put back there by normal means. (108.3.c)
+
+**So a champion sitting in its zone is an available play, not scenery.** When
+the board state says the champion zone is occupied, that card is castable this
+turn on the same terms as anything in hand — and it is often the strongest
+play available. When the zone is empty the champion has already been deployed
+and is somewhere on the board.
+
 ## Moving units
 
 - Moving is an inherent ability of every unit, and **exhausting the unit is

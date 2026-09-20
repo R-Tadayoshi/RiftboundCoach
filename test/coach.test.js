@@ -667,3 +667,50 @@ test("the rules themselves still survive the cut", () => {
   assert.match(rules, /806\.3, 813\.3\.a/, "rules come before the marker");
   assert.match(rules, /Conquered <battlefield> and scored 1/, "and so does the observed section");
 });
+
+/* Two gaps found by reading the coach's advice against the rules: it did not
+ * know units enter exhausted, and it treated the champion as an identity
+ * label rather than a card that can be played from its zone. */
+
+test("the champion in its zone is reported as playable", () => {
+  fixture.build();
+  const s = Snapshot.build();
+  assert.deepEqual(s.players.self.championZone, {
+    name: "Yasuo",
+    code: "OGN-002",
+    available: true,
+  });
+});
+
+test("a deployed champion leaves an empty zone, and says so", () => {
+  fixture.build();
+  const zone = globalThis.document.querySelector(
+    '[data-zone-owner="self"] [data-drop-zone="champion"]'
+  );
+  zone.remove();
+  const s = Snapshot.build();
+  assert.equal(s.players.self.championZone.available, false);
+  assert.equal(s.players.self.champion, null);
+});
+
+test("the prompt names the champion as a play, not as who you are", () => {
+  fixture.build();
+  const msg = buildUserMessage(summarize(Snapshot.build()), {});
+  assert.match(msg, /champion in zone, PLAYABLE THIS TURN: Yasuo/);
+  assert.match(msg, /legend: Yasuo, the Unforgiven/, "the legend stays an identity");
+});
+
+test("the champion's card text is fetched, since it can be cast", () => {
+  fixture.build();
+  assert.ok(codesToResolve(Snapshot.build()).includes("OGN-002"));
+});
+
+test("both new rules are stated with their numbers", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /Units enter the Board exhausted/);
+  assert.match(rules, /143\.4/);
+  assert.match(rules, /can be played from here as normal/);
+  assert.match(rules, /108\.3\.d/);
+  assert.match(rules, /cannot move this turn/, "the consequence is spelled out");
+});

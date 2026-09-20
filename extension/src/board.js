@@ -160,9 +160,26 @@
 
   /** Legend or champion art for one side, by its alt text. Null when hidden. */
   function cardAlt(side, dropZone) {
+    return cardAt(side, dropZone)?.name ?? null;
+  }
+
+  /* The card sitting in a single-card zone — legend, champion — with its code
+   * as well as its name, so its cost and text can be looked up.
+   *
+   * A champion in its zone is a card that can still be played (rule 108.3.d),
+   * so whether this answers null is a fact about the game, not a gap: null
+   * means it has already been deployed. */
+  function cardAt(side, dropZone) {
     for (const owner of doc().querySelectorAll(`[data-zone-owner="${side}"]`)) {
-      const img = owner.querySelector(`[data-drop-zone="${dropZone}"] img[alt]`);
-      if (img?.alt && !FACE_DOWN_RE.test(img.alt)) return img.alt;
+      const el = owner.querySelector(`[data-drop-zone="${dropZone}"]`);
+      const img = el?.querySelector("img[alt]");
+      if (!img?.alt || FACE_DOWN_RE.test(img.alt)) continue;
+      const src = img.currentSrc || img.src || "";
+      return {
+        name: img.alt,
+        code: codeFromSrc(src),
+        exhausted: root.RBCExhaust.read(el.querySelector("[data-card-id]") || el),
+      };
     }
     return null;
   }
@@ -516,6 +533,7 @@
     score,
     playerName,
     cardAlt,
+    cardAt,
     codeFromSrc,
     zoneCards,
     MARKER_ID_RE,
