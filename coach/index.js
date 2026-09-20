@@ -8,6 +8,7 @@
  *   node coach/index.js --dry-run    build and print the prompt, send nothing
  *   node coach/index.js --once       coach the current state, then exit
  *   node coach/index.js --every      coach on every change, not just my turns
+ *   node coach/index.js --compare    ask several models the same turn, once
  */
 "use strict";
 
@@ -24,6 +25,19 @@ const args = new Set(process.argv.slice(2));
 const DRY_RUN = args.has("--dry-run");
 const ONCE = args.has("--once");
 const EVERY = args.has("--every");
+const COMPARE = args.has("--compare");
+
+/* Whether a bigger model is worth it here is a question about THIS prompt on
+ * YOUR boards, and no amount of reasoning about it substitutes for running the
+ * same turn through a few and reading the answers. Override with RBC_COMPARE
+ * as a comma-separated list of slugs. */
+const COMPARE_MODELS = (
+  process.env.RBC_COMPARE ||
+  "anthropic/claude-haiku-4.5,anthropic/claude-sonnet-5,anthropic/claude-opus-5"
+)
+  .split(",")
+  .map((m) => m.trim())
+  .filter(Boolean);
 
 /* Solo practice only, checked again here.
  *
@@ -92,6 +106,23 @@ async function coach(snapshot) {
     return;
   }
 
+  if (COMPARE) {
+    // Sequential, not parallel: the point is to read them side by side, and a
+    // rate limit hit halfway through a race tells you nothing.
+    for (const model of COMPARE_MODELS) {
+      const started = Date.now();
+      try {
+        const { text, usage } = await ask({ system: SYSTEM, user, model });
+        const secs = ((Date.now() - started) / 1000).toFixed(1);
+        console.log(`\n### ${model}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok` : ""})\n`);
+        console.log(text + "\n");
+      } catch (err) {
+        console.error(`\n### ${model} — failed: ${err.message}\n`);
+      }
+    }
+    return;
+  }
+
   try {
     const { text, model, usage } = await ask({ system: SYSTEM, user });
     console.log("\n" + text + "\n");
@@ -148,10 +179,18 @@ async function tick(quiet) {
 
 async function main() {
   console.log(`[coach] watching ${SIDECAR}`);
-  console.log(`[coach] model: ${DRY_RUN ? "(dry run — nothing is sent)" : DEFAULT_MODEL}`);
+  console.log(
+    `[coach] model: ${
+      DRY_RUN
+        ? "(dry run — nothing is sent)"
+        : COMPARE
+        ? `comparing ${COMPARE_MODELS.join(", ")}`
+        : DEFAULT_MODEL
+    }`
+  );
   console.log(`[coach] ${EVERY ? "coaching every change" : "coaching on my turns"}\n`);
 
-  if (ONCE) {
+  if (ONCE || COMPARE) {
     await tick(false);
     return;
   }

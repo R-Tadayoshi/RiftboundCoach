@@ -522,3 +522,16 @@ test("the model is told a build is evidence, not a verdict", () => {
   assert.match(SYSTEM, /evidence against it, not proof/);
   assert.match(SYSTEM, /tech cards\s+and sideboard swaps exist/);
 });
+
+test("seedAll reads a folder, since dropping files in one is the obvious move", () => {
+  const fs = require("node:fs");
+  const os = require("node:os");
+  const path = require("node:path");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "rbc-decks-"));
+  fs.writeFileSync(path.join(dir, "a.txt"), "3 OGN-099\n");
+  fs.writeFileSync(path.join(dir, "b.deck"), "2 OGN-099\n");
+  fs.writeFileSync(path.join(dir, "notes.md"), "not a decklist\n");
+
+  const seen = fs.readdirSync(dir).filter((f) => /\.(txt|deck|list)$/i.test(f)).sort();
+  assert.deepEqual(seen, ["a.txt", "b.deck"], "only decklist files, notes.md ignored");
+});

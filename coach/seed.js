@@ -184,6 +184,37 @@ async function seed(file, options = {}) {
   }
 }
 
+/* Seed every list in a directory.
+ *
+ * Dropping files into decks/ and expecting them to be read is the obvious
+ * mental model, and until now the tool did not support it: a file sat there
+ * doing nothing until it was named on the command line. Each file's name
+ * becomes its build name, which is why the names are worth choosing. */
+async function seedAll(dir) {
+  let files;
+  try {
+    files = fs
+      .readdirSync(dir)
+      .filter((f) => /\.(txt|deck|list)$/i.test(f))
+      .sort();
+  } catch (err) {
+    console.error(`[seed] cannot read ${dir}: ${err.message}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!files.length) {
+    console.error(`[seed] no .txt files in ${dir}.`);
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log(`[seed] reading ${files.length} list(s) from ${dir}\n`);
+  for (const file of files) {
+    await seed(path.join(dir, file), {});
+  }
+}
+
 function list() {
   const store = archetypes.load();
   const names = Object.keys(store);
@@ -223,13 +254,16 @@ async function main() {
   const argv = process.argv.slice(2);
   if (argv[0] === "--list") return list();
   if (argv[0] === "--forget") return forget(argv[1]);
+  if (argv[0] === "--all") return seedAll(argv[1] || "decks");
 
   const file = argv.find((a) => !a.startsWith("--") && argv[argv.indexOf(a) - 1]?.startsWith("--") !== true);
   if (!file) {
     console.error(
       "usage: node coach/seed.js <decklist.txt> [--name \"Heron\"] [--champion \"Name\"]\n" +
+        "       node coach/seed.js --all [decks/]      read every list in a folder\n" +
         "       node coach/seed.js --list\n" +
         '       node coach/seed.js --forget "<Champion>"\n\n' +
+        "Putting a file in decks/ does not read it — seed it, or use --all.\n" +
         "The champion is read from the list's `Champion:` section.\n" +
         "The build is named after the file unless --name says otherwise."
     );
@@ -241,4 +275,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { parseDeck, parseList, sectionFor, resolveEntry, seed };
+module.exports = { parseDeck, parseList, sectionFor, resolveEntry, seed, seedAll };

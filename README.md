@@ -107,6 +107,25 @@ terminal. Flags:
 | `--dry-run` | build and print the prompt, send nothing — no key needed |
 | `--once` | coach the current state and exit |
 | `--every` | coach on every change, not only your turns |
+| `--compare` | ask several models the same turn, once, and print all answers |
+
+### Which model
+
+`anthropic/claude-sonnet-5` by default. Whether a bigger one earns its cost on
+*this* prompt and *your* boards is not something to settle by argument, so:
+
+```bash
+node coach/index.js --compare
+```
+
+runs the same live turn through Haiku 4.5, Sonnet 5 and Opus 5 and prints all
+three with their latency, for about two cents. `RBC_COMPARE` takes a
+comma-separated list to compare others.
+
+What to look for: does it **count correctly** — ready runes, might, what you
+can actually pay for — and does it commit to a line rather than listing
+options. A model that reads the board right and says something obvious is more
+useful mid-turn than one that reasons beautifully about a board it misread.
 
 Card text comes from [RiftScribe](https://riftscribe.gg/api-docs) — free, no
 key — and is cached in `state/cards.json`, so a match after the first is
@@ -126,10 +145,16 @@ nothing fabricated. ### Seeding a decklist
 Waiting to face a deck four times is slow, so you can hand it a list:
 
 ```bash
-node coach/seed.js decks/jayce-control.txt --name "Control"
+node coach/seed.js --all decks/                              # read every list in the folder
+node coach/seed.js decks/jayce-control.txt --name "Control"  # or one at a time
 node coach/seed.js --list
 node coach/seed.js --forget "Jayce, Brilliant Inventor"
 ```
+
+**Putting a file in `decks/` does not read it.** Seeding is a command, not a
+folder scan — run `--all` after adding lists, or name the file directly. With
+`--all`, each file's name becomes its build name, so name the files the way you
+want the builds named.
 
 The filename doesn't matter, and you don't name the champion — it's read from
 the list's own `Champion:` section. It takes the format Rift Atlas exports:
