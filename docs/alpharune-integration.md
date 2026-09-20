@@ -134,6 +134,45 @@ stays out of alpharune's build and survives a re-clone of it.
   forward. That is the mapping work: our zones and card codes onto
   `moveObject` / `moveObjectToBattlefield` / `setObjectExhausted` calls.
 
+## The chain, end to end
+
+All four links now run.
+
+| step | what it does |
+|---|---|
+| `coach/to-position.js` | a captured board → a position script |
+| `engine/position_script.h` | that script → a constructed engine position |
+| `engine/position` | prints the legal moves there |
+| `engine/rank` | plays each one out and ranks them |
+
+Two things the translator does that are worth keeping:
+
+**It refuses rather than approximates.** Every card is resolved against the
+engine and checked by `coach/fidelity.js`; anything that is ABSENT or a STUB
+stops the translation with a list. A position missing one card still produces
+a ranking with percentages on it, and that is precisely the danger.
+
+**It states how the constructed board differs from the real one.** Their hand
+is a count and never contents — the extractor refuses to read it even when the
+client renders it — so the engine holds something else, and that is printed as
+a caveat rather than quietly assumed away. Same for unreadable runes and for a
+capture taken on the wrong turn.
+
+### `expect legend`
+
+A legend cannot be placed. It comes from the deck file, set up before any edit
+runs. So the position **asserts** it and a mismatch is a hard failure:
+
+```
+! expect legend P1 Blade Dancer    deck legend is "Grand Duelist",
+                                   position expects "Blade Dancer"
+```
+
+This is not a formality. A legend sits in play all game and its abilities are
+usually the cheapest line a player has — the two-point turn this whole project
+was built around was a legend readying a unit. Rank a position whose legend is
+not the one on screen and every number is about a different game.
+
 ## Staging
 
 **Stage 1 — rank my own lines. Does not need the resampler.**

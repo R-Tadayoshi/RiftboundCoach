@@ -17,6 +17,9 @@
 //   energy P1 11        the rune POOL: what can be spent right now
 //   power  P1 3         any-domain power
 //   place  P1 <card name> <zone> [ready|exhausted]
+//   expect legend P1 <card name>   assert the deck's legend is the one on
+//                                  screen — it cannot be placed, so it is
+//                                  checked
 //
 // Zones: hand base trash bfA bfB deck
 
@@ -180,6 +183,29 @@ inline PositionLoadReport loadPosition(const CardDB& db,
                                 doomed.size(), l.tok[1].c_str(), what.c_str());
                 ++rep.applied;
             }
+
+        } else if (cmd == "expect" && l.tok.size() >= 4 && l.tok[1] == "legend") {
+            /* A legend cannot be placed: it comes from the deck file, set up
+             * before any edit runs. So the position ASSERTS which legend it
+             * expects, and a mismatch is a hard failure rather than a note.
+             *
+             * This matters more than it sounds. A legend sits in play all
+             * game and its abilities are usually the cheapest thing a player
+             * has — the line that decided turn 11 of the game this was built
+             * for was a legend readying a unit. Rank a position whose legend
+             * is not the one on screen and every number is about a different
+             * game. */
+            const PlayerId who = playerOf(l.tok[2]);
+            std::string want;
+            for (size_t i = 3; i < l.tok.size(); ++i) want += (i > 3 ? " " : "") + l.tok[i];
+
+            std::string got;
+            for (auto& [id, obj] : st.objects) {
+                if (obj.owner == who && obj.zone == ZoneType::LegendZone) { got = obj.name; break; }
+            }
+            if (got.empty()) fail("that player has no legend in the legend zone");
+            else if (got != want) fail("deck legend is \"" + got + "\", position expects \"" + want + "\"");
+            else ++rep.applied;
 
         } else if (cmd == "place" && l.tok.size() >= 4) {
             const PlayerId who = playerOf(l.tok[1]);
