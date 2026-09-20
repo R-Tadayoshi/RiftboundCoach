@@ -55,6 +55,44 @@ function units(zone) {
   }));
 }
 
+/* Which gear is attached to which unit.
+ *
+ * The board does not say. Equipment renders as a separate card in the same
+ * zone as the unit it modifies, with no marker tying the two together — so
+ * the relationship is read out of the match log instead, where equipping is
+ * stated outright:
+ *
+ *   "Equipped Guardian Angel to Irelia, Fervent."
+ *
+ * The latest line for a given piece of gear wins, since gear can be moved.
+ * This is INFERRED, and is labelled as such wherever it is shown: the log is
+ * a history, and a unit that has since died or a gear that has since moved
+ * would leave a stale pairing behind. It is only reported when both cards are
+ * still on the board together, which catches most of that. */
+const EQUIP_RE = /^Equipped\s+(.+?)\s+to\s+(.+?)\.?$/i;
+
+function attachments(snapshot) {
+  const pairs = new Map(); // gear name -> unit name, latest wins
+  for (const entry of snapshot.log || []) {
+    const hit = EQUIP_RE.exec((entry.text || "").trim());
+    if (hit) pairs.set(hit[1].trim(), hit[2].trim());
+  }
+  if (!pairs.size) return {};
+
+  /* Only keep a pairing whose two cards are still sitting in the same zone.
+   * Anything else is a line from earlier in the game that no longer holds. */
+  const out = {};
+  for (const sideZones of Object.values(snapshot.zones || {})) {
+    for (const zone of Object.values(sideZones)) {
+      const names = new Set((zone.visible || []).map((c) => c.name).filter(Boolean));
+      for (const [gear, unit] of pairs) {
+        if (names.has(gear) && names.has(unit)) out[gear] = unit;
+      }
+    }
+  }
+  return out;
+}
+
 /* Cards the opponent has spent. Public — they were played and resolved — and
  * the other half of a deck-thinning read: two copies in the trash and a thin
  * deck says a lot about whether the third is still in hand. */
@@ -70,8 +108,10 @@ function knownTrash(zone) {
   return [...counts.values()].sort((a, b) => b.count - a.count);
 }
 
-function sideSummary(snapshot, side) {
+function sideSummary(snapshot, side, attachedTo = {}) {
   const zones = snapshot.zones?.[side] || {};
+  const withGear = (zone) =>
+    units(zone).map((u) => (attachedTo[u.name] ? { ...u, attachedTo: attachedTo[u.name] } : u));
   const player = snapshot.players?.[side] || {};
   return {
     name: player.name,
@@ -82,9 +122,9 @@ function sideSummary(snapshot, side) {
     runes: readyRunes(zones.runeArea),
     deck: snapshot.decks?.[side] || { main: null, rune: null },
     handCount: zones.hand?.count ?? 0,
-    base: units(zones.base),
-    battlefieldA: units(zones.battlefieldA),
-    battlefieldB: units(zones.battlefieldB),
+    base: withGear(zones.base),
+    battlefieldA: withGear(zones.battlefieldA),
+    battlefieldB: withGear(zones.battlefieldB),
     trash: knownTrash(zones.trash),
   };
 }
@@ -104,8 +144,9 @@ function codesToResolve(snapshot) {
 }
 
 function summarize(snapshot) {
-  const self = sideSummary(snapshot, "self");
-  const opponent = sideSummary(snapshot, "opponent");
+  const attachedTo = attachments(snapshot);
+  const self = sideSummary(snapshot, "self", attachedTo);
+  const opponent = sideSummary(snapshot, "opponent", attachedTo);
 
   return {
     turn: {
@@ -131,4 +172,4 @@ function summarize(snapshot) {
   };
 }
 
-module.exports = { summarize, readyRunes, runeDomain, knownTrash, codesToResolve, units };
+module.exports = { summarize, readyRunes, runeDomain, knownTrash, codesToResolve, units, attachments };

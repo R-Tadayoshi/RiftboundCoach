@@ -58,7 +58,10 @@ function describeUnits(units) {
     .map((u) => {
       const state =
         u.exhausted === true ? "exhausted" : u.exhausted === false ? "ready" : "state unknown";
-      return `${u.name} (${state})`;
+      // "per the log" is load-bearing: the board carries no marker for this,
+      // so the pairing is read out of the match log and could be stale.
+      const gear = u.attachedTo ? `, equipped to ${u.attachedTo} per the log` : "";
+      return `${u.name} (${state}${gear})`;
     })
     .join(", ");
 }
@@ -83,15 +86,40 @@ function describeCard(card) {
   return card.text ? `${head}: ${card.text}` : head;
 }
 
+/* Two priors, reported separately because they are different evidence.
+ *
+ * Observed cards are things THIS opponent has actually put on the table, with
+ * the sample size attached. Seeded cards come from a decklist the player
+ * supplied: better coverage, but no guarantee the opponent is on that build. */
 function describePrior(prior) {
   if (!prior) return "";
-  const lines = prior.cards
-    .slice(0, 14)
-    .map((c) => `  - ${c.name} (seen in ${c.seen} of ${c.of})`)
-    .join("\n");
-  return `\nPREVIOUSLY SEEN FROM ${prior.champion.toUpperCase()} — across ${
-    prior.matchesPlayed
-  } past game(s), public cards only. A prior, not their list:\n${lines}\n`;
+  const blocks = [];
+
+  if (prior.cards?.length) {
+    const lines = prior.cards
+      .slice(0, 14)
+      .map((c) => `  - ${c.name} (seen in ${c.seen} of ${c.of})`)
+      .join("\n");
+    blocks.push(
+      `SEEN BEFORE FROM ${prior.champion.toUpperCase()} — across ${
+        prior.matchesPlayed
+      } past game(s), public cards only. A prior, not their list:\n${lines}`
+    );
+  }
+
+  if (prior.seeded?.length) {
+    const lines = prior.seeded
+      .slice(0, 24)
+      .map((c) => `  - ${c.name}${c.copies > 1 ? ` x${c.copies}` : ""}`)
+      .join("\n");
+    blocks.push(
+      `TYPICAL ${prior.champion.toUpperCase()} LIST — from a decklist provided by the ` +
+        `player, NOT confirmed for this opponent. They may be on a different ` +
+        `build, and nothing here has been seen this game:\n${lines}`
+    );
+  }
+
+  return blocks.length ? `\n${blocks.join("\n\n")}\n` : "";
 }
 
 function buildUserMessage(summary, cardText, prior) {

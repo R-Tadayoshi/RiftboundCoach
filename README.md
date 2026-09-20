@@ -108,8 +108,35 @@ champion, in `state/archetypes.json`.
 
 Play against Jayce four times and the file knows what Jayce decks *in your pod*
 are playing — grounded in what you actually face, improving on its own, with
-nothing fabricated. It is plain JSON, so you can correct it or seed it by hand
-with cards you know an archetype plays but have not yet met.
+nothing fabricated. ### Seeding a decklist
+
+Waiting to face a deck four times is slow, so you can hand it a list:
+
+```bash
+node coach/seed.js "Jayce, Brilliant Inventor" decks/jayce.txt
+node coach/seed.js --list
+node coach/seed.js --forget "Jayce, Brilliant Inventor"
+```
+
+The file is read the way decklists are written — one card per line, optional
+count, `#` comments ignored. Codes and names both work:
+
+```
+3 Dredge Up
+2 OGN-099
+Platewyrm Egg
+```
+
+Every line is resolved against the card API, so a typo is **reported rather
+than stored**. `Dredge Upp` is refused; `Dredge` is refused for matching two
+cards. Nothing invented gets in.
+
+Seeded and observed cards stay separate in the prompt, because they are
+different evidence. A decklist says what the archetype plays; a sighting says
+what *this* opponent played. Seeded cards are labelled "NOT confirmed for this
+opponent — they may be on a different build", and a seeded card that then shows
+up in a game moves over to the observed list, where the sighting outranks the
+list it came from.
 
 Only public cards are learned — base, battlefields, runes and trash. A hand is
 never learned, because it was withheld before this layer saw it. Runes are
@@ -120,6 +147,18 @@ The prior enters the prompt labelled as a prior, with its sample size
 never "they have X" — and that this game's board overrides it. A prior is not
 read from the current game before it is used, so a card first seen a moment ago
 is not handed back as if history had established it.
+
+### Equipment
+
+The board renders gear as a separate card in the same zone as the unit it
+modifies, with no marker tying them together. The pairing is read out of the
+match log instead — `"Equipped Guardian Angel to Irelia, Fervent."` — and shown
+as `Guardian Angel (ready, equipped to Irelia, Fervent per the log)`.
+
+"Per the log" is load-bearing: this is inferred, not read off the board. A
+pairing is dropped when the two cards are no longer in the same zone, which
+catches the unit dying or the gear moving, and the latest line wins when gear
+is re-equipped.
 
 ### What the coach is told it cannot do
 

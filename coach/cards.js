@@ -84,4 +84,24 @@ async function resolve(codes) {
   return out;
 }
 
-module.exports = { resolve, fetchCard, distil, CACHE_FILE };
+/* Find a card by name, for seeding a decklist written the way people write
+ * decklists. Exact matches win; a partial match is returned only when it is
+ * the single hit, so "Dredge" finding one card resolves and finding four does
+ * not silently pick the first. */
+async function findByName(name) {
+  const res = await fetch(`${API}?q=${encodeURIComponent(name)}`, {
+    headers: { accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`${res.status} searching for ${name}`);
+  const hits = await res.json();
+  if (!Array.isArray(hits) || !hits.length) return null;
+
+  const wanted = name.trim().toLowerCase();
+  const exact = hits.filter((c) => (c.name || "").trim().toLowerCase() === wanted);
+  if (exact.length === 1) return distil(exact[0]);
+  if (exact.length > 1) return { ambiguous: exact.map((c) => c.public_code) };
+  if (hits.length === 1) return distil(hits[0]);
+  return { ambiguous: hits.slice(0, 6).map((c) => `${c.public_code} ${c.name}`) };
+}
+
+module.exports = { resolve, fetchCard, findByName, distil, CACHE_FILE, API };

@@ -244,6 +244,8 @@ test("frequency builds across matches", () => {
     name: "Garbage Grabber",
     seen: 2,
     of: 3,
+    seeded: false,
+    copies: null,
   });
 });
 
@@ -276,4 +278,138 @@ test("the model is told how to weigh a prior, and not to invent cards", () => {
   assert.match(SYSTEM, /treat it as a\s+prior from past games, not as their current list/);
   assert.match(SYSTEM, /never\s+"they have X"/);
   assert.match(SYSTEM, /Never invent a card/);
+});
+
+/* Seeding an archetype from a decklist, rather than waiting to face it. */
+
+const seed = require("../coach/seed.js");
+
+test("a decklist is read the way decklists are written", () => {
+  const entries = seed.parseList(`
+# Jayce control
+3 OGN-099
+2x Dredge Up
+Platewyrm Egg
+
+  4  VEN-075   # trailing comment
+`);
+  assert.deepEqual(entries, [
+    { count: 3, token: "OGN-099" },
+    { count: 2, token: "Dredge Up" },
+    { count: 1, token: "Platewyrm Egg" },
+    { count: 4, token: "VEN-075" },
+  ]);
+});
+
+test("seeded and observed cards are kept apart in the prior", () => {
+  const store = {
+    "Jayce, Brilliant Inventor": {
+      matches: ["AAA"],
+      cards: {
+        "OGN-099": { name: "Garbage Grabber", matches: ["AAA"] },
+        "VEN-075": { name: "Platewyrm Egg", matches: [], seeded: true, copies: 3 },
+      },
+    },
+  };
+  const prior = archetypes.priorFor(vsJayce("NOW", {}), store);
+
+  assert.deepEqual(prior.cards.map((c) => c.name), ["Garbage Grabber"], "observed");
+  assert.deepEqual(prior.seeded.map((c) => c.name), ["Platewyrm Egg"], "seeded, never seen");
+});
+
+test("a seeded card that then gets played moves to observed", () => {
+  const store = {
+    "Jayce, Brilliant Inventor": {
+      matches: ["AAA"],
+      cards: { "VEN-075": { name: "Platewyrm Egg", matches: ["AAA"], seeded: true, copies: 3 } },
+    },
+  };
+  const prior = archetypes.priorFor(vsJayce("NOW", {}), store);
+  assert.equal(prior.cards.length, 1, "a sighting outranks the list it came from");
+  assert.equal(prior.seeded.length, 0);
+});
+
+test("the prompt marks a seeded list as unconfirmed for this opponent", () => {
+  const { describePrior } = require("../coach/prompt.js");
+  const text = describePrior({
+    champion: "Jayce, Brilliant Inventor",
+    matchesPlayed: 0,
+    cards: [],
+    seeded: [{ code: "VEN-075", name: "Platewyrm Egg", copies: 3 }],
+  });
+  assert.match(text, /TYPICAL JAYCE/);
+  assert.match(text, /NOT confirmed for this opponent/);
+  assert.match(text, /may be on a different/);
+  assert.match(text, /Platewyrm Egg x3/);
+});
+
+test("a seeded list is usable before any game has been played", () => {
+  const store = {
+    "Jayce, Brilliant Inventor": {
+      matches: [],
+      cards: { "VEN-075": { name: "Platewyrm Egg", matches: [], seeded: true, copies: 3 } },
+    },
+  };
+  const prior = archetypes.priorFor(vsJayce("FIRST", {}), store);
+  assert.ok(prior, "no games played, but the list still helps");
+  assert.equal(prior.seeded.length, 1);
+});
+
+/* Equipment. The board renders gear as a separate card in the unit's zone with
+ * nothing tying them together, so the pairing comes out of the match log. */
+
+const { attachments } = require("../coach/summarize.js");
+
+const equipped = (log, oppZones) => {
+  fixture.build({ mode: "solo_lab", opponentId: "plr_x", log, zones: { opponent: oppZones } });
+  return Snapshot.build();
+};
+
+const BOTH_PRESENT = {
+  battlefieldB: [
+    { id: "u1", code: "SFD-057", name: "Irelia, Fervent", exhausted: true },
+    { id: "g1", code: "SFD-051", name: "Guardian Angel", exhausted: false },
+  ],
+};
+
+test("reads an equip out of the log", () => {
+  const s = equipped(
+    [{ at: "01:14", actor: "self", text: "Equipped Guardian Angel to Irelia, Fervent." }],
+    BOTH_PRESENT
+  );
+  assert.deepEqual(attachments(s), { "Guardian Angel": "Irelia, Fervent" });
+});
+
+test("a stale pairing is dropped once the pair is no longer together", () => {
+  // The unit died, or the gear moved. The log line survives; the pairing must not.
+  const s = equipped(
+    [{ at: "01:14", actor: "self", text: "Equipped Guardian Angel to Irelia, Fervent." }],
+    { battlefieldB: [{ id: "g1", code: "SFD-051", name: "Guardian Angel", exhausted: false }] }
+  );
+  assert.deepEqual(attachments(s), {}, "gear alone is not attached to anything");
+});
+
+test("gear moved to another unit takes the later line", () => {
+  const s = equipped(
+    [
+      { at: "01:10", actor: "self", text: "Equipped Guardian Angel to Treasure Hunter." },
+      { at: "01:14", actor: "self", text: "Equipped Guardian Angel to Irelia, Fervent." },
+    ],
+    BOTH_PRESENT
+  );
+  assert.deepEqual(attachments(s), { "Guardian Angel": "Irelia, Fervent" });
+});
+
+test("no equip line means no attachment claimed", () => {
+  const s = equipped([{ at: "01:14", actor: "self", text: "Moved Irelia, Fervent to base." }], BOTH_PRESENT);
+  assert.deepEqual(attachments(s), {});
+});
+
+test("the prompt shows the pairing and says it came from the log", () => {
+  const s = equipped(
+    [{ at: "01:14", actor: "self", text: "Equipped Guardian Angel to Irelia, Fervent." }],
+    BOTH_PRESENT
+  );
+  const msg = buildUserMessage(summarize(s), {});
+  assert.match(msg, /Guardian Angel \(ready, equipped to Irelia, Fervent per the log\)/);
 });

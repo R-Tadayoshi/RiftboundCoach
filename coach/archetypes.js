@@ -92,27 +92,38 @@ function observe(snapshot, store) {
  * Returns null rather than an empty prior when there is no history: a coach
  * told "you have seen nothing" may treat that as evidence of absence, and one
  * match is not a read. */
-function priorFor(snapshot, store, minMatches = 1) {
+function priorFor(snapshot, store, minMatches = 0) {
   const data = store || load();
   const key = archetypeKey(snapshot);
   if (!key || !data[key]) return null;
 
   const entry = data[key];
   const played = entry.matches.length;
+  // A seeded list is worth having before a single game has been played, so
+  // the match floor only gates the observed half.
   if (played < minMatches) return null;
 
-  const cards = Object.entries(entry.cards)
-    .map(([code, card]) => ({
-      code,
-      name: card.name,
-      seen: card.matches.length,
-      of: played,
-    }))
+  /* Two kinds of evidence, kept apart. A decklist says what the archetype
+   * plays; a sighting says what THIS opponent played. Collapsing them into one
+   * number would make a seeded card look like a game it was never seen in. */
+  const all = Object.entries(entry.cards).map(([code, card]) => ({
+    code,
+    name: card.name,
+    seen: card.matches.length,
+    of: played,
+    seeded: !!card.seeded,
+    copies: card.copies ?? null,
+  }));
+
+  const observed = all
     .filter((c) => c.seen > 0)
     .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name));
+  const seeded = all
+    .filter((c) => c.seeded && c.seen === 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  if (!cards.length) return null;
-  return { champion: key, matchesPlayed: played, cards };
+  if (!observed.length && !seeded.length) return null;
+  return { champion: key, matchesPlayed: played, cards: observed, seeded };
 }
 
 module.exports = { observe, priorFor, publicCards, archetypeKey, load, save, STORE, PUBLIC_ZONES };

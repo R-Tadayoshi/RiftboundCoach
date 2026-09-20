@@ -1,0 +1,11 @@
+# A decklist is read the way you would write one: one card per line, with an
+# optional count. Codes and names both work; comments and blanks are ignored.
+#
+#   node coach/seed.js "Jayce, Brilliant Inventor" decks/example-jayce.txt
+#
+# Every line is resolved against the card API, so a typo is reported rather
+# than quietly stored as a card that does not exist.
+
+3 Dredge Up
+2 OGN-099
+Platewyrm Egg
