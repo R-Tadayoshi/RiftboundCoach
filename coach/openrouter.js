@@ -6,7 +6,11 @@
 "use strict";
 
 const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-4.5";
+/* Checked against OpenRouter's own model list rather than remembered:
+ * claude-sonnet-5 is both newer and cheaper than the 4.5 this defaulted to
+ * ($2/$10 per Mtok against $3/$15). RBC_MODEL overrides it with any slug
+ * OpenRouter serves — haiku-4.5 for a cheaper run, opus-5 for a harder think. */
+const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-5";
 
 async function ask({ system, user, model = DEFAULT_MODEL, apiKey = process.env.OPENROUTER_API_KEY }) {
   if (!apiKey) {

@@ -80,9 +80,24 @@ cat state/state.json                     # newest, mirrored to disk
 ## Coaching
 
 ```bash
+# macOS / Linux
 export OPENROUTER_API_KEY=sk-or-...
+
+# Windows, cmd.exe
+set OPENROUTER_API_KEY=sk-or-...
+
+# Windows, PowerShell
+$env:OPENROUTER_API_KEY="sk-or-..."
+
 node coach/index.js
 ```
+
+[OpenRouter](https://openrouter.ai) is a gateway: one key and one bill across
+many providers. The model is chosen by its slug, and the default
+`anthropic/claude-sonnet-5` routes to Anthropic. Set `RBC_MODEL` to use
+another — `anthropic/claude-haiku-4.5` is cheaper, `anthropic/claude-opus-5`
+thinks harder. It is pay-as-you-go and needs credit on the account; a turn
+costs roughly 1,500 tokens in and 250 out, so about half a cent on Sonnet 5.
 
 It watches the sidecar and, when it is your turn, prints a line to the
 terminal. Flags:
@@ -92,8 +107,6 @@ terminal. Flags:
 | `--dry-run` | build and print the prompt, send nothing — no key needed |
 | `--once` | coach the current state and exit |
 | `--every` | coach on every change, not only your turns |
-
-`RBC_MODEL` picks the model (default `anthropic/claude-sonnet-4.5`).
 
 Card text comes from [RiftScribe](https://riftscribe.gg/api-docs) — free, no
 key — and is cached in `state/cards.json`, so a match after the first is
