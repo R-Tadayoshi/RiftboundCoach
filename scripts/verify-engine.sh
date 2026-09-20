@@ -15,6 +15,11 @@ set -euo pipefail
 ROOT="${ALPHARUNE_ROOT:-$(cd "$(dirname "$0")/../../chorlick/alpharune" && pwd)}"
 LOG="${TMPDIR:-/tmp}/riftbound-verify.log"
 
+# Never wait on `pgrep -f "cmake --build"`. The waiting shell's own command
+# line contains that string, so the pattern matches itself and the loop never
+# exits — which is how a dozen stray waiters and several concurrent builds
+# ended up thrashing this machine. Run the build in the foreground here and
+# let the shell wait on it properly.
 echo "building $ROOT ..."
 if ! (cd "$ROOT" && cmake --build build) > "$LOG" 2>&1; then
   echo "BUILD FAILED:"
