@@ -1,0 +1,209 @@
+diff --git a/src/cards/card.h b/src/cards/card.h
+index bd1b268..3502b9f 100644
+--- a/src/cards/card.h
++++ b/src/cards/card.h
+@@ -557,6 +557,35 @@ public:
+     /// flag to filter out untargetable enemy candidates.
+     virtual bool canBeChosenByEnemy() const { return true; }
+ 
++    /// Same question, with the board in hand.
++    ///
++    /// The stateless form above cannot express a condition — "unless I'm in
++    /// combat", "while I'm level 16" — so cards needing one were left
++    /// unimplemented with an ENGINE GAP note (Master Yi, Unstoppable; Akali,
++    /// Silent). This overload is what the engine actually calls; it defaults
++    /// to the stateless answer, so every existing override keeps working
++    /// untouched and only cards that need the board override this one.
++    virtual bool canBeChosenByEnemy(const GameState& /*state*/,
++                                    GameObjectId /*self*/) const {
++        return canBeChosenByEnemy();
++    }
++
++    // ── Countering ────────────────────────────────────────────────────
++    /// Whether a counterspell may counter this card.
++    ///
++    /// "This can't be countered" had no representation: every counterspell
++    /// reaches into the chain and pops the top item, with no way to ask the
++    /// card being countered whether it objects. Counterspells consult this
++    /// (via chainItemCanBeCountered in card_helpers.h) before removing an
++    /// item; a card that cannot be countered is simply not a legal thing to
++    /// counter, so the counterspell fizzles as it would on any other illegal
++    /// target — it is still paid for and still goes to the trash.
++    ///
++    /// Note the fail-open default in the helper: when the executor has no
++    /// CardRegistry it cannot ask, and then the item counters as before.
++    /// That keeps registry-less tests behaving exactly as they did.
++    virtual bool canBeCountered() const { return true; }
++
+     // ── Entry state ───────────────────────────────────────────────────
+     /// Whether this unit should enter the board READY (not exhausted) on
+     /// play, without paying an Accelerate cost. Default false; resolves
+diff --git a/src/cards/card_helpers.h b/src/cards/card_helpers.h
+index f3f01e4..be793ea 100644
+--- a/src/cards/card_helpers.h
++++ b/src/cards/card_helpers.h
+@@ -168,10 +168,33 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
+         ps.last_spell_energy_spent = 0;
+ }
+ 
+-inline void counterChainTop(CardContext& ctx) {
+-    if (ctx.state.chain.items.empty()) return;
++/// Whether this chain item may legally be countered.
++///
++/// Fails open on purpose. A chain item with no CardDef (a token's ability,
++/// an engine-made effect) has no card to ask, and an executor with no
++/// CardRegistry cannot ask; in both cases the answer is "yes, counter it",
++/// which is exactly what every counterspell did before this existed. Only a
++/// card that answers false — Card::canBeCountered — changes anything.
++inline bool chainItemCanBeCountered(CardContext& ctx, const ChainItem& item) {
++    if (item.card_def_id == kInvalidId) return true;
++    const CardRegistry* reg = ctx.executor.cardRegistry();
++    if (!reg) return true;
++    const Card* card = reg->get(item.card_def_id);
++    return !card || card->canBeCountered();
++}
++
++/// Counter the top chain item. Returns whether it was actually countered, so
++/// callers with a rider ("counter it AND they can't play spells this turn")
++/// can skip the rider when the counter fizzled.
++inline bool counterChainTop(CardContext& ctx) {
++    if (ctx.state.chain.items.empty()) return false;
+     auto& top = ctx.state.chain.items.back();
+-    if (!top.is_spell) return;
++    if (!top.is_spell) return false;
++    if (!chainItemCanBeCountered(ctx, top)) {
++        ctx.events.logTrace("COUNTER: " + std::to_string(top.source) +
++                             " cannot be countered");
++        return false;
++    }
+     auto countered = top.source;
+     revertCounteredPlay(ctx, top);  // CR 425.1.b
+     ctx.state.chain.items.pop_back();
+@@ -182,6 +205,7 @@ inline void counterChainTop(CardContext& ctx) {
+         obj.location = std::nullopt;
+         ctx.state.player(obj.owner).trash.push_back(countered);
+     }
++    return true;
+ }
+ 
+ // ── Gold tokens ──
+diff --git a/src/core/game_state.h b/src/core/game_state.h
+index 9c5ca4e..a4f55cb 100644
+--- a/src/core/game_state.h
++++ b/src/core/game_state.h
+@@ -107,6 +107,7 @@ struct PlayerState {
+     bool grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer ("friendly units may be played to open battlefields")
+     bool units_play_base_only = false;         // set on the RESTRICTED player — Mageseeker Warden ("opponents can only play units to their base")
+     bool tokens_enter_ready = false;           // Renata Glasc, Industrialist ("your tokens enter ready")
++    bool units_enter_ready = false;            // Magma Wurm ("other friendly units enter ready"), Wuju Master
+     bool recall_all_on_attacker_tie = false;   // Symbol of the Solari (227): attacker-side combat tie recalls ALL units
+     bool effects_cant_ready_my_units = false;  // set on the RESTRICTED player — Mageseeker Warden cl2 ("spells/abilities can't ready enemy units/gear")
+     int  spells_have_repeat_energy = 0;        // Syndra, Transcendent (708): granted [Repeat] tranche cost (energy)
+diff --git a/src/engine/effect_executor.cpp b/src/engine/effect_executor.cpp
+index 19d2363..cee3953 100644
+--- a/src/engine/effect_executor.cpp
++++ b/src/engine/effect_executor.cpp
+@@ -262,6 +262,32 @@ void EffectExecutor::drawCards(PlayerId player, int count) {
+     }
+ }
+ 
++void EffectExecutor::burnCards(PlayerId player, int count) {
++    auto& ps = state_.player(player);
++    events_.logTrace(std::string("EFFECT: ") + toString(player) + " burns " +
++                     std::to_string(count) + " (deck=" +
++                     std::to_string(ps.main_deck.size()) + ")");
++
++    int burned = 0;
++    for (int i = 0; i < count; ++i) {
++        // An empty deck stops the burn. It does NOT trigger burn-out: CR
++        // 431.2 fires when a DRAW finds the deck empty, and burning is not
++        // drawing.
++        if (ps.main_deck.empty()) break;
++        auto card_id = ps.main_deck.back();
++        ps.main_deck.pop_back();
++        ps.trash.push_back(card_id);
++        state_.getObject(card_id).zone = ZoneType::Trash;
++        events_.logTrace("  BURNED: " + state_.getObject(card_id).name +
++                         " (id=" + std::to_string(card_id) + ")");
++        ++burned;
++    }
++    if (burned < count) {
++        events_.logTrace("  burn stopped short: deck exhausted after " +
++                         std::to_string(burned));
++    }
++}
++
+ void EffectExecutor::bounceToHand(GameObjectId target) {
+     if (!state_.objectExists(target)) return;
+     auto& obj = state_.getObject(target);
+diff --git a/src/engine/effect_executor.h b/src/engine/effect_executor.h
+index 1af2ec5..d9083d2 100644
+--- a/src/engine/effect_executor.h
++++ b/src/engine/effect_executor.h
+@@ -40,6 +40,12 @@ public:
+     /// from the def). Returned reference is valid for the executor's life.
+     const CardDB& cardDB() const { return card_db_; }
+ 
++    /// Access the CardRegistry (card *behaviour*, as opposed to cardDB()'s
++    /// static data). May be null: it is optional at construction and tests
++    /// that never play a card leave it unset, so every caller must handle
++    /// nullptr rather than assume a registry is present.
++    const CardRegistry* cardRegistry() const { return card_registry_; }
++
+     /// Set the RNG for effects that need randomness (reveal, recycle).
+     void setRng(std::mt19937_64* rng) { rng_ = rng; }
+ 
+@@ -51,6 +57,16 @@ public:
+     void dealDamage(GameObjectId target, int amount, GameObjectId source);
+     void killObject(GameObjectId target);
+     void drawCards(PlayerId player, int count);
++
++    /// [Burn N] — put the top N cards of a player's main deck into their
++    /// trash.
++    ///
++    /// Not a draw and not deck-out. The engine's `burned_out` flag is the
++    /// CR 431.2 burn-out (an empty deck costing you a point), which shares
++    /// only a name with this. Burning the last card does NOT trigger that:
++    /// burn-out fires when a DRAW finds the deck empty, so an empty deck
++    /// here simply stops.
++    void burnCards(PlayerId player, int count);
+     void bounceToHand(GameObjectId target);
+     void giveTemporaryMight(GameObjectId target, int amount, int minimum = 0);
+     void giveTemporaryKeyword(GameObjectId target, Keyword kw, int value);
+diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
+index ce24a33..b82a15e 100644
+--- a/src/engine/game_engine.cpp
++++ b/src/engine/game_engine.cpp
+@@ -1747,6 +1747,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
+         if (card.hasKeyword(Keyword::Ambush) && card.isAtBattlefield()) {
+             enters_ready = true;
+         }
++        // A passive on ANOTHER card: "other friendly units enter ready" (Magma
++        // Wurm), "your units enter ready" (Wuju Master). The per-card
++        // entersReadyOnPlay() hook below only asks the ENTERING card about
++        // itself, so a passive held by a different permanent had no way to be
++        // expressed — both cards carried an ENGINE GAP note saying so. The
++        // flag is refreshed from applyPassiveAura on every recalc, exactly
++        // like tokens_enter_ready.
++        if (state_.player(card.controller).units_enter_ready) enters_ready = true;
++
+         // Cards that intrinsically enter ready (e.g. Daisy! "I enter ready").
+         if (card.card_def_id != kInvalidId) {
+             if (const Card* cdef = card_registry_.get(card.card_def_id)) {
+@@ -3798,6 +3807,7 @@ void GameEngine::recalculateAuras() {
+         ps.grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer
+         ps.units_play_base_only = false;         // Mageseeker Warden
+         ps.tokens_enter_ready = false;           // Renata Glasc, Industrialist
++        ps.units_enter_ready = false;            // Magma Wurm, Wuju Master
+         ps.recall_all_on_attacker_tie = false;   // Symbol of the Solari
+         ps.effects_cant_ready_my_units = false;  // Mageseeker Warden cl2
+         ps.spells_have_repeat_energy = 0;        // Syndra, Transcendent
+@@ -3829,7 +3839,7 @@ void GameEngine::recalculateAuras() {
+         if (!on_board && !legend_zone) continue;
+         if (obj.card_def_id == kInvalidId) continue;
+         const Card* card = card_registry_.get(obj.card_def_id);
+-        if (on_board && card && !card->canBeChosenByEnemy()) {
++        if (on_board && card && !card->canBeChosenByEnemy(state_, id)) {
+             obj.untargetable_by_enemy = true;
+         }
+ 

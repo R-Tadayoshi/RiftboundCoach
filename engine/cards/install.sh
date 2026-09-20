@@ -38,6 +38,17 @@ for src in "$HERE"/*.cpp; do
   dst="$ROOT/src/cards/$sub/$name"
 
   if [ -f "$dst" ] && cmp -s "$src" "$dst"; then same=$((same+1)); continue; fi
+
+  # A file the checkout has NOT touched is upstream's pristine copy, and
+  # overwriting it loses nothing — that is the whole point of the cards here
+  # that modify an existing upstream card (the counterspells carrying the
+  # canBeCountered guard). Only a checkout-side *modification* is worth
+  # refusing over, since that is the improvement this guard exists to protect.
+  if [ -f "$dst" ] && git -C "$ROOT" diff --quiet HEAD -- "src/cards/$sub/$name" 2>/dev/null; then
+    cp "$src" "$dst"; echo "  installed over pristine upstream: $sub/$name"
+    copied=$((copied+1)); continue
+  fi
+
   if [ -f "$dst" ] && [ "$FORCE" != "--force" ]; then
     echo "  DIFFERS: $sub/$name — the checkout's copy is not this one."
     echo "           Compare them, then re-run with --force to overwrite."

@@ -196,15 +196,14 @@ from the first run.
 ## Where the card database stands
 
 ```
-984 cards (OGN, OGS, SFD, UNL, VEN)
-  781 OK        usable in a search
-   19 PARTIAL   the file says it is incomplete
-  184 STUB      no behaviour, and its text needs some
+984 cards (OGN, OGS, SFD, UNL, VEN)   (2026-09-20)
+  802 OK        usable in a search
+   17 PARTIAL   the file says it is incomplete
+  165 STUB      no behaviour, and its text needs some
 ```
 
-Of the 184 stubs, **180 are VEN** — imported as data by `coach/gen-cards.js`
-and awaiting bodies. Only 23 cards across the four original sets are not
-usable, and both decks that ship with the engine now rank in full.
+Most of the stubs are VEN — imported as data by `coach/gen-cards.js` and
+awaiting bodies. Both decks that ship with the engine rank in full.
 
 Most of the movement in that number was the gate's own false positives, not
 new work. It has been wrong three times, each time in the direction that
@@ -218,6 +217,81 @@ blocks a sound search:
 
 The hook list is now derived from `card.h` and a test re-reads the header, so
 the next missing virtual is a failing test rather than a card quietly refused.
+
+That test has since earned itself: adding `Card::canBeCountered` to the engine
+turned it red on the same commit, before the new virtual could quietly
+demote any card implemented only through it.
+
+## "This can't be countered" — a rule the engine could not express
+
+Decree of Rage (VEN-015) reads *"This can't be countered. Deal 4 to an enemy
+Calm unit."* The second half was ordinary; the first had nowhere to live.
+
+Every counterspell in the engine reaches into `state.chain.items`, takes the
+back, and pops it. None of them asks the card being countered anything — the
+chain item carries a `card_def_id`, but a `CardDef` is static data with no
+opinions. So the line was unrepresentable, and the card sat as a generated
+stub rather than being written wrong.
+
+What it needed, in the engine (now `engine/patches/01-engine-core.patch`):
+
+- `Card::canBeCountered()`, defaulting to true.
+- `chainItemCanBeCountered(ctx, item)` in `card_helpers.h`, which every
+  counter path consults.
+- `counterChainTop` returning whether it countered, so Lilting Lullaby's
+  rider — *"its controller can't play spells this turn"* — is skipped when
+  the counter fizzled. That one is easy to miss: the counter and the rider
+  read as one sentence but are two effects, and only the first is conditional.
+- `EffectExecutor::cardRegistry()`. There was a setter and a constructor
+  parameter, and no getter.
+
+The predicate **fails open** — no `CardDef`, or no registry, means "counter
+it". That is not laziness: it is what every counterspell did before the
+predicate existed, so the engine's own counter tests, which build
+registry-less executors, pass untouched, and the only behaviour that changed
+is the one card that objects. A real game always has a registry
+(`GameEngine` passes `&card_registry_` at construction). The fail-open is
+pinned by a test so that tightening it into a fail-closed check trips
+something rather than quietly un-countering the format.
+
+Four of the seven counterspells share `counterChainTop` and needed no edit.
+The other three — Defy, Hard Bargain, Abandon — hand-roll the pop, each
+differently (Defy gates on cost, Hard Bargain publishes a pay-2-to-save
+choice, Abandon returns the card to hand and then predicts), so each got the
+guard where its own path decides. Flurry of Feathers is a fourth shape: the
+counter is one of two *modes*, so an uncounterable top makes that mode
+illegal rather than a legal choice that does nothing.
+
+## The patch set did not apply, and nothing would have noticed
+
+`engine/patches/` exists so a re-clone of alpharune does not silently lose our
+engine changes. It was not doing that job.
+
+Each patch had been generated as `git diff <the files this feature touched>`
+from a working tree that already carried the earlier features. Two of them
+touched `game_engine.cpp`, so each contained the other's hunks. Applied in
+order against a pristine checkout, the first went in and the second reported
+`CANNOT APPLY`. Nobody ran that: `apply.sh` was only ever pointed at the
+checkout the patches came from, where every patch reverse-checks as "already
+applied" and the script prints a reassuring `0 applied, 3 already in.`
+
+A green reassurance from a check that cannot fail is the same failure mode as
+grepping a build that is still running.
+
+Per-feature patches only work if each is generated against a tree that lacks
+the others — a branch per feature, in a repository we do not own. So the split
+is now by file role (`01-engine-core`, `02-engine-tests`), which one working
+tree can produce honestly, and `scripts/regen-engine-patches.sh` regenerates
+both and **applies them to a throwaway worktree at upstream HEAD before
+overwriting anything**. If they do not apply clean, the old ones stay and the
+script exits non-zero.
+
+`engine/cards/install.sh` had a smaller version of the same problem: it
+refused to overwrite any file that differed from its copy, to protect an
+improvement made checkout-side. But a file the checkout has not modified is
+upstream's pristine copy, and refusing there just meant the counterspells
+carrying the `canBeCountered` guard silently did not install. It now asks git
+whether the checkout actually changed the file, and only refuses when it did.
 
 ## Two things scoped and deliberately NOT built
 

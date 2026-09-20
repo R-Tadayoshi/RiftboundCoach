@@ -1,0 +1,161 @@
+diff --git a/tests/cards/test_counter_spells.cpp b/tests/cards/test_counter_spells.cpp
+index fa5b467..118398b 100644
+--- a/tests/cards/test_counter_spells.cpp
++++ b/tests/cards/test_counter_spells.cpp
+@@ -399,4 +399,156 @@ TEST_F(AbandonTest, ReturnsCounteredSpellToHand) {
+     (void)deck_top;
+ }
+ 
++
++// ═══════════════════════════════════════════════════════════════════════════
++// "This can't be countered" — Card::canBeCountered
++// ═══════════════════════════════════════════════════════════════════════════
++//
++// Decree of Rage (802) is the first card to answer false. The guard lives in
++// chainItemCanBeCountered() (cards/card_helpers.h) and is consulted by every
++// counter path, so these tests are as much about the seven counterspells
++// above as they are about Decree of Rage.
++//
++// Note which EffectExecutor each test builds. The guard needs a CardRegistry
++// to ask the card anything, and the executor's registry is optional: a real
++// game always has one (GameEngine passes &card_registry_ at construction),
++// while most tests here construct `EffectExecutor(state, events, card_db)`
++// and get a null one. With no registry the guard fails open — counters behave
++// exactly as they did before it existed — which is why every test above still
++// passes untouched. FailsOpenWithoutARegistry pins that deliberately, so the
++// day someone "fixes" it into a fail-closed check, a test says so.
++
++constexpr CardDefId kDecreeOfRage = 802;
++
++class UncounterableTest : public CardTestFixture {};
++
++TEST_F(UncounterableTest, WindWallCannotCounterDecreeOfRage) {
++    auto target = pushSpellOnChain(P2, kDecreeOfRage);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kWindWall, P1, {}, exec);
++
++    ASSERT_EQ(state.chain.items.size(), 1u)
++        << "Decree of Rage can't be countered — it must stay on the chain";
++    EXPECT_EQ(state.chain.items.back().source, target);
++    EXPECT_NE(state.getObject(target).zone, ZoneType::Trash);
++    EXPECT_FALSE(inTrash(P2, target));
++}
++
++TEST_F(UncounterableTest, WindWallStillCountersAnOrdinarySpell) {
++    // The guard must not become a blanket "nothing counters". Same executor,
++    // same card, a spell that has no objection.
++    auto target = pushSpellOnChain(P2, kLunarBoon);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kWindWall, P1, {}, exec);
++
++    EXPECT_TRUE(state.chain.items.empty());
++    EXPECT_EQ(state.getObject(target).zone, ZoneType::Trash);
++}
++
++TEST_F(UncounterableTest, FailsOpenWithoutARegistry) {
++    auto target = pushSpellOnChain(P2, kDecreeOfRage);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db);  // deliberately no registry
++    invokeOnResolve(src, kWindWall, P1, {}, exec);
++
++    EXPECT_TRUE(state.chain.items.empty())
++        << "with no registry the guard cannot ask, so it must fail OPEN and "
++           "leave pre-existing counter behaviour unchanged";
++    EXPECT_EQ(state.getObject(target).zone, ZoneType::Trash);
++}
++
++TEST_F(UncounterableTest, LullabyRiderDoesNotApplyWhenCounterFizzles) {
++    // "Counter a spell. Its controller can't play spells this turn." The
++    // rider rides on the counter: no counter, no rider.
++    pushSpellOnChain(P2, kDecreeOfRage);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kLullaby, P1, {}, exec);
++
++    EXPECT_EQ(state.chain.items.size(), 1u);
++    EXPECT_FALSE(state.player(P2).cant_play_spells_this_turn)
++        << "the counter fizzled, so its rider must not land either";
++}
++
++TEST_F(UncounterableTest, DefyCannotCounterDecreeOfRage) {
++    // Defy gates on cost ("no more than [4]"); Decree of Rage costs 1, so it
++    // passes that gate and only canBeCountered can stop it.
++    auto target = pushSpellOnChain(P2, kDecreeOfRage);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kDefy, P1, {}, exec);
++
++    EXPECT_EQ(state.chain.items.size(), 1u);
++    EXPECT_NE(state.getObject(target).zone, ZoneType::Trash);
++}
++
++// ═══════════════════════════════════════════════════════════════════════════
++// Decree of Rage (802) — the other half: deal 4 to an enemy Calm unit
++// ═══════════════════════════════════════════════════════════════════════════
++
++class DecreeOfRageTest : public CardTestFixture {};
++
++TEST_F(DecreeOfRageTest, TargetsOnlyEnemyCalmUnits) {
++    auto enemy_calm = addUnit(P2, kInvalidId, 5);
++    state.getObject(enemy_calm).domains = {Domain::Calm};
++    auto enemy_fury = addUnit(P2, kInvalidId, 5);
++    state.getObject(enemy_fury).domains = {Domain::Fury};
++    auto own_calm = addUnit(P1, kInvalidId, 5);
++    state.getObject(own_calm).domains = {Domain::Calm};
++
++    Card* c = card_registry.get(kDecreeOfRage);
++    auto legal = c->enumerateLegalTargets(state, P1);
++
++    ASSERT_EQ(legal.size(), 1u);
++    EXPECT_EQ(legal[0], enemy_calm);
++    EXPECT_TRUE(c->hasLegalTargets(state, P1));
++}
++
++TEST_F(DecreeOfRageTest, NotPlayableWithNoEnemyCalmUnit) {
++    auto enemy_fury = addUnit(P2, kInvalidId, 5);
++    state.getObject(enemy_fury).domains = {Domain::Fury};
++
++    Card* c = card_registry.get(kDecreeOfRage);
++    EXPECT_FALSE(c->hasLegalTargets(state, P1));
++}
++
++TEST_F(DecreeOfRageTest, SkipsUnitsUntargetableByTheEnemy) {
++    auto shy = addUnit(P2, kInvalidId, 5);
++    state.getObject(shy).domains = {Domain::Calm};
++    state.getObject(shy).untargetable_by_enemy = true;
++
++    Card* c = card_registry.get(kDecreeOfRage);
++    EXPECT_TRUE(c->enumerateLegalTargets(state, P1).empty());
++}
++
++TEST_F(DecreeOfRageTest, DealsFour) {
++    auto victim = addUnit(P2, kInvalidId, 6);
++    state.getObject(victim).domains = {Domain::Calm};
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kDecreeOfRage, P1, {victim}, exec);
++
++    EXPECT_EQ(state.getObject(victim).damage_marked, 4);
++}
++
+ }  // namespace
