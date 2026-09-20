@@ -173,6 +173,26 @@ usually the cheapest line a player has — the two-point turn this whole project
 was built around was a legend readying a unit. Rank a position whose legend is
 not the one on screen and every number is about a different game.
 
+## Does the ranking actually decide anything?
+
+Yes, above about a thousand rollouts. Same position, same decks, only the
+count changing:
+
+| rollouts | result |
+|---|---|
+| 40 | top four inside the noise; StandardMove happened to lead |
+| 150 | top four inside the noise; a PlayCard happened to lead |
+| 1200 | **CLEAR** — `PlayCard card=2` at 82.7%, separated from the next |
+
+Five actions at 1200 rollouts is 6000 games in **79 seconds**, which is nothing
+against a turn you get minutes to think about. So 1200 is the default, chosen
+from the measurement rather than for comfort: below roughly a thousand this
+tool honestly reports TOO CLOSE TO CALL and tells you nothing.
+
+Passing the turn was worst at every count — 40.0%, 38.0%, 37.2% — which is the
+reassuring part. The thing the engine is sure about, it has been sure about
+from the first run.
+
 ## Staging
 
 **Stage 1 — rank my own lines. Does not need the resampler.**

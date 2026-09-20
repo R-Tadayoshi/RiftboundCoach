@@ -102,7 +102,13 @@ int main(int argc, char** argv) {
             "usage: rank <deck1.txt> <deck2.txt> <position.txt> [rollouts]\n");
         return 2;
     }
-    const int rollouts = argc > 4 ? std::atoi(argv[4]) : 60;
+    /* 1200, measured rather than guessed. On the example position the top
+     * four actions sat inside the noise at 40, at 150 and at 400; at 1200 the
+     * best separated cleanly at 82.7%. Five actions x 1200 rollouts is 6000
+     * games in about 80 seconds, which is nothing against a turn you get
+     * minutes to think about. Below roughly a thousand this tool reports
+     * TOO CLOSE TO CALL and tells you nothing. */
+    const int rollouts = argc > 4 ? std::atoi(argv[4]) : 1200;
     const int kMaxDecisions = 400;
 
     CardRegistry registry;
