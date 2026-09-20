@@ -332,3 +332,34 @@ test(
     assert.ok(withBase > 600, `expected most cards to carry behaviour, saw ${withBase}`);
   })
 );
+
+/* "228 of 984 cards are stubs" is true and useless. What decides whether
+ * tonight's game can be ranked is the few cards in the two decks at the
+ * table, which is usually a much shorter list. */
+test(
+  "a deck report names only the cards that block ranking IT",
+  withIndex(() => {
+    const files = Fid.scanCardFiles();
+    const fs2 = require("fs");
+    const deck = "/home/user/chorlick/alpharune/decks/draven_test.txt";
+    if (!files.size || !fs2.existsSync(deck)) return;
+
+    const logs = [];
+    const realLog = console.log;
+    console.log = (...a) => logs.push(a.join(" "));
+    let blocking;
+    try { blocking = Fid.reportDeck(deck, index, files); }
+    finally { console.log = realLog; }
+
+    const out = logs.join("\n");
+    assert.match(out, /distinct card\(s\)/);
+    if (blocking) {
+      assert.match(out, /block ranking/);
+      // The deck has ~29 distinct cards; whatever blocks must be fewer.
+      assert.ok(blocking < 29, "a whole-deck block would not be a useful report");
+      assert.match(out, /the coach still works on this deck/);
+    } else {
+      assert.match(out, /Every card is implemented/);
+    }
+  })
+);

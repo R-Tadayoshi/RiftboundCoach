@@ -124,12 +124,49 @@ function gate(cardRefs, { index, files } = {}) {
   return { safe: blocking.length === 0, blocking, checked };
 }
 
+/* What a deck needs before its games can be ranked.
+ *
+ * The bare count — 228 stubs of 984 — is true and not actionable. What
+ * decides whether tonight's game can be ranked is the handful of cards in the
+ * two decks at the table, and that is usually a much shorter list. */
+function reportDeck(file, index, files) {
+  const { parseDeckNames } = require("./alpharune.js");
+  const rows = parseDeckNames(fs.readFileSync(file, "utf8"));
+
+  const blocking = [];
+  for (const { count, name } of rows) {
+    const r = resolve(index, { name });
+    const v = verdictFor(r.card, files);
+    if (v.verdict !== "OK") blocking.push({ count, name, ...v });
+  }
+
+  console.log(`${path.basename(file)} — ${rows.length} distinct card(s)\n`);
+  if (!blocking.length) {
+    console.log("  Every card is implemented. Games with this deck can be ranked.");
+    return 0;
+  }
+  console.log(`  ${blocking.length} card(s) block ranking:`);
+  for (const b of blocking) {
+    console.log(`    ${String(b.count).padStart(2)}x ${b.name.padEnd(28)} ${b.verdict}`);
+  }
+  console.log(
+    `\n  Until these are implemented the coach still works on this deck — it ` +
+      `\n  reads card text directly — but it cannot rank a board they are on.`
+  );
+  return blocking.length;
+}
+
 function main() {
   const index = loadIndex(ROOT);
   const files = scanCardFiles(ROOT);
   if (!files.size) {
     console.error(`No card files under ${ROOT}/src/cards. Set ALPHARUNE_ROOT.`);
     process.exit(2);
+  }
+
+  const deckFlag = process.argv.indexOf("--deck");
+  if (deckFlag >= 0 && process.argv[deckFlag + 1]) {
+    process.exit(reportDeck(process.argv[deckFlag + 1], index, files) ? 1 : 0);
   }
 
   const counts = { OK: 0, STUB: 0, ABSENT: 0 };
@@ -159,4 +196,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { scanCardFiles, verdictFor, gate, BEHAVIOUR_HOOKS };
+module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS };
