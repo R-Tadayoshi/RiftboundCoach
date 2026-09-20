@@ -22,7 +22,7 @@ const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-5";
  *
  * The cap is not what you pay — usage is — so it is set well clear of both.
  * At 2000 a high-effort answer came back cut off mid-sentence after spending
- * 1727 of it thinking; at 4000 an "off"-effort answer did the same after
+ * 1727 of it thinking; at 4000 an answer at the provider default did the same after
  * 3861. Effort does not cap thinking, so the budget has to clear the worst
  * case rather than the expected one. */
 const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 6000);
@@ -40,6 +40,41 @@ const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 6000);
  * `--compare` and RBC_COMPARE carrying "@effort" entries rather than taking
  * this default's word for it. */
 const REASONING_EFFORT = process.env.RBC_REASONING || "low";
+
+/* Reasoning efforts OpenRouter accepts, as fractions of max_tokens:
+ * none 0, minimal ~10%, low ~20%, medium ~50%, high ~80%, max/xhigh ~95%.
+ *
+ * "default" is ours, not OpenRouter's: it sends no reasoning field at all and
+ * lets the model do whatever it does unasked. That is NOT the same as off —
+ * on a Sonnet 5 run, sending nothing produced 2314 reasoning tokens while
+ * "low" produced none. This file used to treat "off" as "send nothing", so a
+ * run labelled off was really the provider default thinking hard, and the
+ * comparison it fed was between three labels, two of which were lying. */
+const EFFORTS = new Set([
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "default",
+]);
+
+function applyReasoning(body, effort) {
+  const want = (effort || "default").toLowerCase();
+  /* A typo must not quietly become "provider default" — that is how a
+   * mislabelled run gets read as a finding. */
+  if (!EFFORTS.has(want)) {
+    throw new Error(
+      `"${effort}" is not a reasoning effort. Use one of: ${[...EFFORTS].join(", ")}. ` +
+        `("off" was an older name for "none"; it used to mean "send nothing", which is ` +
+        `"default" and is not off at all.)`
+    );
+  }
+  if (want === "default") return; // send no reasoning field
+  body.reasoning = { effort: want };
+}
 
 async function ask({
   system,
@@ -75,7 +110,7 @@ async function ask({
     ],
     max_tokens: MAX_TOKENS,
   };
-  if (effort && effort !== "off") body.reasoning = { effort };
+  applyReasoning(body, effort);
 
   const res = await fetch(ENDPOINT, {
     method: "POST",
@@ -106,7 +141,7 @@ async function ask({
       reason === "length"
         ? `the ${MAX_TOKENS}-token budget ran out${
             thought ? ` after ${thought} characters of reasoning` : ""
-          }. Raise RBC_MAX_TOKENS, or set RBC_REASONING=off.`
+          }. Raise RBC_MAX_TOKENS, or set RBC_REASONING=none.`
         : `finish_reason was "${reason}".`;
     throw new Error(`${model} returned an empty message — ${detail}`);
   }
@@ -125,4 +160,4 @@ async function ask({
   };
 }
 
-module.exports = { ask, DEFAULT_MODEL, MAX_TOKENS, REASONING_EFFORT, ENDPOINT };
+module.exports = { ask, DEFAULT_MODEL, MAX_TOKENS, REASONING_EFFORT, EFFORTS, applyReasoning, ENDPOINT };

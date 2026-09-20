@@ -138,17 +138,33 @@ The case against: the work that matters here is *arithmetic* — summing might a
 a battlefield, checking what a rune spread can actually pay for — and getting
 it wrong is the failure that matters most. Thinking is exactly what buys that.
 
-Compare them on one board rather than guessing, with `@effort` entries:
+Compare them on the same board rather than guessing, with `@effort` entries.
+This is the default set, so `--compare` alone walks one model up the ladder:
 
 ```bash
-set RBC_COMPARE=anthropic/claude-sonnet-5@off,anthropic/claude-sonnet-5@low,anthropic/claude-sonnet-5@high
+set RBC_COMPARE=anthropic/claude-sonnet-5@none,anthropic/claude-sonnet-5@low,anthropic/claude-sonnet-5@medium,anthropic/claude-sonnet-5@high
 node coach/index.js --compare
 ```
+
+Efforts are `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max` — and
+`default`, which sends no reasoning setting at all.
+
+**`default` is not `none`.** An early comparison labelled a run "off" when it
+was really sending nothing and letting the model choose: that run spent 2314
+tokens thinking, while the run labelled "low" spent none. Two of its three
+labels were wrong, and it was the "off" one that looked surprisingly good.
+`none` now says none. An unrecognised effort is an error rather than a
+silent fallback to the default, for the same reason.
+
+One board cannot settle this. The models disagree most on quiet turns and
+agree on obvious ones, so a single turn where they all say the same thing
+tells you nothing. Run it on several turns, and weight the ones where you
+had a real decision to make.
 
 Reasoning tokens bill at the output rate, so effort costs real money — though
 still cents. Per 40-turn session, at list prices:
 
-| | off | low | medium | high |
+| | none | low | medium | high |
 |---|---|---|---|---|
 | haiku-4.5 | $0.10 | $0.16 | $0.34 | $0.70 |
 | sonnet-5 | $0.20 | $0.32 | $0.68 | $1.40 |

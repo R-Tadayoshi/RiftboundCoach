@@ -36,12 +36,24 @@ const COMPARE = args.has("--compare");
  *
  *   anthropic/claude-sonnet-5           the default effort
  *   anthropic/claude-sonnet-5@high      the same model, thinking harder
- *   anthropic/claude-sonnet-5@off       no thinking at all
+ *   anthropic/claude-sonnet-5@none      no thinking at all
+ *   anthropic/claude-sonnet-5@default   whatever it does unasked
+ *
+ * Efforts: none, minimal, low, medium, high, xhigh, max, default. Note that
+ * "default" is not "none" — on Sonnet 5, sending no reasoning field produced
+ * more thinking than asking for "low".
+ *
+ * The default set below walks one model up the effort ladder rather than
+ * lining three models up at one effort: which model is a question you can
+ * only ask once effort means what it says.
  *
  * "@" rather than ":" because OpenRouter slugs use ":" themselves (:batch). */
 const COMPARE_MODELS = (
   process.env.RBC_COMPARE ||
-  "anthropic/claude-haiku-4.5,anthropic/claude-sonnet-5,anthropic/claude-opus-5"
+  "anthropic/claude-sonnet-5@none," +
+    "anthropic/claude-sonnet-5@low," +
+    "anthropic/claude-sonnet-5@medium," +
+    "anthropic/claude-sonnet-5@high"
 )
   .split(",")
   .map((m) => m.trim())

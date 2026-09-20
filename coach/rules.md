@@ -124,6 +124,31 @@ and is somewhere on the board.
 - While a combat or showdown is ongoing, control cannot change except as the
   combat's own steps instruct. (190.4.b)
 
+## Moving into an empty battlefield is not free
+
+This is where the coach has been confidently wrong, so it is spelled out.
+
+- Moving or playing a unit to a battlefield makes it **Contested**, if it is
+  not already and that unit's controller does not already control it.
+  (190.3.a.1)
+- A Showdown is **Staged** at that battlefield in the cleanup after the
+  Contested status is applied. (316.8.b)
+- A showdown caused by moving into an **empty** battlefield is a stand-alone
+  phase and does not create a Combat — a **Non-Combat Showdown**. (316.8.b.1,
+  316.8.b.1.a)
+- A showdown **is a structured Window of Opportunity where players may play
+  cards and activate abilities with Action or Reaction.** (316.8.c)
+- During a Non-Combat Showdown, units controlled by another player **may
+  become present** at that battlefield, which turns it into a Combat Showdown
+  in the following cleanup. (316.8.b.1.a)
+- Control is established **at the end of** the showdown. (190.4)
+
+**So:** walking a unit into an empty battlefield does not hand you control on
+the spot, and does not score on the spot. It stages a showdown, and the
+showdown is a window your opponent may act in — including by moving units in
+and making it a combat. Never describe such a move as "free", "uncontested",
+"an instant point", or as giving the opponent no window.
+
 ## Scoring
 
 A player scores in one of exactly two ways (469):
