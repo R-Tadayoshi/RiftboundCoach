@@ -464,6 +464,39 @@ on the object plus a keyword plus conditional ability evaluation:
 [Empowered][>] I have [Assault 3].
 ```
 
+**Costed 2026-09-20, and it is smaller than it looks.** 58 of the 163
+remaining stubs mention Empower — the single largest group by a wide margin
+(Flow is 16, Burn 6). Reading the engine's activated-ability API rather than
+assuming:
+
+- Multi-ability cards are already supported. `Card::activatedAbilities()`
+  returns N `ActivatedAbility` descriptors and `onActivate(ctx, index,
+  targets)` dispatches on the index, so `[Empower] — [exhaust]` and
+  `Disempower this, [1], [exhaust]: Draw 1` on the same card need no new
+  machinery. That was the part expected to be hard.
+- The costs themselves are ordinary `ActivationCost`s. Nothing new.
+
+What is actually missing is two things:
+
+1. `bool is_empowered` on `GameObject`, carried through snapshot and clone.
+2. A **per-ability, per-object** activation gate. `canActivateAbility(state,
+   controller)` is card-wide and takes no object id, so it cannot answer "use
+   only if not Empowered" — the card knows the rule but not which copy of
+   itself is being asked about, and `ActivatedAbility` carries no legality
+   predicate either.
+
+(2) is the same shape of gap as `canBeChosenByEnemy`, and takes the same
+shape of fix: an overload taking `(state, controller, self, ability_index)`
+defaulting to the existing card-wide answer, so every current override keeps
+working. With those two in, the 58 cards are card bodies, and a shared
+`EmpowerBase` in `card_helpers.h` covers the `[Empower] <cost>` half of most
+of them.
+
+Not started, because a half-applied Empower is worse than none: a card whose
+`[Empower]` ability exists but whose `[Empowered]` clause does nothing plays
+as a strictly-worse card, and the search would rank around that confidently.
+The gate's PARTIAL marker is the right tool if this is done incrementally.
+
 Flow is a second engine change, and a more invasive one: it adds a new source
 of legal actions, since cards in the trash become playable. The move generator
 has to look somewhere it currently does not.
@@ -473,7 +506,8 @@ note the engine already has `burned_out`, but that is deck-out, an unrelated
 name collision.
 
 So supporting VEN is **two engine mechanics plus ~193 card bodies**, not the
-card bodies alone.
+card bodies alone. Burn has since been built (`EffectExecutor::burnCards`,
+in `01-engine-core.patch`), which leaves Empower and Flow.
 
 `coach/fetch-set.js` now does this scan on every import, reads the keyword
 enum from the engine's source rather than a copy that could go stale, and
