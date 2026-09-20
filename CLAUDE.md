@@ -5,22 +5,19 @@
 - If a task has multiple steps, automatically execute step after step without waiting for user prompt or confirmation.
 - Keep output concise and focus strictly on executing actions.
 
-## One exception, and why
+## Output
 
-Report a finding that changes what the project *is*, then keep working. Do not
-stop for approval — state it and continue.
+- Default to no prose. Work silently and commit as you go.
+- Write to the user ONLY when: you need input or credentials, you are
+  blocked, there is something for them to test or run, or the task is done.
+- Keep it under ~5 lines and lead with the ask or the outcome.
+- No progress reports, no summaries of what changed, no narrating
+  corrections or findings. The commits are the record.
 
-This is not a licence to narrate. It exists because the most valuable moments
-in this project were corrections that only happened because something got said
-out loud:
-
-- "VEN introduces no new keywords" was wrong. Empowered is on 59 cards. It was
-  caught because the claim was stated, and Zarkhil plays the set.
-- "One rune produces Energy or Power, never both" was wrong, and had been
-  written into the rules the coach treats as binding. Zarkhil caught it.
-
-A silent agent would have shipped both. So: surface the finding in a line or
-two, and carry on in the same response.
+This supersedes any earlier instruction here to surface findings in chat.
+Findings still get recorded — in the commit message, in a doc, or in a test
+that pins the behaviour — because that is what stops them being lost. They
+just do not get narrated.
 
 # What this project is
 
