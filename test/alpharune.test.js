@@ -403,3 +403,22 @@ test(
     assert.equal(r.safe, false, `${partial.name} should block`);
   })
 );
+
+/* The hook list, kept honest against the engine's header.
+ *
+ * Handpicking it produced two rounds of false stubs: applyReplacement was
+ * missing and called Guardian Angel a blank, then selfCostReduction was
+ * missing and called Plaza Guardian one. Both were fully implemented. This
+ * test re-reads card.h so the third round is a failing test rather than a
+ * card quietly refused. */
+test(
+  "every virtual a card can override is in the gate's hook list",
+  withIndex(() => {
+    const fromHeader = Fid.hooksFromHeader();
+    if (!fromHeader) return;
+    const missing = fromHeader.filter((h) => !Fid.BEHAVIOUR_HOOKS.includes(h));
+    assert.deepEqual(missing, [],
+      `card.h declares virtuals the gate does not know — a card implemented ` +
+      `only through one of these would be called a stub: ${missing.join(", ")}`);
+  })
+);

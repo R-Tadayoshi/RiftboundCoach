@@ -45,6 +45,17 @@ const ROOT = process.env.ALPHARUNE_ROOT || path.join(__dirname, "..", "..", "cho
  * So the list errs the other way. A card matching any of these is credited
  * with behaviour, and a card that overrode one of them pointlessly would only
  * cost us a search we could have refused. */
+/* Derived from the header rather than remembered, and kept in sync by a test
+ * that re-reads `card.h` and fails on anything missing.
+ *
+ * Handpicking this list has now produced two rounds of false stubs:
+ * `applyReplacement` was absent and called Guardian Angel a blank, then
+ * `selfCostReduction` was absent and called Plaza Guardian one. Both cards
+ * were implemented. A false STUB blocks a sound search, which is the same sin
+ * as a false "illegal" in legality.js — so the list is every virtual a card
+ * can override, minus the ones that are not behaviour. */
+const NOT_BEHAVIOUR = new Set(["def"]);
+
 const BEHAVIOUR_HOOKS = [
   "onResolve", "onPlay", "onActivate", "onTrigger", "onEquip",
   "onEquippedTrigger", "applyReplacement", "applyPassiveAura",
@@ -57,7 +68,22 @@ const BEHAVIOUR_HOOKS = [
   "getTargetRequirements", "enumerateLegalTargets", "needsPlayTimeTarget",
   "needsPlayTimeTargetPair", "needsEquipTimeTarget", "isActionAbility",
   "isReactionAbility", "hasLegalTargets",
+  // Added after each was found missing by a card it wrongly called a stub.
+  "canBeChosenByEnemy", "selfCostReduction", "entersReadyOnPlay",
+  "levelThreshold", "minTurnToScore", "playableAsReactionToAttack",
+  "requiresLegion", "requiresLevel", "suppressesTemporaryTriggersHere",
 ];
+
+/** Every virtual a card can override, read out of the engine's own header. */
+function hooksFromHeader(root) {
+  const fs2 = require("fs");
+  const p2 = require("path");
+  const file = p2.join(root || ROOT, "src", "cards", "card.h");
+  if (!fs2.existsSync(file)) return null;
+  const text = fs2.readFileSync(file, "utf8");
+  const names = [...text.matchAll(/virtual\s+[A-Za-z_:<>,\s*&]+?\s+(\w+)\s*\(/g)].map((m) => m[1]);
+  return [...new Set(names)].filter((n) => !NOT_BEHAVIOUR.has(n) && !/^~?Card$/.test(n));
+}
 const BEHAVIOUR_RE = new RegExp(`\\b(?:${BEHAVIOUR_HOOKS.join("|")})\\s*\\([^;]*?\\)[^;{]*?override`, "s");
 
 /* A card can also inherit behaviour from a shared base — SimpleEquipGear and
@@ -228,4 +254,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, PARTIAL_RE };
+module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, hooksFromHeader, PARTIAL_RE };
