@@ -255,43 +255,46 @@ test("the targeting clause does not leak into the card or destination", () => {
   assert.equal(m.target, null);
 });
 
-/* Turn 11, Zarkhil 5 — 6, eleven ready runes. One answer proposed Draven
- * (6 Energy + 1 Power) and Stellacorn Herder (4 Energy) — 11 runes, every one
- * spent — while advising "hold En Garde/Defy up in case they draw into a
- * trick". The other called Draven "exactly 6 of your 11", losing the Power. */
+/* Turn 11, Zarkhil 5 — 6, eleven ready runes, Draven at 6 Energy + 1 Power.
+ *
+ * My first version of this check counted Energy + Power against the ready
+ * runes and made Draven cost seven. That is wrong: a rune's two abilities
+ * have two different costs (164.2), recycling is not exhausting, and a rune
+ * does not have to be ready to be recycled — so one rune pays 1 Energy AND
+ * 1 Power. The check flagged legal lines, which this file exists not to do.
+ * These tests pin the corrected bound. */
 
 const COSTS = {
   "SFD-148": { name: "Draven, Audacious", type: "Unit", energy: 6, power: 1, might: 6, text: "" },
   "SFD-048": { name: "Stellacorn Herder", type: "Unit", energy: 4, power: null, might: 3, text: "" },
-  "OGN-046": { name: "En Garde", type: "Spell", energy: 1, power: null, text: "" },
+  "OGN-045": { name: "Defy", type: "Spell", energy: 1, power: 1, text: "" },
   "MYST-001": { name: "Mystery", type: "Unit", might: 2, text: "" },
 };
 
-const withRunes = (ready, unknown = 0) => ({
+const withRunes = (ready, exhausted = 0, unknown = 0) => ({
   ...board(),
   turn: { step: "main" },
-  me: { base: [], hand: [], runes: { total: ready, ready, exhausted: 0, unknown, byDomain: {} } },
+  me: {
+    base: [],
+    hand: [],
+    runes: { total: ready + exhausted, ready, exhausted, unknown, byDomain: {} },
+  },
 });
 
-test("a line that costs more than the ready runes is rejected", () => {
-  const v = L.check(
-    "ACTIONS:\n- play Draven, Audacious to base\n- play Stellacorn Herder to base",
-    withRunes(10),
-    COSTS
+test("one rune pays both the Energy and the Power of a cost", () => {
+  // Draven is 6+1p. Six ready runes: exhaust all six, recycle one of them.
+  assert.deepEqual(
+    L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(6), COSTS),
+    [],
+    "recycling a spent rune is how the Power gets paid"
   );
-  assert.equal(v.length, 1);
-  assert.equal(v[0].rule, "164.2");
-  assert.match(v[0].why, /costs 11 but you have 10/);
+  // And a single rune covers a 1 Energy + 1 Power trick.
+  assert.deepEqual(L.check("ACTIONS:\n- play Defy to base", withRunes(1), COSTS), []);
 });
 
-test("Power is counted as its own rune, not folded into the Energy", () => {
-  // Draven alone is 7 runes, not 6 — the mistake in the answer.
-  assert.equal(L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(6), COSTS).length, 1);
-  assert.deepEqual(L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(7), COSTS), []);
-});
-
-test("spending every rune is legal, and not flagged", () => {
-  // Tapping out is a judgement call, not a rules violation.
+test("the real turn-11 line is affordable and is not flagged", () => {
+  // Draven (6+1p) + Stellacorn Herder (4) on 11 ready runes: 10 Energy of 11,
+  // one recycle, one rune left standing.
   assert.deepEqual(
     L.check(
       "ACTIONS:\n- play Draven, Audacious to base\n- play Stellacorn Herder to base",
@@ -300,6 +303,36 @@ test("spending every rune is legal, and not flagged", () => {
     ),
     []
   );
+});
+
+test("Energy is capped by the runes that are ready", () => {
+  const v = L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(5, 6), COSTS);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].rule, "164.2.a");
+  assert.match(v[0].why, /needs 6 Energy but only 5 rune\(s\) are ready/);
+});
+
+test("Power is capped by the runes on the board, ready or not", () => {
+  // Two Defys want 2 Power; one rune on board can only be recycled once.
+  const v = L.check(
+    "ACTIONS:\n- play Defy to base\n- play Defy to base",
+    withRunes(2, 0),
+    COSTS
+  );
+  assert.deepEqual(v, [], "two runes, two recycles — fine");
+
+  const tight = L.check(
+    "ACTIONS:\n- play Defy to base\n- play Defy to base",
+    { ...withRunes(2), me: { base: [], hand: [], runes: { total: 1, ready: 2, exhausted: 0, unknown: 0, byDomain: {} } } },
+    COSTS
+  );
+  assert.equal(tight.length, 1);
+  assert.equal(tight[0].rule, "164.2.b");
+});
+
+test("an exhausted rune still pays Power, because recycling is not exhausting", () => {
+  // One ready rune for the Energy, an already-spent one recycled for the Power.
+  assert.deepEqual(L.check("ACTIONS:\n- play Defy to base", withRunes(1, 4), COSTS), []);
 });
 
 test("one unknown cost silences the sum rather than guessing at it", () => {
@@ -316,7 +349,7 @@ test("one unknown cost silences the sum rather than guessing at it", () => {
 
 test("runes the board could not read are assumed available", () => {
   assert.deepEqual(
-    L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(5, 2), COSTS),
+    L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(4, 0, 2), COSTS),
     [],
     "never flag on the strength of an unreadable rune"
   );

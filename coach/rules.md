@@ -215,15 +215,31 @@ Each battlefield scores once per turn per player.
 
 ## Paying for things
 
-- A basic rune has two abilities: exhaust it to add 1 Energy, or recycle it to
-  add 1 Power of that rune's domain (164.2, 164.2.a, 164.2.b.1).
-- **One rune produces Energy or Power, never both.** A cost written as
-  6 Energy + 1 Power needs **seven** runes, not six. Power in a cost is another
-  rune, not a rider on the energy.
-- Add up the whole line before recommending it, and say what is left standing.
-  Advice to "hold up a trick" is worthless if the line already spent every
-  rune — the rune pool empties anyway at the end of the turn (167, 167.1), so
-  what matters is what stays ready during the opponent's turn.
+A basic rune has **two abilities, with two different costs** (164.2):
+
+- `[E]: [Reaction] — Add [1].` — the cost is **exhausting** it.
+- `Recycle this: [Reaction] — Add [C].` — the cost is **recycling** it, which
+  puts it on the bottom of the rune deck (416.1.b). The Power added carries
+  that rune's domain (164.2.b.1).
+
+**Recycling is not exhausting, and a rune does not have to be ready to be
+recycled.** So one rune can pay for both: exhaust it for 1 Energy, then
+recycle that same spent rune for 1 Power. A cost of 6 Energy + 1 Power is
+**six** runes, not seven — one of the six leaves the board on the way.
+
+So, when adding up a line:
+
+- Energy is limited by how many runes are **ready** — an exhausted rune cannot
+  be exhausted again.
+- Power is limited by how many runes are **on the board at all**, ready or
+  already spent, and by having the right domain among them.
+- A rune recycled is gone for the rest of the game, so paying Power costs
+  shrinks the rune pool you will have next turn. That is a real cost and worth
+  mentioning, but it is not a reason to call the play unaffordable.
+- Say what is left standing after the line. The rune pool empties at end of
+  turn anyway (167, 167.1), so what matters is which runes stay **ready** for
+  the opponent's turn. One ready rune is enough for a 1-Energy trick, or for a
+  1-Energy + 1-Power one if it is the right domain.
 
 ## Runes, energy and power
 

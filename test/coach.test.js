@@ -964,9 +964,15 @@ test("the rules state that a move is limited by its cost, not by a per-turn cap"
   assert.match(rules, /Check the legend before concluding/);
 });
 
-test("the rules state that power is a separate rune from energy", () => {
+/* I had this backwards and wrote the wrong version into the binding rules
+ * section: "one rune produces Energy or Power, never both". Recycling is a
+ * separate cost from exhausting, so one rune pays both. */
+test("the rules state that one rune can pay both Energy and Power", () => {
   const { loadRules } = require("../coach/prompt.js");
   const rules = loadRules();
-  assert.match(rules, /never both/);
-  assert.match(rules, /needs \*\*seven\*\* runes, not six/);
+  assert.match(rules, /Recycling is not exhausting/);
+  assert.match(rules, /is\s*\n?\*\*six\*\* runes, not seven/);
+  assert.doesNotMatch(rules, /never both/, "that was the error, not the rule");
+  assert.match(rules, /Energy is limited by how many runes are \*\*ready\*\*/);
+  assert.match(rules, /Power is limited by how many runes are \*\*on the board/);
 });

@@ -271,51 +271,83 @@ function checkHide(action, summary) {
 
 /* Can the whole line actually be paid for?
  *
- * Each rune produces at most one Energy OR one Power (164.2), so a line whose
- * total cost exceeds the ready runes cannot be played whatever the domains
- * are. Domains are deliberately NOT checked here: working out whether a
- * specific Power is payable needs the rune spread and the recycle rules, and
- * getting that subtly wrong would flag legal lines.
+ * A basic rune has TWO abilities with two different costs (164.2):
  *
- * This is the check the coach needed most. Asked for a line on 11 ready
- * runes, it proposed Draven (6 Energy + 1 Power) plus Stellacorn Herder (4
- * Energy) — exactly 11, every rune spent — and in the same breath advised
- * "hold En Garde/Defy up in case they draw into a trick". The other answer
- * called Draven "exactly 6 of your 11", missing the Power entirely. Both were
- * arithmetic, which is the one thing code never gets wrong. */
+ *   [E]: [Reaction] — Add [1].            cost: exhaust it
+ *   Recycle this: [Reaction] — Add [C].   cost: recycle it (416.1.b, to the
+ *                                         bottom of the rune deck)
+ *
+ * Recycling is not exhausting, and nothing requires a rune to be ready in
+ * order to be recycled. So one rune can pay BOTH: exhaust it for 1 Energy,
+ * then recycle that same spent rune for 1 Power of its domain. Draven's
+ * 6 Energy + 1 Power is six runes, not seven — one of the six goes back into
+ * the rune deck on the way.
+ *
+ * I had this backwards and this check flagged legal lines, which is the one
+ * thing the rule at the top of this file forbids. So the bound is:
+ *
+ *   Energy  <= runes that are READY  (only a ready rune can be exhausted)
+ *   Power   <= runes ON BOARD        (ready or already spent, either recycles)
+ *
+ * Domains are still not checked. Power carries the domain of the rune
+ * recycled (164.2.b.1), and deciding whether a particular Power is payable
+ * needs the spread — getting that subtly wrong is how this went wrong once
+ * already. */
 function costOf(card) {
   if (!card) return null;
   const energy = typeof card.energy === "number" ? card.energy : null;
   if (energy === null) return null;
-  return energy + (typeof card.power === "number" ? card.power : 0);
+  return { energy, power: typeof card.power === "number" ? card.power : 0 };
 }
 
 function checkAffordable(actions, summary, cardText) {
-  const ready = summary.me?.runes?.ready;
-  if (typeof ready !== "number") return null;
-  // Runes the board could not read might be ready; assume they are.
-  const available = ready + (summary.me?.runes?.unknown || 0);
+  const runes = summary.me?.runes;
+  if (!runes || typeof runes.ready !== "number") return null;
 
-  let total = 0;
+  // Runes the board could not read might be ready; assume they are.
+  const unknown = runes.unknown || 0;
+  const ready = runes.ready + unknown;
+  const onBoard =
+    typeof runes.total === "number"
+      ? runes.total
+      : ready + (runes.exhausted || 0);
+
+  let energy = 0;
+  let power = 0;
   const spent = [];
   for (const action of actions) {
     if (action.verb !== "play") continue;
     const cost = costOf(cardTextFor(action.card, summary, cardText));
     if (cost === null) return null; // one unknown cost and the sum means nothing
-    total += cost;
-    spent.push(`${action.card} (${cost})`);
+    energy += cost.energy;
+    power += cost.power;
+    spent.push(
+      `${action.card} (${cost.energy}${cost.power ? `+${cost.power}p` : ""})`
+    );
   }
-  if (!spent.length || total <= available) return null;
+  if (!spent.length) return null;
 
-  return {
-    rule: "164.2",
-    why:
-      `this line costs ${total} but you have ${available} ready rune(s): ` +
-      `${spent.join(" + ")}. A rune produces one Energy or one Power, never ` +
-      `both, so Power in a cost is another rune — not a free rider on the ` +
-      `Energy. There is no way to pay for all of this.`,
-    action: spent.join(" + "),
-  };
+  if (energy > ready) {
+    return {
+      rule: "164.2.a",
+      why:
+        `this line needs ${energy} Energy but only ${ready} rune(s) are ready: ` +
+        `${spent.join(" + ")}. Energy comes from exhausting a ready rune, and ` +
+        `an exhausted rune cannot be exhausted again.`,
+      action: spent.join(" + "),
+    };
+  }
+  if (power > onBoard) {
+    return {
+      rule: "164.2.b",
+      why:
+        `this line needs ${power} Power but you have only ${onBoard} rune(s) ` +
+        `on board: ${spent.join(" + ")}. Power comes from recycling a rune, ` +
+        `and each rune can only be recycled once.`,
+      action: spent.join(" + "),
+    };
+  }
+  return null;
 }
 
 /* Check every action in an answer. Returns [] when nothing is provably
