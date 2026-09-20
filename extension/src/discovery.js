@@ -168,6 +168,68 @@
     return out;
   }
 
+  /* The champion and legend zones, in full.
+   *
+   * Two attempts to read the champion zone from its expected shape have both
+   * failed on the live board, so this stops inferring the shape and reports
+   * it: every element carrying the zone anywhere in the document, what owns
+   * it, and whether a card is inside. Legend is dumped beside it because the
+   * same function reads both and legend works — the difference between them
+   * is the answer.
+   *
+   * Card NAMES are included here, deliberately: these are your own champion
+   * and legend, which are public from the first turn. */
+  function identityZones() {
+    const out = {};
+    for (const zone of ["champion", "legend"]) {
+      const hits = [];
+      let nodes;
+      try {
+        nodes = root.document.querySelectorAll(
+          `[data-drop-zone="${zone}"], [data-drop-zone-root="${zone}"]`
+        );
+      } catch (_) {
+        nodes = [];
+      }
+
+      for (const el of nodes) {
+        const img = el.querySelector("img[alt]");
+        const ownerEl = el.closest("[data-zone-owner]");
+        const visualEl = el.closest("[data-visual-owner]") || el.querySelector("[data-visual-owner]");
+        hits.push({
+          tag: el.tagName?.toLowerCase(),
+          dropZone: el.getAttribute("data-drop-zone"),
+          dropZoneRoot: el.getAttribute("data-drop-zone-root"),
+          cardId: el.getAttribute("data-card-id"),
+          hasImg: !!img,
+          alt: img?.alt || null,
+          src: (img?.currentSrc || img?.src || "").split("/").slice(-2).join("/") || null,
+          // The nesting question: is there a data-zone-owner above this at all?
+          ownerAbove: ownerEl ? ownerEl.getAttribute("data-zone-owner") : null,
+          ownerAboveTag: ownerEl ? ownerEl.tagName?.toLowerCase() : null,
+          visualOwner: visualEl ? visualEl.getAttribute("data-visual-owner") : null,
+          depthFromBody: (() => {
+            let d = 0;
+            for (let n = el; n && n !== root.document.body; n = n.parentElement) d += 1;
+            return d;
+          })(),
+        });
+        if (hits.length >= 10) break;
+      }
+      out[zone] = hits;
+    }
+
+    // How many zone-owner containers exist at all, and what they are called.
+    out.zoneOwners = [
+      ...new Set(
+        [...root.document.querySelectorAll("[data-zone-owner]")].map((el) =>
+          el.getAttribute("data-zone-owner")
+        )
+      ),
+    ];
+    return out;
+  }
+
   /** Everything at once, ready to paste. */
   function report() {
     return {
@@ -179,6 +241,7 @@
       battlefieldArea: battlefieldArea(),
       resourceReadouts: resourceReadouts(),
       deckPiles: deckPiles(),
+      identityZones: identityZones(),
       zonesPresent: [
         ...new Set(
           [...root.document.querySelectorAll("[data-drop-zone-root]")].map((el) =>
@@ -197,6 +260,7 @@
     battlefieldArea,
     resourceReadouts,
     deckPiles,
+    identityZones,
     report,
   };
 })(typeof window !== "undefined" ? window : globalThis);

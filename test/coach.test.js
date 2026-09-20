@@ -732,12 +732,19 @@ test("the champion is listed where the turn's options are counted", () => {
   }
 });
 
-test("a deployed champion is not offered as a play", () => {
+test("an unread champion zone says so rather than passing as empty", () => {
+  // Two attempts to read it have failed on the live board, and while they
+  // failed the models stated flatly there was nothing to deploy. An absent
+  // line is indistinguishable from an absent card.
   fixture.build();
   deployChampion();
   const msg = buildUserMessage(summarize(Snapshot.build()), {});
   const playable = msg.slice(msg.indexOf("CARDS YOU CAN PLAY"), msg.indexOf("THEM —"));
-  assert.ok(!playable.includes("CHAMPION ZONE"), "nothing to play from an empty zone");
+
+  assert.ok(!playable.includes("CHAMPION ZONE —"), "no champion is offered");
+  assert.match(playable, /could not be read/, "but the gap is stated");
+  assert.match(playable, /this list is incomplete/);
+  assert.match(playable, /108\.3\.d/);
 });
 
 test("the opponent's champion is shown as theirs, not as your option", () => {

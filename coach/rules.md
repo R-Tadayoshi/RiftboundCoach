@@ -72,7 +72,10 @@ available from your next turn, not this one.
   rules of Playing a Card."** (108.3.d)
 - It cannot be put back there by normal means. (108.3.c)
 
-**So a champion sitting in its zone is an available play, not scenery.** When
+**So a champion sitting in its zone is an available play, not scenery.** If
+the board state says the champion zone could not be read, treat the list of
+playable cards as incomplete rather than complete — do not conclude there is
+nothing to deploy. When
 the board state says the champion zone is occupied, that card is castable this
 turn on the same terms as anything in hand — and it is often the strongest
 play available. When the zone is empty the champion has already been deployed

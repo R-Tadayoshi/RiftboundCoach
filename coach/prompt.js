@@ -237,6 +237,20 @@ function buildUserMessage(summary, cardText, prior) {
       rows.push(
         `  - ${side.championZone.name} (CHAMPION ZONE — playable from there, rule 108.3.d)`
       );
+    } else {
+      /* An unread champion zone must not pass as an empty one.
+       *
+       * Reading it has failed twice on the live board, and while it failed the
+       * models stated flatly that there was nothing to deploy — reasoning
+       * confidently from a list they had no reason to doubt. An absent line is
+       * indistinguishable from an absent card, so the uncertainty is said out
+       * loud rather than left to be inferred from silence. */
+      rows.push(
+        "  ! the champion zone could not be read. If a champion is still sitting" +
+          "\n    in its zone on screen it is ALSO playable from there (rule" +
+          "\n    108.3.d) and this list is incomplete — check the board before" +
+          "\n    concluding you have nothing to deploy."
+      );
     }
     return rows.length ? rows.join("\n") : "  (nothing)";
   };
