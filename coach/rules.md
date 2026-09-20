@@ -32,13 +32,58 @@ wholesale, see "Filling this in" at the bottom.
 
 *(empty — see "Filling this in")*
 
-## Filling this in
+# Observed in play — NOT verified as rules
 
-The official Core Rules are published as a PDF at `riftbound.gg` and
-`playriftbound.com`. Neither is reachable from the environment this was built
-in. To have the real rules distilled into this file rather than guessed,
-add both domains to the cloud environment's **Custom** network allowlist —
-the same place `play.riftatlas.com` was added — and say so.
+Game-log lines seen in real captures. These describe what the client actually
+did, which is evidence about the action space but is **not** a rulebook: an
+action being possible once says nothing about when it is possible. The model is
+told to treat this section as weaker than the rules above.
+
+Moving and playing:
+
+- `Played <unit> from hand to base.`
+- `Moved <unit> to <battlefield>.`
+- `Moved <unit> to base.`
+- `Played <unit> from hand to <battlefield>.` — seen only for a battlefield
+  the player already controlled, which is consistent with the rule above.
+- `Moved <unit> from <battlefield> to trash.`
+
+Costs:
+
+- `Exhausted 1 <domain> rune.` — runes are exhausted to pay
+- `Paid 2 Energy — Exhaust 2.`
+- `Recycled 1 <domain> rune.`
+- `Channeled 1 rune.`
+- `Adjusted floating energy to N.` / `Adjusted floating power to N.`
+
+Units:
+
+- `Readied <unit>.` / `Exhausted <unit>.`
+- `Equipped <gear> to <unit>.`
+
+Resolution and scoring:
+
+- `Played <spell> from hand.` then `Chain resolved: <spell>.`
+- `Conquered <battlefield> and scored 1.`
+- `Scored 1 at turn start. Score: 1 → 2.`
+- `Drew 1 card.`
+
+# Filling this in
+
+Both `riftbound.gg` and `playriftbound.com` are now reachable, and both turn
+out to be JavaScript shells holding no rules text. Tracing where each gets its
+content:
+
+| What | Host | Reachable |
+|---|---|---|
+| Riot's official Core Rules PDF | `cmsassets.rgpub.io` | no |
+| riftbound.gg's rules viewer data | `api.dotgg.gg`, `static.dotgg.gg` | no |
+
+**`cmsassets.rgpub.io`** is the one worth adding: it serves Riot's own PDF,
+which is the authoritative text rather than a third party's transcription.
+
+Failing that, the PDF can simply be downloaded in a browser and committed to
+this repository, and read from there.
 
 Until then, this file holds only what has been stated outright, and the coach
 is told to say when it cannot tell whether a play is legal rather than assume.

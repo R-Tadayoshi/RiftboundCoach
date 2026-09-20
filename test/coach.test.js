@@ -616,3 +616,15 @@ test("a missing rules file leaves the prompt usable", () => {
   assert.ok(BASE_SYSTEM.length > 500, "the coaching instructions stand alone");
   assert.ok(!BASE_SYSTEM.includes("RULES\n\n#"), "rules are appended, not baked in");
 });
+
+test("observed log lines are carried, and marked weaker than rules", () => {
+  const { loadRules, SYSTEM } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /NOT verified as rules/);
+  assert.match(rules, /Played <unit> from hand to base/);
+  assert.match(
+    SYSTEM,
+    /weaker than its rules/,
+    "the model is told an action seen once is not a legality"
+  );
+});

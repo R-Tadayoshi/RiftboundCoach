@@ -67,6 +67,9 @@ Legality:
   it forbids.
 - That section is INCOMPLETE. Where it does not settle whether a play is
   legal, say so plainly — "if you can do X" — rather than assuming it is.
+- Its "Observed in play" part is weaker than its rules: those lines record what
+  the client was seen doing once, not when it is allowed. An action appearing
+  there does not make it legal now.
   Recommending an illegal play is the worst failure available to you: it looks
   like advice and cannot be taken.`;
 
