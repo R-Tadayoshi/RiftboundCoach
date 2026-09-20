@@ -195,10 +195,49 @@ already there: of alpharune's 787 card files, **605 carry a behaviour body**
 and only 182 are pure data. Writing card behaviour IS the work of supporting a
 set, and alpharune has done it four times.
 
-Good news in it: **VEN introduces no new keywords.** Every bracketed keyword in
-the set is already one of the engine's 23, and keywords are declarative
-(`d.keywords.set(Keyword::Deflect)`) with the engine handling them centrally.
-So no engine changes are needed, only cards.
+### VEN needs engine work, not only cards
+
+I first wrote here that VEN introduces no new keywords. That was wrong, and
+wrong in an avoidable way: I ran the scan against the set **index**, whose
+records carry no `description` field at all, and read "no new keywords" out of
+197 empty strings. Zarkhil, who plays the set, asked about Empowered. It is on
+59 cards.
+
+Scanned against the full records, and against the engine's `Keyword` enum read
+from its own source:
+
+| keyword | cards | what it needs |
+|---|---|---|
+| `[Empowered]` | 59 | a per-object state, plus abilities that apply only while it holds |
+| `[Empower]` | 45 | an activated ability that sets that state, once per unit |
+| `[Flow]` | 17 | playing a card **from the trash** for an alternate cost, then banishing it |
+| `[Burn N]` | 8 | mill N from the top of the main deck |
+| `[Stun]` | 2 | already an engine mechanic (`UnitStunnedEvent`, `WhenYouStun`) |
+| `[Add N]` | 5 | rune-pool notation, not a keyword |
+
+Empower is the big one — about 30% of the set touches it. It is a new boolean
+on the object plus a keyword plus conditional ability evaluation:
+
+```
+[Empower] 2 Fury (2 Fury: Empower me. Use only if not Empowered.)
+[Empowered][>] I have [Assault 3].
+```
+
+Flow is a second engine change, and a more invasive one: it adds a new source
+of legal actions, since cards in the trash become playable. The move generator
+has to look somewhere it currently does not.
+
+Burn is a card effect rather than a mechanic and needs no new engine concept —
+note the engine already has `burned_out`, but that is deck-out, an unrelated
+name collision.
+
+So supporting VEN is **two engine mechanics plus ~193 card bodies**, not the
+card bodies alone.
+
+`coach/fetch-set.js` now does this scan on every import, reads the keyword
+enum from the engine's source rather than a copy that could go stale, and
+**refuses to scan textless records** instead of returning a comfortable answer
+about them.
 
 ### The fidelity gate (built: `coach/fidelity.js`)
 

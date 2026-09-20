@@ -191,3 +191,51 @@ test(
     assert.equal(r.safe, true, JSON.stringify(r.blocking));
   })
 );
+
+/* Keyword scanning. I ran this by hand against the set INDEX — whose records
+ * carry no description — and reported "VEN introduces no new keywords" from
+ * 197 empty strings. Empowered is on 59 of them. The tool now refuses that
+ * input instead of answering it. */
+
+test("a keyword scan over textless records is refused, not answered", () => {
+  const index = [{ name: "A", description: "" }, { name: "B" }];
+  assert.throws(() => F.newKeywords(index), /not the full records/);
+});
+
+test("keywords are split by whether the engine has an enum value", () => {
+  const engine = new Set(["deflect", "assault"]);
+  const r = F.newKeywords(
+    [
+      { description: "[Deflect] (reminder)[Empower] :rb_energy_2:" },
+      { description: "[Empowered][>] I have [Assault 3]." },
+    ],
+    engine
+  );
+  assert.deepEqual(r.known.map((k) => k.keyword).sort(), ["assault", "deflect"]);
+  assert.deepEqual(r.unknown.map((k) => k.keyword).sort(), ["empower", "empowered"]);
+});
+
+test(
+  "the engine's keyword list is read from its source, not copied",
+  withIndex(() => {
+    const e = F.engineKeywords();
+    if (!e) return;
+    assert.equal(e.size, 23);
+    assert.ok(e.has("deflect") && e.has("ganking") && e.has("temporary"));
+    assert.ok(!e.has("empower"), "if this fails the engine has gained Empower");
+  })
+);
+
+test(
+  "VEN's new mechanics are reported, Empowered among them",
+  withIndex(() => {
+    const fs2 = require("fs");
+    if (!fs2.existsSync("state/sets/ven.json")) return;
+    const cards = Object.values(JSON.parse(fs2.readFileSync("state/sets/ven.json", "utf8")));
+    const r = F.newKeywords(cards, F.engineKeywords());
+    const names = r.unknown.map((k) => k.keyword);
+    for (const k of ["empowered", "empower", "flow"]) {
+      assert.ok(names.includes(k), `${k} should be reported as new`);
+    }
+  })
+);

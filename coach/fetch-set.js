@@ -101,6 +101,62 @@ function residualText(card) {
   return t.replace(/\s+/g, " ").trim();
 }
 
+/* The engine's keyword enum, read from its source rather than copied here.
+ * A copy goes stale silently; the enum is the truth. */
+function engineKeywords(root) {
+  const fs2 = require("fs");
+  const p2 = require("path");
+  root = root || process.env.ALPHARUNE_ROOT ||
+    p2.join(__dirname, "..", "..", "chorlick", "alpharune");
+  for (const rel of [["src", "core", "types.h"], ["src", "core", "types.hpp"]]) {
+    const f = p2.join(root, ...rel);
+    if (!fs2.existsSync(f)) continue;
+    const m = /enum\s+class\s+Keyword\s*:[^{]*\{([^}]*)\}/.exec(fs2.readFileSync(f, "utf8"));
+    if (!m) continue;
+    return new Set(
+      m[1]
+        .split(",")
+        .map((e) => e.split("=")[0].trim().toLowerCase())
+        .filter((e) => e && e !== "count")
+    );
+  }
+  return null;
+}
+
+/* Keywords a set uses that the engine has no enum value for.
+ *
+ * This exists because I got it wrong by hand. I ran the check against the
+ * set INDEX, whose records carry no `description` at all, and reported "VEN
+ * introduces no new keywords" from 197 empty strings. Zarkhil knew the set and
+ * asked about Empowered. It is on 59 cards.
+ *
+ * So the check refuses to run on textless data rather than returning a
+ * comfortable answer about it. */
+function newKeywords(cards, engineSet) {
+  const withText = cards.filter((c) => (c.description || "").trim());
+  if (!withText.length) {
+    throw new Error(
+      `none of these ${cards.length} cards carry text — this is the index, not ` +
+        `the full records, and a keyword scan over it would find nothing and ` +
+        `mean nothing.`
+    );
+  }
+  const engine = engineSet || engineKeywords();
+  const counts = new Map();
+  for (const c of withText) {
+    for (const m of (c.description || "").matchAll(/\[([A-Za-z][A-Za-z ]{1,24}?)(?:\s+\d+)?\]/g)) {
+      const k = m[1].toLowerCase().replace(/[^a-z]/g, "");
+      if (k) counts.set(k, (counts.get(k) || 0) + 1);
+    }
+  }
+  const known = [];
+  const unknown = [];
+  for (const [k, n] of [...counts].sort((a, b) => b[1] - a[1])) {
+    (engine && engine.has(k) ? known : unknown).push({ keyword: k, cards: n });
+  }
+  return { known, unknown, engineKnown: !!engine };
+}
+
 const classify = (card) =>
   !(card.description || "").trim()
     ? "vanilla"
@@ -135,7 +191,33 @@ async function main() {
     `\n${free} of ${cards.length} are pure data — the engine needs no code for them.\n` +
       `${buckets["needs-behaviour"].length} carry rules text and need a hand-written body.`
   );
+
+  /* Cards are work. A keyword the engine has never heard of is a different
+   * kind of work — an engine change — so it is reported separately and
+   * loudly. */
+  let kw;
+  try {
+    kw = newKeywords(cards);
+  } catch (err) {
+    console.log(`\nKeyword scan skipped: ${err.message}`);
+    return;
+  }
+  if (!kw.engineKnown) {
+    console.log(`\nKeyword scan skipped: could not read the engine's Keyword enum.`);
+    return;
+  }
+  console.log(
+    `\nKeywords already in the engine: ${kw.known.map((k) => k.keyword).join(", ") || "(none)"}`
+  );
+  if (!kw.unknown.length) {
+    console.log(`No keyword in this set is new to the engine.`);
+    return;
+  }
+  console.log(`\nNEW MECHANICS — these need engine work, not just cards:`);
+  for (const { keyword, cards: n } of kw.unknown) {
+    console.log(`  ${keyword.padEnd(14)} on ${String(n).padStart(3)} card(s)`);
+  }
 }
 
 if (require.main === module) main().catch((e) => { console.error(e.message); process.exit(1); });
-module.exports = { fetchSet, listSet, classify, residualText };
+module.exports = { fetchSet, listSet, classify, residualText, newKeywords, engineKeywords };
