@@ -18,7 +18,7 @@ OUTDIR="${1:-./engine}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$OUTDIR"
 
-for src in probe position; do
+for src in probe position rank; do
   g++ -std=gnu++20 -O1 \
     -I "$ROOT/src" -I "$ROOT/build/generated" \
     "$HERE/$src.cpp" \
