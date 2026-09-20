@@ -107,7 +107,14 @@ function residualText(card) {
   let t = (card.description || "").replace(/:rb_[a-z0-9_]+:/gi, "");
   t = t.replace(/\[[^\]]{1,24}\]/g, "");       // [Deflect], [>], [Deflect 2]
   t = t.replace(/\([^)]*\)/g, "");             // reminder text
-  return t.replace(/\s+/g, " ").trim();
+
+  /* What survives a keyword list is its punctuation. "[Assault 2], [Shield 2]
+   * (reminder)" strips to ",", and a bare comma was being read as rules text
+   * needing an implementation — which called Garen, Rugged a stub when his
+   * whole card is two engine keywords. Residue with no letters or digits in
+   * it is not an effect. */
+  t = t.replace(/\s+/g, " ").trim();
+  return /[A-Za-z0-9]/.test(t) ? t : "";
 }
 
 /* The engine's keyword enum, read from its source rather than copied here.

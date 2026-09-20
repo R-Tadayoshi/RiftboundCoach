@@ -461,3 +461,25 @@ test(
     assert.equal(blocking, 0, `the engine's own test deck should rank:\n${logs.join("\n")}`);
   })
 );
+
+/* Punctuation is not an effect. "[Assault 2], [Shield 2] (reminder)" strips
+ * to a bare comma, and that comma was read as rules text needing an
+ * implementation — so Garen, Rugged, whose whole card is two engine keywords,
+ * was called a stub and blocked. */
+test("residue with no letters or digits is not rules text", () => {
+  const { residualText, classify } = require("../coach/fetch-set.js");
+  for (const d of [
+    "[Assault 2], [Shield 2] (+2 [M] while I'm an attacker or defender.)",
+    "[Tank]; [Shield].",
+    "[Deflect] (Opponents must pay to choose me.)",
+  ]) {
+    assert.equal(residualText({ description: d }), "", JSON.stringify(d));
+    assert.equal(classify({ description: d }), "keywords-only");
+  }
+});
+
+test("real text is still real text", () => {
+  const { residualText } = require("../coach/fetch-set.js");
+  assert.equal(residualText({ description: "Kill a gear." }), "Kill a gear.");
+  assert.equal(residualText({ description: "[Deflect] Draw 1." }), "Draw 1.");
+});
