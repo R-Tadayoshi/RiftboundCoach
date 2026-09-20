@@ -50,7 +50,21 @@ does is attach a percentage to a board the engine could not faithfully build.
 
 **Both decklists are required, and theirs is a guess.** Their unseen cards are
 sampled from what is left of the list you give, so a wrong list samples from
-the wrong pool. Seeded archetypes are the place to get one.
+the wrong pool.
+
+`coach/guess-deck.js` writes one from the seeded builds and what they have
+shown this game:
+
+```bash
+node coach/guess-deck.js state/state.json decks/theirs.txt
+```
+
+It refuses more often than it answers, on purpose. Fewer than three of their
+shown cards in the best-fitting build, or two builds fitting equally well, and
+it declines rather than picking — sampling their hand from the wrong deck is
+worse than not ranking at all. A card they played that a build does not contain
+counts twice as heavily against it as a match counts for, since staples appear
+in everything and a surprise does not.
 
 **Rollouts default to 1200** because that is what the measurement supports: on
 the position this was built against, the top four options sat inside the noise
