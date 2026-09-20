@@ -122,6 +122,46 @@ downstream fails closed and would simply start refusing to rank.
 cards are NOT patches: they are reproduced by `coach/gen-cards.js` from the
 committed set data.
 
+## What is actually left, and what it is blocked on
+
+197 cards short of the 984 are unusable. They divide into engine work and
+card work, and the split matters — the engine work unblocks cards in bulk
+while each card is its own afternoon.
+
+| blocked on | cards |
+|---|---|
+| **Empower / Empowered** | 53 |
+| **Flow** (play from trash, then banish) | 16 |
+| **Burn N** (mill) | 5 |
+| enemy-attacks trigger | 1 |
+| leaves-the-board trigger | 1 |
+| nothing shared — each needs its own implementation | 121 |
+
+### The three that pay
+
+**Empower** is the biggest and the shape is known: a per-object boolean, an
+activated ability that sets it once (`Use only if not Empowered`), and
+abilities gated on it (`[Empowered][>] I have [Assault 3]`). No new trigger
+plumbing, and the flag pattern already exists on `GameObject`.
+
+**Flow** is smaller but more invasive, because it adds a new *source* of legal
+actions: `generateMainPhaseActions` iterates the hand and Flow needs it to
+iterate the trash too, with `executePlayCard` routing the card out of the
+trash and banishing it on resolve.
+
+**Burn N** is the cheapest of the three. `effect_executor.h` has no mill
+primitive at all — not one — so `void burnCards(PlayerId, int)` moving N from
+the top of the main deck to the trash is the whole job. (The engine's existing
+`burned_out` is deck-out, an unrelated name collision.)
+
+### Two one-card triggers, both correctly deferred
+
+Nine-Tailed Fox needs a "when an enemy unit attacks a battlefield you control"
+trigger; Treasure Trove needs "leaves the board", which is not the same as
+`WhenIDie` — its file says so and is marked PARTIAL rather than pretending.
+Adding a trigger means firing it at every site a permanent departs, and
+missing one is a card that silently half-works.
+
 ## Naming, which has bitten five times
 
 - A **legend** is printed with its champion tag and named without it. The board
