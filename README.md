@@ -20,12 +20,25 @@ and `coach/engine.js`; `docs/alpharune-integration.md` records what was
 checked against its source rather than its README.
 
 ```bash
-# once: build the engine, then our probes against it
+# once: build the engine, apply our patches, then build our probes against it
 cd ../chorlick/alpharune && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
-cd -   && ./engine/build.sh
+cd -   && ./engine/patches/apply.sh && ./engine/build.sh
 
+node coach/doctor.js        # is every link in place? says which is not
 node coach/index.js --rank --deck-mine decks/mine.txt --deck-theirs decks/theirs.txt
 ```
+
+**Run `node coach/doctor.js` first.** The ranking path has a lot of links — a
+C++ engine built from source, a patch set applied to it, an imported card set,
+two relinked probes, two decklists — and every one fails closed, which is right
+and makes diagnosis miserable: the symptom of any break is the same quiet
+"answering without the engine". The doctor checks each in dependency order and
+names the one that is down.
+
+It catches the trap that costs the most time: the probes link the engine's
+static library, so rebuilding the engine without re-running `engine/build.sh`
+leaves them holding the previous card set, reporting cards as unknown that the
+engine now has.
 
 What it prints:
 
