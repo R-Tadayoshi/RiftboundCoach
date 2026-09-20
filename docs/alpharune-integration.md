@@ -193,6 +193,32 @@ Passing the turn was worst at every count — 40.0%, 38.0%, 37.2% — which is t
 reassuring part. The thing the engine is sure about, it has been sure about
 from the first run.
 
+## Where the card database stands
+
+```
+984 cards (OGN, OGS, SFD, UNL, VEN)
+  781 OK        usable in a search
+   19 PARTIAL   the file says it is incomplete
+  184 STUB      no behaviour, and its text needs some
+```
+
+Of the 184 stubs, **180 are VEN** — imported as data by `coach/gen-cards.js`
+and awaiting bodies. Only 23 cards across the four original sets are not
+usable, and both decks that ship with the engine now rank in full.
+
+Most of the movement in that number was the gate's own false positives, not
+new work. It has been wrong three times, each time in the direction that
+blocks a sound search:
+
+| what it missed | cost |
+|---|---|
+| `applyReplacement` and 8 other virtuals | 90 cards, Guardian Angel among them |
+| a card declaring itself PARTIAL | 19 counted as OK — the opposite error |
+| `COVERAGE-OK`, meaning the engine handles it centrally | Rek'Sai, Breacher, which blocked a shipped deck |
+
+The hook list is now derived from `card.h` and a test re-reads the header, so
+the next missing virtual is a failing test rather than a card quietly refused.
+
 ## Two things scoped and deliberately NOT built
 
 Both were looked at properly and left alone, which is worth recording so the
