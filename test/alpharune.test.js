@@ -1,0 +1,84 @@
+"use strict";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("fs");
+const A = require("../coach/alpharune.js");
+
+/* These tests need the engine checkout. Without it they say so and skip,
+ * rather than passing quietly — an unverified mapping is not a working one. */
+let index = null;
+try {
+  index = A.loadIndex();
+} catch (err) {
+  console.warn(`  (alpharune tests skipped: ${err.message.split(".")[0]})`);
+}
+const withIndex = (fn) => () => (index ? fn() : undefined);
+
+test("codes reduce to a set-and-number key whatever the spelling", () => {
+  assert.equal(A.baseCode("SFD-057/221"), "SFD-057");
+  assert.equal(A.baseCode("sfd-057-221"), "SFD-057");
+  assert.equal(A.baseCode("SFD-57"), "SFD-057");
+  assert.equal(A.baseCode(null), null);
+});
+
+/* RiftAtlas prints a legend as "<champion tag>, <card name>"; the card is
+ * named by the second half alone. No legend in the index has a comma. */
+test("a champion tag in front of a legend name is an alternative, not the name", () => {
+  assert.deepEqual(A.nameVariants("Irelia, Blade Dancer"), [
+    "irelia, blade dancer",
+    "blade dancer",
+  ]);
+  assert.deepEqual(A.nameVariants("Blade Dancer"), ["blade dancer"]);
+});
+
+test(
+  "the legend on the board resolves to the engine's card",
+  withIndex(() => {
+    const r = A.resolve(index, { name: "Irelia, Blade Dancer" });
+    assert.ok(!r.miss, r.why);
+    assert.equal(r.card.name, "Blade Dancer");
+    assert.match(r.how, /champion tag stripped/);
+  })
+);
+
+test(
+  "a public code resolves even when the printing differs",
+  withIndex(() => {
+    // RiftScribe serves Blade Dancer as SFD-195; the index has only SFD-246.
+    const byName = A.resolve(index, { code: "SFD-195/221", name: "Blade Dancer" });
+    assert.ok(!byName.miss);
+    assert.equal(byName.card.public_code, "SFD-246/221");
+    assert.match(byName.how, /code absent/);
+  })
+);
+
+test(
+  "reprints under one name are only accepted when they play the same",
+  withIndex(() => {
+    const r = A.resolve(index, { name: "Lonely Poro" });
+    assert.ok(!r.miss, r.why);
+    assert.match(r.how, /identical printings/);
+  })
+);
+
+test(
+  "the engine's own deck files map completely",
+  withIndex(() => {
+    const deck = "/home/user/chorlick/alpharune/decks/draven_test.txt";
+    if (!fs.existsSync(deck)) return;
+    const r = A.checkDeck(deck, index);
+    assert.deepEqual(r.misses, [], "a deck the engine ships should resolve");
+  })
+);
+
+test(
+  "VEN is absent, and that is reported rather than discovered later",
+  withIndex(() => {
+    const sets = A.coveredSets(index);
+    assert.equal(sets.VEN, undefined, "if VEN appears, this limitation is gone");
+    for (const s of ["OGN", "SFD", "UNL"]) assert.ok(sets[s] > 0, `${s} missing`);
+    // A VEN card the opponent actually played.
+    const r = A.resolve(index, { code: "VEN-038/166", name: "Akali, Silent" });
+    assert.ok(r.miss, "Akali, Silent should not resolve");
+  })
+);
