@@ -112,9 +112,12 @@ async function coach(snapshot) {
     for (const model of COMPARE_MODELS) {
       const started = Date.now();
       try {
-        const { text, usage } = await ask({ system: SYSTEM, user, model });
+        const { text, usage, reasoningTokens } = await ask({ system: SYSTEM, user, model });
         const secs = ((Date.now() - started) / 1000).toFixed(1);
-        console.log(`\n### ${model}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok` : ""})\n`);
+        const thinking = reasoningTokens ? `, ${reasoningTokens} thinking` : "";
+        console.log(
+          `\n### ${model}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok${thinking}` : ""})\n`
+        );
         console.log(text + "\n");
       } catch (err) {
         console.error(`\n### ${model} — failed: ${err.message}\n`);

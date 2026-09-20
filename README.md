@@ -119,8 +119,15 @@ node coach/index.js --compare
 ```
 
 runs the same live turn through Haiku 4.5, Sonnet 5 and Opus 5 and prints all
-three with their latency, for about two cents. `RBC_COMPARE` takes a
-comma-separated list to compare others.
+three with their latency and how much of it was thinking, for about two cents.
+`RBC_COMPARE` takes a comma-separated list to compare others.
+
+Sonnet 5 and Opus 5 are reasoning models: they think before answering, and the
+thinking comes out of the same token budget as the reply. `RBC_MAX_TOKENS`
+(2000) is the budget and `RBC_REASONING` (`low`) is how hard they think —
+`off` for the fastest answer, `medium` or `high` to let them work. A budget too
+small for the thinking returns an empty message, and the error says so rather
+than reporting no answer.
 
 What to look for: does it **count correctly** — ready runes, might, what you
 can actually pay for — and does it commit to a line rather than listing
