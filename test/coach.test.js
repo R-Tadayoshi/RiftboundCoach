@@ -682,15 +682,37 @@ test("the champion in its zone is reported as playable", () => {
   });
 });
 
+/* Deploying the champion removes the CARD; the zone's drop target stays put.
+ * Removing the first matching element instead left the card behind, which is
+ * how the regression hid — the test was simulating something that never
+ * happens. */
+function deployChampion() {
+  const card = globalThis.document.querySelector(
+    '[data-zone-owner="self"] [data-drop-zone="champion"] img'
+  );
+  card.closest('[data-drop-zone="champion"]').remove();
+}
+
 test("a deployed champion leaves an empty zone, and says so", () => {
   fixture.build();
-  const zone = globalThis.document.querySelector(
-    '[data-zone-owner="self"] [data-drop-zone="champion"]'
-  );
-  zone.remove();
+  deployChampion();
   const s = Snapshot.build();
   assert.equal(s.players.self.championZone.available, false);
   assert.equal(s.players.self.champion, null);
+});
+
+test("the champion is found behind the zone's empty drop target", () => {
+  // The live board nests a drop target, a hover anchor and the card button,
+  // all carrying data-drop-zone="champion". Reading only the first found the
+  // drop target, saw no image, and reported the zone empty — so a castable
+  // champion silently vanished from the prompt.
+  fixture.build();
+  const zones = globalThis.document.querySelectorAll(
+    '[data-zone-owner="self"] [data-drop-zone="champion"]'
+  );
+  assert.ok(zones.length > 1, "the fixture nests the zone as the board does");
+  assert.ok(!zones[0].querySelector("img"), "and the first one holds no card");
+  assert.equal(Snapshot.build().players.self.championZone.name, "Yasuo");
 });
 
 test("the champion is listed where the turn's options are counted", () => {
@@ -712,9 +734,7 @@ test("the champion is listed where the turn's options are counted", () => {
 
 test("a deployed champion is not offered as a play", () => {
   fixture.build();
-  globalThis.document
-    .querySelector('[data-zone-owner="self"] [data-drop-zone="champion"]')
-    .remove();
+  deployChampion();
   const msg = buildUserMessage(summarize(Snapshot.build()), {});
   const playable = msg.slice(msg.indexOf("CARDS YOU CAN PLAY"), msg.indexOf("THEM —"));
   assert.ok(!playable.includes("CHAMPION ZONE"), "nothing to play from an empty zone");

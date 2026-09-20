@@ -207,7 +207,12 @@ function build(overrides) {
   const sideHtml = (side) => `
     <section data-zone-owner="${side}">
       <div data-drop-zone="legend"><img alt="${side === "self" ? o.selfLegend : o.opponentLegend}" src="${ART("OGN-001")}"></div>
-      <div data-drop-zone="champion"><img alt="${side === "self" ? o.selfChampion : o.opponentChampion}" src="${ART("OGN-002")}"></div>
+      <div data-drop-zone="champion" data-drop-target="true"></div>
+      <div data-drop-zone="champion" data-hover-preview-anchor="true">
+        <button data-drop-zone="champion" data-card-id="champ-${side}" data-board-card-visual="true">
+          <img alt="${side === "self" ? o.selfChampion : o.opponentChampion}" src="${ART("OGN-002")}">
+        </button>
+      </div>
       ${Object.entries(zones[side])
         .map(([zone, cards]) =>
           zoneHtml(side, zone, cards, zone === "battlefieldA" ? o.battlefieldA : o.battlefieldB)

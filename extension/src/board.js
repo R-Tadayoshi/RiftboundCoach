@@ -171,15 +171,22 @@
    * means it has already been deployed. */
   function cardAt(side, dropZone) {
     for (const owner of doc().querySelectorAll(`[data-zone-owner="${side}"]`)) {
-      const el = owner.querySelector(`[data-drop-zone="${dropZone}"]`);
-      const img = el?.querySelector("img[alt]");
-      if (!img?.alt || FACE_DOWN_RE.test(img.alt)) continue;
-      const src = img.currentSrc || img.src || "";
-      return {
-        name: img.alt,
-        code: codeFromSrc(src),
-        exhausted: root.RBCExhaust.read(el.querySelector("[data-card-id]") || el),
-      };
+      /* EVERY element carrying this drop zone, not the first.
+       *
+       * A zone nests several: a drop target, a hover anchor, the card button.
+       * Taking the first and looking only inside it finds nothing when the
+       * first is an empty drop target — which silently emptied the champion
+       * zone and made a castable champion vanish from the prompt. */
+      for (const el of owner.querySelectorAll(`[data-drop-zone="${dropZone}"]`)) {
+        const img = el.querySelector("img[alt]");
+        if (!img?.alt || FACE_DOWN_RE.test(img.alt)) continue;
+        const src = img.currentSrc || img.src || "";
+        return {
+          name: img.alt,
+          code: codeFromSrc(src),
+          exhausted: root.RBCExhaust.read(el.querySelector("[data-card-id]") || el),
+        };
+      }
     }
     return null;
   }

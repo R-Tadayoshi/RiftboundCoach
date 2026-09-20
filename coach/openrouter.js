@@ -21,9 +21,11 @@ const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-5";
  * fit under the old cap, which made it look like the only model that worked.
  *
  * The cap is not what you pay — usage is — so it is set well clear of both.
- * At 2000 a high-effort answer still came back cut off mid-sentence, having
- * spent 1727 of it thinking. */
-const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 4000);
+ * At 2000 a high-effort answer came back cut off mid-sentence after spending
+ * 1727 of it thinking; at 4000 an "off"-effort answer did the same after
+ * 3861. Effort does not cap thinking, so the budget has to clear the worst
+ * case rather than the expected one. */
+const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 6000);
 
 /* How hard the model thinks before answering.
  *
