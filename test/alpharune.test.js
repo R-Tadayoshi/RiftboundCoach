@@ -363,3 +363,43 @@ test(
     }
   })
 );
+
+/* Half-done cards. The gate was binary — any behaviour hook meant implemented
+ * — so a card with its main effect written and one clause missing read OK and
+ * the search trusted it. That is worse than a stub: a stub does nothing and is
+ * refused, while a half-done card does most of what it says, which is the kind
+ * of wrong that survives a sanity check. */
+test("a file that declares itself incomplete is not counted as implemented", () => {
+  const files = new Map([
+    ["x-1", { file: "a.cpp", hasBehaviour: true, partial: true }],
+    ["x-2", { file: "b.cpp", hasBehaviour: true, partial: false }],
+  ]);
+  const card = (id) => ({ id, ability_text: "Kill a gear." });
+  assert.equal(Fid.verdictFor(card("x-1"), files).verdict, "PARTIAL");
+  assert.equal(Fid.verdictFor(card("x-2"), files).verdict, "OK");
+});
+
+test("a declaration is picked up; a mention of one is not", () => {
+  assert.match("    // ENGINE GAP: cannot be expressed", Fid.PARTIAL_RE);
+  assert.match("/// PARTIAL: the second clause is missing", Fid.PARTIAL_RE);
+  assert.match(" * TODO: implement the Flow clause", Fid.PARTIAL_RE);
+
+  // Prose about a gap that was closed is not a declaration that one remains.
+  assert.doesNotMatch(
+    "/// this card, and Master Yi, carried ENGINE GAP notes. The\n/// overload fixed it.",
+    Fid.PARTIAL_RE
+  );
+  assert.doesNotMatch("// implemented in full", Fid.PARTIAL_RE);
+});
+
+test(
+  "a PARTIAL card blocks a ranking just as a stub does",
+  withIndex(() => {
+    const files = Fid.scanCardFiles();
+    if (!files.size) return;
+    const partial = index.rows.find((c) => Fid.verdictFor(c, files).verdict === "PARTIAL");
+    if (!partial) return;
+    const r = Fid.gate([{ code: partial.public_code, name: partial.name }]);
+    assert.equal(r.safe, false, `${partial.name} should block`);
+  })
+);

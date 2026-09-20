@@ -82,6 +82,7 @@ function scanCardFiles(root = ROOT) {
         out.set(m[1], {
           file: `${sub}/${file}`,
           hasBehaviour: BEHAVIOUR_RE.test(text) || BASE_RE.test(text),
+          partial: PARTIAL_RE.test(text),
         });
       }
     }
@@ -89,7 +90,29 @@ function scanCardFiles(root = ROOT) {
   return out;
 }
 
-/** OK | STUB | ABSENT, with the reason. */
+/* A card can be half done: its main effect written, one printed clause not.
+ * The gate as first written is binary — a file with any behaviour hook counts
+ * as implemented — so a half-done card reads OK and the search trusts it.
+ *
+ * That is a worse failure than a stub. A stub does nothing and is refused; a
+ * half-done card does most of what it says, which is exactly the kind of wrong
+ * that survives a sanity check. Brittle Steel is the live example: "Kill a
+ * gear" is an afternoon's work and its [Flow] clause needs an engine mechanic
+ * that does not exist, so it is tempting to write the first half and move on.
+ *
+ * So a card may declare itself unfinished, and the gate believes it over its
+ * own inference. The engine's existing files already use this wording in
+ * comments ("ENGINE GAP", "not implemented"), which this picks up for free. */
+/* The marker has to OPEN a comment line, not merely appear in one.
+ *
+ * The first version matched the phrase anywhere, and immediately mis-flagged
+ * Akali, Silent: her file's header explains that she "carried ENGINE GAP
+ * notes" — past tense, describing the gap this project closed. Prose about a
+ * fixed problem is not a declaration that the card is broken. */
+const PARTIAL_RE =
+  /^[ \t]*(?:\/\/+|\/\*+|\*)[ \t]*(?:PARTIAL|ENGINE GAP|NOT IMPLEMENTED|TODO: implement)\b/m;
+
+/** OK | STUB | PARTIAL | ABSENT, with the reason. */
 function verdictFor(card, files) {
   if (!card) return { verdict: "ABSENT", why: "no card in the engine" };
   const impl = files.get(card.id);
@@ -98,6 +121,13 @@ function verdictFor(card, files) {
   const text = (card.ability_text || "") + " " + (card.effect_text || "");
   const needs = !!residualText({ description: text });
   if (!needs) return { verdict: "OK", why: "no behaviour needed (vanilla or keywords only)" };
+  if (impl.partial) {
+    return {
+      verdict: "PARTIAL",
+      why: `${impl.file} says it is incomplete — a card that does most of what ` +
+        `it says is worse to search over than one that does nothing`,
+    };
+  }
   if (impl.hasBehaviour) return { verdict: "OK", why: `implemented in ${impl.file}` };
   return {
     verdict: "STUB",
@@ -169,7 +199,7 @@ function main() {
     process.exit(reportDeck(process.argv[deckFlag + 1], index, files) ? 1 : 0);
   }
 
-  const counts = { OK: 0, STUB: 0, ABSENT: 0 };
+  const counts = { OK: 0, PARTIAL: 0, STUB: 0, ABSENT: 0 };
   const stubs = [];
   for (const card of index.rows) {
     const v = verdictFor(card, files);
@@ -185,7 +215,9 @@ function main() {
   console.log(
     `\nOK means the card needs no behaviour, or its file implements some.\n` +
       `STUB means its printed text needs behaviour and its file has none —\n` +
-      `the engine plays it as a blank, and a search over it is not trustworthy.`
+      `the engine plays it as a blank, and a search over it is not trustworthy.\n` +
+      `PARTIAL means the file says so itself: most of the card works, which is\n` +
+      `harder to notice going wrong than a card that does nothing.`
   );
   if (stubs.length) {
     console.log(`\nFirst few stubs:`);
@@ -196,4 +228,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS };
+module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, PARTIAL_RE };
