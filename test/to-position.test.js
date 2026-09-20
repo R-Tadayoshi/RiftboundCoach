@@ -104,7 +104,8 @@ test(
     s.them.hand = [{ name: "Should Not Appear", code: "OGN-001" }];
     const { script, caveats } = toPosition(s);
     assert.doesNotMatch(script, /place P2 .* hand/, "opponent hand contents must not cross");
-    assert.ok(caveats.some((c) => /unknown identity/.test(c)));
+    assert.match(script, /^hidden P2 4$/m, "the count crosses, the contents do not");
+    assert.ok(caveats.some((c) => /sampled fresh per/.test(c)));
   })
 );
 
@@ -116,5 +117,39 @@ test(
     const { script, caveats } = toPosition(s);
     assert.match(script, /^turnplayer P2$/m);
     assert.ok(caveats.some((c) => /not on my turn/.test(c)));
+  })
+);
+
+/* Determinization. The opponent's hand is a count we can read off the board
+ * and contents we never can. Inventing one hand and reasoning as though it
+ * were certain is the mistake alpharune's own ISMCTS makes — its resampler is
+ * a Clone(), so its search reads the opponent's real cards. */
+test(
+  "their hand count crosses into the position as a sampling instruction",
+  withEngine(() => {
+    const s = board();
+    s.them.handCount = 4;
+    const { script } = toPosition(s);
+    assert.match(script, /^hidden P2 4$/m);
+    assert.doesNotMatch(script, /place P2 .* hand/);
+  })
+);
+
+test(
+  "an empty opponent hand declares nothing to sample",
+  withEngine(() => {
+    const s = board();
+    s.them.handCount = 0;
+    const { script } = toPosition(s);
+    assert.doesNotMatch(script, /^hidden P2/m);
+  })
+);
+
+test(
+  "our own hand is placed, never sampled",
+  withEngine(() => {
+    const { script } = toPosition(board());
+    assert.doesNotMatch(script, /^hidden P1/m, "we know our own hand");
+    assert.match(script, /^place P1 .* hand$/m);
   })
 );

@@ -20,6 +20,8 @@
 //   expect legend P1 <card name>   assert the deck's legend is the one on
 //                                  screen — it cannot be placed, so it is
 //                                  checked
+//   hidden P2 4                    this player holds 4 cards I cannot see;
+//                                  the ranker samples them per rollout
 //
 // Zones: hand base trash bfA bfB deck
 
@@ -36,6 +38,7 @@
 #include <cstdio>
 #include <fstream>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -47,6 +50,12 @@ struct PositionLoadReport {
     int failed = 0;
     int setup_choices = 0;
     std::vector<std::string> errors;
+
+    /// Cards a player holds whose identity we do not know, by player index
+    /// (1 = P1, 2 = P2). We can count an opponent's hand from the board and
+    /// never read it — so the count is a fact and the contents are not.
+    /// A ranker samples them fresh per rollout; see `hidden` below.
+    int hidden[3] = {0, 0, 0};
 };
 
 namespace position_detail {
@@ -184,6 +193,25 @@ inline PositionLoadReport loadPosition(const CardDB& db,
                 ++rep.applied;
             }
 
+        } else if (cmd == "hidden" && l.tok.size() == 3) {
+            /* "This player holds N cards I cannot see."
+             *
+             * Recorded, not placed. The right thing to do with an unknown
+             * hand is not to invent one and then reason as though it were
+             * certain — that is the mistake the engine's own ISMCTS makes,
+             * where the resampler is a Clone() and the search reads the
+             * opponent's real cards. It is also what a constructed position
+             * does by default: the opponent holds whatever the deal gave.
+             *
+             * Instead the count travels with the position and the ranker
+             * draws a DIFFERENT hand from the unseen pool for every rollout,
+             * so the average is taken over what they might hold rather than
+             * over one guess repeated. */
+            const PlayerId who = playerOf(l.tok[1]);
+            const int n = std::stoi(l.tok[2]);
+            if (who == PlayerId::None || n < 0) fail("hidden <P1|P2> <count>");
+            else { rep.hidden[static_cast<int>(who)] = n; ++rep.applied; }
+
         } else if (cmd == "expect" && l.tok.size() >= 4 && l.tok[1] == "legend") {
             /* A legend cannot be placed: it comes from the deck file, set up
              * before any edit runs. So the position ASSERTS which legend it
@@ -252,6 +280,31 @@ inline PositionLoadReport loadPosition(const CardDB& db,
     out_step = resume_engine->resumeFromSnapshot(std::move(to_resume), /*seed=*/1);
     out_state = st;
     return rep;
+}
+
+/// Deal `count` cards from a player's main deck into their hand, chosen at
+/// random with `rng`.
+///
+/// The deck, at this point, IS the unseen pool: the position has already
+/// placed everything we could see — their board, their trash — so whatever
+/// remains is exactly what they might be holding. No separate bookkeeping is
+/// needed, and none can drift out of step with the board.
+inline int dealHidden(GameState& st, PlayerId who, int count, std::mt19937_64& rng) {
+    std::vector<GameObjectId> pool;
+    for (auto& [id, obj] : st.objects) {
+        if (obj.owner == who && obj.zone == ZoneType::MainDeck) pool.push_back(id);
+    }
+    if (pool.empty() || count <= 0) return 0;
+
+    // Sort first: iteration order over the object map is not guaranteed
+    // stable, and a rollout that cannot be reproduced cannot be debugged.
+    std::sort(pool.begin(), pool.end());
+    std::shuffle(pool.begin(), pool.end(), rng);
+
+    StateEditor ed;
+    const int n = std::min<int>(count, static_cast<int>(pool.size()));
+    for (int i = 0; i < n; ++i) ed.moveObject(st, pool[i], who, ZoneType::Hand);
+    return n;
 }
 
 }  // namespace riftbound

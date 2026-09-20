@@ -145,12 +145,19 @@ function toPosition(summary, { index, files } = {}) {
    * even when the client renders it. The engine needs cards, so it gets
    * whatever the deal gave, and that difference is stated rather than hidden. */
   if (typeof summary.them?.handCount === "number" && summary.them.handCount > 0) {
+    out.push("");
+    out.push(`# ${summary.them.handCount} cards we can count and never read.`);
+    out.push(line("hidden", "P2", summary.them.handCount));
     caveats.push(
-      `their hand is ${summary.them.handCount} card(s) of unknown identity — the ` +
-        `engine will hold something else, so anything depending on what they ` +
-        `hold is guesswork`
+      `their ${summary.them.handCount} hand card(s) are sampled fresh per ` +
+        `rollout from what is left of their deck — so the ranking averages ` +
+        `over what they might hold, not over one guess`
     );
   }
+
+  /* Our own deck order is unknown to us too, but our HAND is not: it is
+   * placed card by card above. So nothing of ours is hidden, and saying
+   * "hidden P1 0" would be noise. */
 
   return { script: out.join("\n") + "\n", caveats, blocked };
 }

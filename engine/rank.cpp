@@ -8,11 +8,19 @@
 //
 // Method: for each legal action at the position, take the action and then play
 // the rest of the game out at random, many times, and count how often the
-// player to move ends up winning. Crude compared to MCTS, and honest about
-// what it measures — but it needs no hidden-information model, because the
-// position is constructed with what we can actually see, and randomness over
-// the unknown is at least an unbiased way of being ignorant rather than a
-// confident wrong guess.
+// player to move ends up winning.
+//
+// The hands we cannot see are DETERMINIZED: a `hidden P2 4` line in the
+// position says the opponent holds four cards of unknown identity, and each
+// rollout deals them a different four from what is left of their deck — which
+// is exactly the unseen pool, since the position has already placed everything
+// visible. So the average is taken over what they might hold, rather than over
+// one invented hand repeated a hundred times.
+//
+// That distinction is the whole reason this is not just alpharune's ISMCTS.
+// Its resampler is a `Clone()`, so its search reads the opponent's real cards
+// — fine for self-play where the engine holds both hands, useless here where
+// we do not have them to read.
 //
 //   rank <deck1> <deck2> <position.txt> [rollouts-per-action]
 
@@ -121,8 +129,16 @@ int main(int argc, char** argv) {
     }
 
     const PlayerId me = here.perspective;
-    std::printf("ranking %zu legal action(s) for %s, %d rollout(s) each\n\n",
+    std::printf("ranking %zu legal action(s) for %s, %d rollout(s) each\n",
                 here.legal.size(), toString(me), rollouts);
+    if (rep.hidden[1] || rep.hidden[2]) {
+        std::printf("hidden cards sampled per rollout: P1 %d, P2 %d\n",
+                    rep.hidden[1], rep.hidden[2]);
+    } else {
+        std::printf("no hidden cards declared — every rollout sees the same "
+                    "hands, so the spread understates the real uncertainty\n");
+    }
+    std::printf("\n");
 
     std::vector<Ranked> out;
     for (size_t i = 0; i < here.legal.size(); ++i) {
@@ -135,6 +151,17 @@ int main(int argc, char** argv) {
             EventBus bus;
             GameEngine engine(db, bus, registry);
             GameState copy = position;
+
+            /* Deal each side's unseen cards afresh for this rollout. Ours too:
+             * we know our hand but not our deck order, and the opponent's hand
+             * we know only the size of. */
+            std::mt19937_64 deal_rng(seed ^ 0xD1B54A32D192ED03ull);
+            for (int p = 1; p <= 2; ++p) {
+                if (rep.hidden[p] > 0) {
+                    dealHidden(copy, static_cast<PlayerId>(p), rep.hidden[p], deal_rng);
+                }
+            }
+
             StepResult sr = engine.resumeFromSnapshot(std::move(copy), seed);
             if (sr.kind != StepKind::NeedDecision) { ++r.unfinished; continue; }
             sr = engine.applyChoice(static_cast<int>(i));
