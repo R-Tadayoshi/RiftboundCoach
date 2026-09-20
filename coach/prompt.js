@@ -80,8 +80,18 @@ ACTIONS:
 - pass
 
 One line per action, in the order you would take them, using only the verbs
-play / move / hide / pass. Name cards exactly as this message names them, and
-name destinations as "base", "battlefield A" or "battlefield B".
+play / move / hide / ready / pass. Name cards exactly as this message names
+them, and name destinations as "base", "battlefield A" or "battlefield B".
+
+If something readies a unit mid-line, WRITE IT DOWN — "ready <card> using
+<source>". A line that moves a unit it never said was readied reads as
+illegal, and the step you left in prose is usually the step the whole line
+depends on:
+
+- play Draven, Audacious to base
+- play En Garde targeting Draven, Audacious
+- ready Draven, Audacious using Blade Dancer
+- move Draven, Audacious from base to battlefield A
 
 If an action chooses a target, say so with "targeting <card>":
 

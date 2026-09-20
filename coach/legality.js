@@ -49,7 +49,7 @@ function resolveBattlefield(text, summary) {
  * is both far more reliable to read and better for the advice: a line it
  * cannot write down plainly is usually a line it has not thought through. */
 const ACTION_RE =
-  /^\s*[-*]?\s*(play|move|hide|pass)\b\s*(.*?)\s*$/i;
+  /^\s*[-*]?\s*(play|move|hide|ready|pass)\b\s*(.*?)\s*$/i;
 
 function parseActions(text) {
   /* [^\S\n] is "blank but not a line break": \s would let ^\s* swallow the
@@ -73,6 +73,25 @@ function parseActions(text) {
     const rest = hit[2];
     if (verb === "pass") {
       actions.push({ verb, raw: line.trim() });
+      continue;
+    }
+
+    /* "ready <card> using <source>" — the source lands in `from`, since it is
+     * where the readying comes from. Without a verb for it, the step that
+     * makes a whole line work lives only in prose: the answer that finally
+     * found the two-point line said "exhaust her and pay 1 rainbow to ready
+     * Draven" in a sentence, and wrote an ACTIONS block that moved a unit it
+     * had never said was ready. */
+    if (verb === "ready") {
+      const via = /^(.*?)\s+(?:using|with|via)\s+(.*)$/i.exec(rest);
+      actions.push({
+        verb,
+        card: (via ? via[1] : rest).trim().replace(/[.,;]+$/, ""),
+        from: via?.[2]?.trim().replace(/[.,;]+$/, "") || null,
+        to: null,
+        target: null,
+        raw: line.trim(),
+      });
       continue;
     }
 
@@ -226,13 +245,16 @@ function checkTarget(action, summary, cardText) {
   };
 }
 
-function checkMove(action, summary) {
+function checkMove(action, summary, readied = new Set()) {
   const found = findMyUnit(summary, action.card);
   if (!found) return null; // not a unit we can see: no claim either way
 
   const { unit, where } = found;
 
-  if (unit.exhausted === true) {
+  /* Readied earlier in this same line, so the board's exhausted flag is stale.
+   * Encouraging the coach to find readying effects and then flagging the moves
+   * they enable would be the worst of both. */
+  if (unit.exhausted === true && !readied.has(action.card.toLowerCase())) {
     return {
       rule: "144.2",
       why:
@@ -267,6 +289,30 @@ function checkHide(action, summary) {
       `"${action.card}" cannot be hidden — Hide places a card facedown at a ` +
       `battlefield you control, and you control none.`,
   };
+}
+
+/* Readying from a source that has nothing left to give.
+ *
+ * The only thing provable from the board is that a named source is already
+ * spent — a legend that has been exhausted has no activated ability left this
+ * turn. Everything else about readying (what the ability costs, whether it
+ * applies to that unit) needs the card, so it stays unjudged. */
+function checkReady(action, summary, cardText) {
+  if (!action.from) return null; // no source named: nothing to check
+
+  const wanted = action.from.toLowerCase();
+  for (const side of ["me"]) {
+    const legend = summary[side]?.legendCard;
+    if (!legend?.name || legend.name.toLowerCase() !== wanted) continue;
+    if (legend.exhausted !== true) return null;
+    return {
+      rule: "415",
+      why:
+        `"${legend.name}" is already exhausted, so its activated abilities are ` +
+        `spent this turn and it cannot ready "${action.card}".`,
+    };
+  }
+  return null;
 }
 
 /* Can the whole line actually be paid for?
@@ -359,10 +405,17 @@ function check(text, summary, cardText) {
   const broke = checkAffordable(actions, summary, cardText);
   if (broke) violations.push(broke);
 
+  /* Units this line readies before it moves them. Order matters: a move is
+   * judged against the board as the line has left it, not as it started. */
+  const readied = new Set();
+
   for (const action of actions) {
     let v = null;
-    if (action.verb === "play") v = checkPlay(action, summary, cardText);
-    else if (action.verb === "move") v = checkMove(action, summary);
+    if (action.verb === "ready") {
+      readied.add((action.card || "").toLowerCase());
+      v = checkReady(action, summary, cardText);
+    } else if (action.verb === "play") v = checkPlay(action, summary, cardText);
+    else if (action.verb === "move") v = checkMove(action, summary, readied);
     else if (action.verb === "hide") v = checkHide(action, summary);
     // A target is checkable whatever the verb that chose it.
     if (!v) v = checkTarget(action, summary, cardText);
@@ -375,6 +428,7 @@ module.exports = {
   check,
   parseActions,
   checkPlay,
+  checkReady,
   checkTarget,
   checkAffordable,
   costOf,

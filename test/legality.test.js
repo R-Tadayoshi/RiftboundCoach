@@ -362,3 +362,80 @@ test("moving costs no runes, so a move never counts toward the total", () => {
   };
   assert.deepEqual(L.check("ACTIONS:\n- move Tideturner to battlefield A\n- pass", b, COSTS), []);
 });
+
+/* Readying, written down. The answer that found the two-point line put its
+ * key step in prose — "exhaust her and pay 1 rainbow to ready Draven" — and
+ * then wrote a block that moved a unit it had never said was ready. Pushing
+ * the coach to find readying effects while flagging the moves they enable
+ * would be the worst of both. */
+
+const readyBoard = (over = {}) => ({
+  ...board(over),
+  turn: { step: "main" },
+  me: {
+    base: over.base || [],
+    hand: [],
+    runes: { total: 11, ready: 11, exhausted: 0, unknown: 0, byDomain: {} },
+    legendCard: over.legendCard ?? { name: "Blade Dancer", exhausted: false },
+  },
+});
+
+test("a unit readied earlier in the line may then move", () => {
+  const b = readyBoard({ base: [unit("Draven, Audacious", true)] });
+  assert.deepEqual(
+    L.check(
+      "ACTIONS:\n- ready Draven, Audacious using Blade Dancer\n" +
+        "- move Draven, Audacious from base to battlefield A",
+      b,
+      CARDS
+    ),
+    [],
+    "the board's exhausted flag is stale once the line has readied it"
+  );
+});
+
+test("an exhausted unit that was never readied is still flagged", () => {
+  const b = readyBoard({ base: [unit("Draven, Audacious", true)] });
+  const v = L.check("ACTIONS:\n- move Draven, Audacious from base to battlefield A", b, CARDS);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].rule, "144.2");
+});
+
+test("readying is judged in order, not as a whole", () => {
+  // Moving first, readying after, does not make the move legal.
+  const b = readyBoard({ base: [unit("Draven, Audacious", true)] });
+  const v = L.check(
+    "ACTIONS:\n- move Draven, Audacious from base to battlefield A\n" +
+      "- ready Draven, Audacious using Blade Dancer",
+    b,
+    CARDS
+  );
+  assert.equal(v.length, 1);
+  assert.equal(v[0].rule, "144.2");
+});
+
+test("a spent legend cannot be the source of a readying", () => {
+  const b = readyBoard({
+    base: [unit("Draven, Audacious", true)],
+    legendCard: { name: "Blade Dancer", exhausted: true },
+  });
+  const v = L.check("ACTIONS:\n- ready Draven, Audacious using Blade Dancer", b, CARDS);
+  assert.equal(v.length, 1);
+  assert.equal(v[0].rule, "415");
+  assert.match(v[0].why, /already exhausted/);
+});
+
+test("a readying with no source named is not judged", () => {
+  const b = readyBoard({
+    base: [unit("Draven, Audacious", true)],
+    legendCard: { name: "Blade Dancer", exhausted: true },
+  });
+  assert.deepEqual(L.check("ACTIONS:\n- ready Draven, Audacious", b, CARDS), []);
+});
+
+test("the ready verb parses its source", () => {
+  const [a] = L.parseActions("ACTIONS:\n- ready Draven, Audacious using Blade Dancer");
+  assert.equal(a.verb, "ready");
+  assert.equal(a.card, "Draven, Audacious");
+  assert.equal(a.from, "Blade Dancer");
+});
