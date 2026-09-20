@@ -71,15 +71,22 @@ test(
   })
 );
 
+/* VEN was absent from the engine entirely until coach/gen-cards.js imported
+ * it. The cards are there now as data-only stubs, so they RESOLVE — and the
+ * fidelity gate is what stops a search over them, not the index. */
 test(
-  "VEN is absent, and that is reported rather than discovered later",
+  "the four original sets are covered, and an imported one resolves",
   withIndex(() => {
     const sets = A.coveredSets(index);
-    assert.equal(sets.VEN, undefined, "if VEN appears, this limitation is gone");
     for (const s of ["OGN", "SFD", "UNL"]) assert.ok(sets[s] > 0, `${s} missing`);
-    // A VEN card the opponent actually played.
+
     const r = A.resolve(index, { code: "VEN-038/166", name: "Akali, Silent" });
-    assert.ok(r.miss, "Akali, Silent should not resolve");
+    if (sets.VEN) {
+      assert.ok(!r.miss, "an imported VEN card should resolve by code");
+      assert.equal(r.card.name, "Akali, Silent");
+    } else {
+      assert.ok(r.miss, "without the import VEN cannot resolve");
+    }
   })
 );
 
@@ -165,8 +172,12 @@ test("a card the engine does not have at all is ABSENT, not OK", () => {
   );
 });
 
+/* The card that started this: Akali, Silent, played against Zarkhil on turn 9.
+ * Absent before the import and a data-only stub after it — either way the gate
+ * refuses to rank a board she is on, because the engine would play her as a
+ * blank and still return a percentage. */
 test(
-  "the gate refuses a position containing a VEN card",
+  "the gate refuses a position containing an unimplemented card",
   withIndex(() => {
     if (!Fid.scanCardFiles().size) return;
     const r = Fid.gate([
@@ -175,7 +186,10 @@ test(
     ]);
     assert.equal(r.safe, false);
     assert.equal(r.blocking.length, 1);
-    assert.equal(r.blocking[0].verdict, "ABSENT");
+    assert.ok(
+      ["ABSENT", "STUB"].includes(r.blocking[0].verdict),
+      `unexpected verdict ${r.blocking[0].verdict}`
+    );
   })
 );
 
