@@ -18,6 +18,7 @@ const os = require("os");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { toPosition } = require("./to-position.js");
+const { loadIndex, resolve, parseDeckNames } = require("./alpharune.js");
 
 const ENGINE_DIR = path.join(__dirname, "..", "engine");
 const ALPHARUNE =
@@ -62,6 +63,48 @@ function parseRanking(stdout) {
   };
 }
 
+/* Every card a position places must be in that player's decklist, or the
+ * engine has no object to move and the line fails.
+ *
+ * Caught here rather than in C++ because the failure means something
+ * specific and fixable: the decklist supplied is not the deck being played.
+ * Letting it surface as a per-line "no card of that name owned by that
+ * player" buries a wrong-deck problem in what looks like a translation bug —
+ * and a position that dropped three cards still ranks, and still prints
+ * percentages.
+ *
+ * Names are compared after resolving both sides through the engine's index,
+ * since a decklist writes a legend with its champion tag and the engine does
+ * not. */
+function checkAgainstDecks(script, deck1, deck2, index) {
+  const inDeck = (file) => {
+    const names = new Set();
+    for (const { name } of parseDeckNames(fs.readFileSync(file, "utf8"))) {
+      const r = resolve(index, { name });
+      names.add(r.miss ? name.toLowerCase() : r.card.name.toLowerCase());
+    }
+    return names;
+  };
+
+  let decks;
+  try {
+    decks = { P1: inDeck(deck1), P2: inDeck(deck2) };
+  } catch (err) {
+    return [{ why: `could not read a decklist: ${err.message}` }];
+  }
+
+  const missing = [];
+  for (const line of script.split("\n")) {
+    const m = /^place (P1|P2) (.+?) (hand|base|trash|bfA|bfB|deck)(?: (ready|exhausted))?$/.exec(line);
+    if (!m) continue;
+    const [, who, name] = m;
+    if (!decks[who].has(name.toLowerCase())) {
+      missing.push({ who, name, why: `not in the decklist given for ${who}` });
+    }
+  }
+  return missing;
+}
+
 /**
  * Rank the moves available on a captured board.
  * Returns {ok:false, why} or {ok:true, ranking, caveats}.
@@ -99,6 +142,20 @@ function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeout
         `${built.blocked.length} card(s) the engine cannot model faithfully: ` +
         built.blocked.map((b) => `${b.name} (${b.why.split("—")[0].trim()})`).join("; "),
       blocked: built.blocked,
+    };
+  }
+
+  const missing = checkAgainstDecks(built.script, deck1, deck2, loadIndex());
+  if (missing.length) {
+    return {
+      ok: false,
+      why:
+        `${missing.length} card(s) are on the board but not in the decklist ` +
+        `supplied for that player — the decklist is not the deck being ` +
+        `played: ` +
+        missing.slice(0, 6).map((m) => `${m.name} (${m.who})`).join(", ") +
+        (missing.length > 6 ? `, +${missing.length - 6} more` : ""),
+      missing,
     };
   }
 
@@ -160,4 +217,4 @@ function rankingBlock(ranking, caveats = []) {
   return lines.join("\n");
 }
 
-module.exports = { rankBoard, parseRanking, rankingBlock, unavailable, DEFAULT_ROLLOUTS };
+module.exports = { rankBoard, parseRanking, rankingBlock, unavailable, checkAgainstDecks, DEFAULT_ROLLOUTS };

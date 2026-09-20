@@ -83,3 +83,67 @@ test("no decklists means no ranking, with the reason", () => {
 test("the default rollout count is the one the measurement supports", () => {
   assert.ok(E.DEFAULT_ROLLOUTS >= 1000, "below ~1000 the ranker cannot separate options");
 });
+
+/* A card can map to the engine perfectly and still not be in the decklist
+ * supplied — which means the list is not the deck being played. Caught before
+ * the engine runs, because a position that dropped three cards still ranks,
+ * and still prints percentages. */
+const fs = require("fs");
+const path = require("path");
+const A = require("../coach/alpharune.js");
+
+let idx = null;
+try { idx = A.loadIndex(); } catch (_) { /* engine checkout absent */ }
+const withIdx = (fn) => () => (idx ? fn() : undefined);
+
+const DECKS = "/home/user/chorlick/alpharune/decks";
+const haveDecks = fs.existsSync(DECKS);
+
+test(
+  "a placed card missing from its player's decklist is reported",
+  withIdx(() => {
+    if (!haveDecks) return;
+    const script = [
+      "place P1 Tideturner hand",
+      "place P1 Nonexistent Card base",
+    ].join("\n");
+    const missing = E.checkAgainstDecks(
+      script, path.join(DECKS, "draven_test.txt"), path.join(DECKS, "fiora_test.txt"), idx
+    );
+    assert.equal(missing.length, 1);
+    assert.equal(missing[0].name, "Nonexistent Card");
+  })
+);
+
+test(
+  "a card in the right deck passes, and the same card in the wrong one does not",
+  withIdx(() => {
+    if (!haveDecks) return;
+    const d1 = path.join(DECKS, "draven_test.txt");
+    const d2 = path.join(DECKS, "fiora_test.txt");
+    assert.deepEqual(E.checkAgainstDecks("place P1 Tideturner hand", d1, d2, idx), []);
+    assert.equal(E.checkAgainstDecks("place P2 Tideturner hand", d1, d2, idx).length, 1);
+  })
+);
+
+/* A decklist names a legend with its champion tag; the engine does not. Both
+ * sides are resolved through the index so the comparison is like for like. */
+test(
+  "a champion-tagged decklist entry still matches the engine's card name",
+  withIdx(() => {
+    if (!haveDecks) return;
+    const d1 = path.join(DECKS, "fiora_test.txt");
+    // fiora_test.txt says "Fiora, Grand Duelist"; the card is "Grand Duelist".
+    assert.deepEqual(
+      E.checkAgainstDecks("place P1 Grand Duelist base", d1, d1, idx),
+      [],
+      "the tag must not defeat the comparison"
+    );
+  })
+);
+
+test("an unreadable decklist is reported rather than thrown", () => {
+  const m = E.checkAgainstDecks("place P1 X hand", "/nope/a.txt", "/nope/b.txt", idx || { byCode: new Map(), byName: new Map(), rows: [] });
+  assert.equal(m.length, 1);
+  assert.match(m[0].why, /could not read a decklist/);
+});
