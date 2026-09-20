@@ -16,6 +16,7 @@ const path = require("node:path");
  * reasoning over an accurate board without the rules recommends plays that
  * cannot be made. */
 const RULES_FILE = process.env.RBC_RULES || path.resolve(__dirname, "rules.md");
+const lessons = require("./lessons.js");
 
 /* Everything after this marker is upkeep for whoever edits the file — where
  * the PDF came from, how to add a rule, what is missing. None of it helps the
@@ -220,6 +221,9 @@ function buildUserMessage(summary, cardText, prior) {
     .join("\n");
 
   const priorBlock = describePrior(prior);
+  /* Lessons ride in the USER message, not the system one: they change between
+   * games, and the system prompt is where the stable things live. */
+  const lessonBlock = lessons.forPrompt();
   /* The legend, with whether its ability is still available.
    *
    * It was previously just a name in the header, so its text never reached
@@ -304,7 +308,7 @@ ${championLine(them)}
       : "nothing yet"
   }
 
-${priorBlock}
+${priorBlock}${lessonBlock ? `\n${lessonBlock}\n` : ""}
 BATTLEFIELDS
   A — ${battlefields.A.name ?? "?"}: mine = ${describeUnits(battlefields.A.mine)}; theirs = ${describeUnits(battlefields.A.theirs)}
   B — ${battlefields.B.name ?? "?"}: mine = ${describeUnits(battlefields.B.mine)}; theirs = ${describeUnits(battlefields.B.theirs)}

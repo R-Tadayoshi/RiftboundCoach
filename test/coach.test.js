@@ -821,3 +821,102 @@ test("the rules state that legends have activated abilities", () => {
   assert.match(rules, /174\.6, 174\.7, 174\.8/);
   assert.match(rules, /not a nameplate/);
 });
+
+/* Lessons: conclusions drawn from finished games. The weakest and most
+ * dangerous of the three knowledge sources, since a lesson is an inference
+ * that gets read back later as knowledge. */
+
+const lessonsMod = require("../coach/lessons.js");
+
+const withTempLessons = (fn) => {
+  const os = require("node:os");
+  const fspath = require("node:path");
+  const fsmod = require("node:fs");
+  const dir = fsmod.mkdtempSync(fspath.join(os.tmpdir(), "rbc-lessons-"));
+  const prev = process.env.RBC_LESSONS;
+  process.env.RBC_LESSONS = fspath.join(dir, "lessons.md");
+  delete require.cache[require.resolve("../coach/lessons.js")];
+  const mod = require("../coach/lessons.js");
+  try {
+    fn(mod);
+  } finally {
+    if (prev === undefined) delete process.env.RBC_LESSONS;
+    else process.env.RBC_LESSONS = prev;
+    delete require.cache[require.resolve("../coach/lessons.js")];
+  }
+};
+
+test("a lesson is stored with where it came from", () => {
+  withTempLessons((L) => {
+    L.add(["Conquer an uncontested battlefield before banking runes."], "room ABC");
+    assert.match(L.list()[0], /Conquer an uncontested battlefield/);
+    assert.match(L.list()[0], /\(room ABC\)/, "provenance rides along");
+  });
+});
+
+test("the same lesson twice does not accumulate", () => {
+  withTempLessons((L) => {
+    L.add(["Trade tempo for a point when the board is empty."], "room A");
+    const second = L.add(["Trade tempo for a point when the board is empty."], "room B");
+    assert.equal(second.added, 0);
+    assert.equal(L.list().length, 1, "learning it again is not learning something new");
+  });
+});
+
+test("lessons are capped so they cannot crowd out the rules", () => {
+  withTempLessons((L) => {
+    const many = Array.from({ length: L.MAX_LESSONS + 10 }, (_, i) => `Lesson number ${i}.`);
+    L.add(many, "bulk");
+    assert.equal(L.list().length, L.MAX_LESSONS);
+    assert.match(L.list().at(-1), /Lesson number 34/, "the newest survive");
+  });
+});
+
+test("the prompt block says lessons are heuristics the board overrides", () => {
+  withTempLessons((L) => {
+    L.add(["Hold a trick rather than spending it on an empty board."], "room A");
+    const block = L.forPrompt();
+    assert.match(block, /NOT rules/);
+    assert.match(block, /may be wrong/);
+    assert.match(block, /rules and the board both/);
+  });
+});
+
+test("no lessons means nothing is added to the prompt", () => {
+  withTempLessons((L) => {
+    assert.equal(L.forPrompt(), "", "an empty file contributes no tokens");
+  });
+});
+
+test("the review is told not to restate rules or guess", () => {
+  const { SYSTEM: REVIEW } = require("../coach/review.js");
+  assert.match(REVIEW, /Restatements of the rules/);
+  assert.match(REVIEW, /Anything you are not confident about/);
+  assert.match(REVIEW, /NO LESSONS/, "it may decline to find any");
+});
+
+test("a game is described from its own room only", () => {
+  const { describeGame } = require("../coach/review.js");
+  const snap = (room, turn, score) => ({
+    match: { roomCode: room, turnNumber: turn, mode: "solo_lab" },
+    players: { self: { name: "me", score, legend: "L" }, opponent: { name: "them", score: 2 } },
+    battlefields: { battlefieldA: { name: "A" }, battlefieldB: { name: "B" } },
+    log: [{ at: "01:00", actor: "self", text: "Conquered A and scored 1." }],
+  });
+  const text = describeGame([snap("R1", 1, 0), snap("R1", 7, 8)]);
+  assert.match(text, /GAME R1/);
+  assert.match(text, /turns: 1 to 7/);
+  assert.match(text, /final score: me 8 — 2 them/);
+  assert.match(text, /Conquered A and scored 1/);
+});
+
+test("a lesson's identity is its text, stripped of bullet and provenance", () => {
+  const { key } = require("../coach/lessons.js");
+  assert.equal(key("- Trade tempo for a point. (room A)"), "trade tempo for a point.");
+  assert.equal(key("Trade tempo for a point."), "trade tempo for a point.");
+  assert.equal(
+    key("- Trade tempo for a point. (room A)"),
+    key("Trade tempo for a point."),
+    "stored and incoming forms must compare equal, or lessons pile up"
+  );
+});

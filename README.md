@@ -330,6 +330,34 @@ its advice against the rules:
 - **A ready rune is worth 1 Energy or 1 domain Power, not both**, and the pool
   empties every turn, so floating resources cannot be banked. (164.2, 167)
 
+### Lessons from finished games
+
+Three kinds of knowledge, kept apart because they carry different weight:
+
+| | source | strength |
+|---|---|---|
+| `coach/rules.md` | quoted from the rulebook | binding |
+| `state/archetypes.json` | decks actually seen or seeded | evidence |
+| `coach/lessons.md` | inferences from how games went | heuristic |
+
+After a game:
+
+```bash
+node coach/review.js              # read the game, write what it taught
+node coach/review.js --dry-run    # see the review prompt, send nothing
+node coach/review.js --note "..." # record one lesson by hand
+```
+
+The hand-written form matters most. When the coach suggests something illegal
+and you correct it, **that correction is ground truth** — better than anything
+the model would infer. A rule belongs in `rules.md` with its number; a
+judgement call belongs here.
+
+Lessons are capped at 25 and deduplicated, so they cannot crowd out the rules
+or the board, and the prompt tells the model they are heuristics that both the
+rules and the live board override. Delete any that look wrong — a wrong lesson
+is worse than none, because it gets read back later as knowledge.
+
 ### What the coach is told it cannot do
 
 The prompt states that the opponent's hand is not visible and gives only its
