@@ -279,6 +279,29 @@ pairing is dropped when the two cards are no longer in the same zone, which
 catches the unit dying or the gear moving, and the latest line wins when gear
 is re-equipped.
 
+### Rules
+
+`coach/rules.md` holds the game rules the coach must respect. It is injected
+into the system prompt and is plain Markdown — correct it, extend it, no code
+involved.
+
+It exists because of a specific failure. Given an accurate board, all three
+models recommended playing a unit straight onto a battlefield nobody
+controlled — an illegal play. **The state was right; they didn't know the
+rules.** That is the worst failure available here, because it reads as advice
+and cannot be taken.
+
+The file is **mostly empty on purpose**. Every rule in it is recorded with its
+source, and nothing is written from memory: a plausible-sounding rule that
+turns out to be wrong does more damage than a missing one, since the coach will
+state it with confidence. The model is told the file is incomplete and to say
+"if you can do X" rather than assume a play is legal.
+
+To fill it from the official Core Rules, add `riftbound.gg` and
+`playriftbound.com` to the cloud environment's **Custom** network allowlist —
+the same place `play.riftatlas.com` went — and they can be distilled in
+properly.
+
 ### What the coach is told it cannot do
 
 The prompt states that the opponent's hand is not visible and gives only its

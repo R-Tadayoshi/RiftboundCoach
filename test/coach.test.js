@@ -587,3 +587,32 @@ test("an unsplit @effort suffix is named as a stale copy, not a bad model", () =
     }
   );
 });
+
+/* Rules. The board handed to the model is accurate; without the rules, a model
+ * reasoning over it recommends plays that cannot be made. All three models
+ * recommended playing a unit onto an uncontrolled battlefield. */
+
+test("the rules file is loaded into the system prompt", () => {
+  const { SYSTEM, loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.ok(rules.length > 0, "there is a rules file");
+  assert.ok(SYSTEM.includes(rules), "and it rides in the system message");
+});
+
+test("the rule the models broke is stated", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  assert.match(loadRules(), /cannot be played directly to a battlefield you do not already\s+control/);
+});
+
+test("the model is told the rules bind it, and that they are incomplete", () => {
+  const { SYSTEM } = require("../coach/prompt.js");
+  assert.match(SYSTEM, /authoritative and binding/);
+  assert.match(SYSTEM, /INCOMPLETE/);
+  assert.match(SYSTEM, /Recommending an illegal play is the worst failure/);
+});
+
+test("a missing rules file leaves the prompt usable", () => {
+  const { BASE_SYSTEM } = require("../coach/prompt.js");
+  assert.ok(BASE_SYSTEM.length > 500, "the coaching instructions stand alone");
+  assert.ok(!BASE_SYSTEM.includes("RULES\n\n#"), "rules are appended, not baked in");
+});

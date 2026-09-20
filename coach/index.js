@@ -125,11 +125,15 @@ async function coach(snapshot) {
     for (const { model, effort, label } of COMPARE_MODELS) {
       const started = Date.now();
       try {
-        const { text, usage, reasoningTokens } = await ask({ system: SYSTEM, user, model, effort });
+        const { text, usage, reasoningTokens, truncated } = await ask({
+          system: SYSTEM, user, model, effort,
+        });
         const secs = ((Date.now() - started) / 1000).toFixed(1);
         const thinking = reasoningTokens ? `, ${reasoningTokens} thinking` : "";
         console.log(
-          `\n### ${label}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok${thinking}` : ""})\n`
+          `\n### ${label}  (${secs}s${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tok${thinking}` : ""})${
+            truncated ? "  [CUT OFF — raise RBC_MAX_TOKENS]" : ""
+          }\n`
         );
         console.log(text + "\n");
       } catch (err) {
@@ -140,8 +144,11 @@ async function coach(snapshot) {
   }
 
   try {
-    const { text, model, usage } = await ask({ system: SYSTEM, user });
+    const { text, model, usage, truncated } = await ask({ system: SYSTEM, user });
     console.log("\n" + text + "\n");
+    if (truncated) {
+      console.warn("  [cut off before the end — raise RBC_MAX_TOKENS]");
+    }
     console.log(
       `  — ${model}${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tokens` : ""}`
     );

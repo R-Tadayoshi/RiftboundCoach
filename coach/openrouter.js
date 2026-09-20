@@ -20,8 +20,10 @@ const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-5";
  * hit the ceiling, and return an empty message. Haiku 4.5 reasons less and so
  * fit under the old cap, which made it look like the only model that worked.
  *
- * The cap is not what you pay — usage is — so it is set well clear of both. */
-const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 2000);
+ * The cap is not what you pay — usage is — so it is set well clear of both.
+ * At 2000 a high-effort answer still came back cut off mid-sentence, having
+ * spent 1727 of it thinking. */
+const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 4000);
 
 /* How hard the model thinks before answering.
  *
@@ -107,11 +109,17 @@ async function ask({
     throw new Error(`${model} returned an empty message — ${detail}`);
   }
 
+  /* Content that stopped because the budget ran out is advice with its end
+   * missing, and the end is where the caveats live. Say so rather than letting
+   * a sentence trail off and be read as the whole answer. */
+  const finish = choice.finish_reason || choice.native_finish_reason || null;
+
   return {
     text,
     model: payload.model || model,
     usage: payload.usage || null,
     reasoningTokens: payload.usage?.completion_tokens_details?.reasoning_tokens ?? null,
+    truncated: finish === "length",
   };
 }
 

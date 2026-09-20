@@ -6,7 +6,26 @@
  */
 "use strict";
 
-const SYSTEM = `You are a Riftbound coach sitting beside a player during solo practice.
+const fs = require("node:fs");
+const path = require("node:path");
+
+/* Rules the model must respect, kept in a file rather than in this string so
+ * they can be corrected without touching code — and so it is obvious how
+ * little is actually known. Missing rules are the main way this coach gives
+ * confident bad advice: the board it is handed is accurate, and a model
+ * reasoning over an accurate board without the rules recommends plays that
+ * cannot be made. */
+const RULES_FILE = process.env.RBC_RULES || path.resolve(__dirname, "rules.md");
+
+function loadRules() {
+  try {
+    return fs.readFileSync(RULES_FILE, "utf8").trim();
+  } catch (_) {
+    return "";
+  }
+}
+
+const BASE_SYSTEM = `You are a Riftbound coach sitting beside a player during solo practice.
 You give short, concrete, decision-focused advice for the turn in front of them.
 
 How to think:
@@ -41,7 +60,22 @@ Hard rules:
 - If a field reads null, it is unknown, not zero and not ready. Say you cannot
   tell rather than filling the gap.
 - Never invent a card. Only name cards given to you in this message.
-- Be brief. Six sentences at most, no preamble, no restating the board.`;
+- Be brief. Six sentences at most, no preamble, no restating the board.
+
+Legality:
+- The RULES section below is authoritative and binding. Never recommend a play
+  it forbids.
+- That section is INCOMPLETE. Where it does not settle whether a play is
+  legal, say so plainly — "if you can do X" — rather than assuming it is.
+  Recommending an illegal play is the worst failure available to you: it looks
+  like advice and cannot be taken.`;
+
+/* Composed once, at load. The rules ride in the system message so they sit
+ * ahead of the board and are not competing with it for attention. */
+const SYSTEM = (() => {
+  const rules = loadRules();
+  return rules ? `${BASE_SYSTEM}\n\n---\n\nRULES\n\n${rules}` : BASE_SYSTEM;
+})();
 
 function describeRunes(runes) {
   if (!runes || !runes.total) return "none";
@@ -209,6 +243,9 @@ What is the line?`;
 
 module.exports = {
   SYSTEM,
+  BASE_SYSTEM,
+  loadRules,
+  RULES_FILE,
   buildUserMessage,
   describeRunes,
   describeUnits,
