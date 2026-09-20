@@ -305,6 +305,52 @@ function buildUserMessage(summary, cardText, prior) {
     return rows.length ? rows.join("\n") : "  (nothing)";
   };
 
+  /* Every way you could ready something this turn, enumerated.
+   *
+   * Prose did not work. rules.md carries a section saying exhausted is not the
+   * end of a unit's turn, with a worked example naming these exact cards, and
+   * the next run still said "play him to base and pass" because he enters
+   * exhausted. The champion taught this lesson already: a fact in the prompt
+   * that is never used is not in the prompt. It has to sit where the options
+   * are counted, as a list, not as advice.
+   *
+   * The match is deliberately loose — any card text mentioning readying gets
+   * listed, and the model decides whether it applies. A missed line costs a
+   * turn; an extra row costs one line of prompt. */
+  const READIES = /\bread(?:y|ies|ying)\b/i;
+
+  const readyingBlock = () => {
+    const rows = [];
+    const seen = new Set();
+    const add = (name, where, card) => {
+      if (!card || seen.has(name)) return;
+      if (!READIES.test(card.text || "")) return;
+      seen.add(name);
+      rows.push(`  - ${name} (${where}): ${(card.text || "").replace(/\s+/g, " ")}`);
+    };
+
+    const legend = me.legendCard;
+    if (legend?.code && legend.exhausted !== true) {
+      add(legend.name, "LEGEND, still ready", cardText[legend.code]);
+    }
+    for (const c of me.hand) add(c.name, "hand", cardText[c.code]);
+    if (me.championZone.available && me.championZone.code) {
+      add(me.championZone.name, "champion zone", cardText[me.championZone.code]);
+    }
+    for (const u of [...me.base, ...me.battlefieldA, ...me.battlefieldB]) {
+      add(u.name, "on board", cardText[u.code]);
+    }
+
+    if (!rows.length) return "  (nothing you hold mentions readying)";
+    return (
+      rows.join("\n") +
+      "\n  A unit readied mid-turn can act again — including one played this" +
+      "\n  turn, which entered exhausted. Note what CHOOSES a unit: equipping" +
+      "\n  gear to your own unit chooses it (818.1.b.1), and choosing is what" +
+      "\n  many of these trigger on."
+    );
+  };
+
   return `TURN ${turn.number ?? "?"} (${turn.step ?? "?"}) — ${
     turn.isMyTurn === true ? "my turn" : turn.isMyTurn === false ? "their turn" : "turn owner unknown"
   }
@@ -319,6 +365,9 @@ ${legendLine(me)}
 
 CARDS YOU CAN PLAY THIS TURN — every one of them, not just your hand:
 ${playableList(me)}
+
+WAYS TO READY SOMETHING THIS TURN — check these before calling a unit spent:
+${readyingBlock()}
 
 THEM — ${them.name ?? "?"}
 ${legendLine(them)}

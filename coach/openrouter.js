@@ -24,8 +24,15 @@ const DEFAULT_MODEL = process.env.RBC_MODEL || "anthropic/claude-sonnet-5";
  * At 2000 a high-effort answer came back cut off mid-sentence after spending
  * 1727 of it thinking; at 4000 an answer at the provider default did the same after
  * 3861. Effort does not cap thinking, so the budget has to clear the worst
- * case rather than the expected one. */
-const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 6000);
+ * case rather than the expected one.
+ *
+ * And the worst case moves. OpenRouter sets the thinking budget as a FRACTION
+ * of this number — high is about 80% — so a fixed cap leaves a fixed slice for
+ * the answer, while the prompt keeps growing as rules and card text are added.
+ * At 6000 a high-effort run returned an empty message on a 9109-token prompt:
+ * 80% of 6000 leaves 1200 for an answer, and the thinking had taken the rest.
+ * Raised so the remaining fifth is comfortably more than an answer needs. */
+const MAX_TOKENS = Number(process.env.RBC_MAX_TOKENS || 16000);
 
 /* How hard the model thinks before answering.
  *
@@ -161,7 +168,10 @@ async function ask({
       reason === "length"
         ? `the ${MAX_TOKENS}-token budget ran out${
             thought ? ` after ${thought} characters of reasoning` : ""
-          }. Raise RBC_MAX_TOKENS, or set RBC_REASONING=none.`
+          }. The thinking budget is a fraction of that cap (high is about ` +
+          `80%), so the answer only gets what is left over. Raise ` +
+          `RBC_MAX_TOKENS — the cap is not what you pay, usage is — or lower ` +
+          `the effort.`
         : `finish_reason was "${reason}".`;
     throw new Error(`${model} returned an empty message — ${detail}`);
   }

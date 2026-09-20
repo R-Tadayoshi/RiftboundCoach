@@ -997,3 +997,67 @@ test("the coach is told to name a readying effect before writing a unit off", ()
   assert.match(SYSTEM, /Name what could ready it first/);
   assert.match(SYSTEM, /Equipping gear to your unit chooses/);
 });
+
+/* Readying, surfaced as a list. rules.md already said "exhausted is not the
+ * end of a unit's turn" and carried the worked example naming these cards;
+ * the next run still passed the turn because Draven entered exhausted. The
+ * champion taught this: prose is not where options get counted. */
+
+const READY_CARDS = {
+  "SFD-195": {
+    name: "Blade Dancer",
+    type: "Legend",
+    text: "When you choose a friendly unit, you may exhaust me and pay rainbow to ready it.",
+  },
+  "SFD-148": { name: "Draven, Audacious", type: "Unit", energy: 6, power: 1, might: 6, text: "The first time I win a combat each turn, you score 1 point." },
+  "SFD-051": { name: "Guardian Angel", type: "Gear", energy: 2, text: "[Equip] calm (calm: Attach this to a unit you control.)" },
+};
+
+const readySummary = (over = {}) => ({
+  turn: { number: 11, step: "main", isMyTurn: true },
+  battlefields: { A: { name: "Targon's Peak", mine: [], theirs: [] }, B: { name: "Targon's Peak", mine: [], theirs: [] } },
+  me: {
+    name: "Zarkhil", score: 5, floating: { energy: 0, power: 0 },
+    runes: { total: 11, ready: 11, exhausted: 0, unknown: 0, byDomain: {} },
+    hand: [{ name: "Draven, Audacious", code: "SFD-148" }, { name: "Guardian Angel", code: "SFD-051" }],
+    base: [], battlefieldA: [], battlefieldB: [], trash: [], deck: { main: 27, rune: 1 },
+    championZone: { name: null, code: null, available: false },
+    legendCard: { name: "Blade Dancer", code: "SFD-195", exhausted: false },
+    ...over,
+  },
+  them: {
+    name: "Opponent", score: 6, floating: { energy: 0, power: 0 },
+    runes: { total: 8, ready: 0, exhausted: 8, unknown: 0, byDomain: {} },
+    handCount: 2, base: [], battlefieldA: [], battlefieldB: [], trash: [], deck: { main: 30, rune: 4 },
+    championZone: { name: null, code: null, available: false }, legendCard: null,
+  },
+  fieldsUnread: [],
+});
+
+test("a ready legend that readies units is listed among the turn's options", () => {
+  const { buildUserMessage } = require("../coach/prompt.js");
+  const msg = buildUserMessage(readySummary(), READY_CARDS, null);
+  assert.match(msg, /WAYS TO READY SOMETHING THIS TURN/);
+  assert.match(msg, /Blade Dancer \(LEGEND, still ready\)/);
+  assert.match(msg, /equipping\s*\n?\s*gear to your own unit chooses it/);
+});
+
+test("an exhausted legend is not offered as a way to ready anything", () => {
+  const { buildUserMessage } = require("../coach/prompt.js");
+  const msg = buildUserMessage(
+    readySummary({ legendCard: { name: "Blade Dancer", code: "SFD-195", exhausted: true } }),
+    READY_CARDS,
+    null
+  );
+  assert.doesNotMatch(msg, /Blade Dancer \(LEGEND/);
+  assert.match(msg, /nothing you hold mentions readying/);
+});
+
+test("cards that say nothing about readying are left out of the list", () => {
+  const { buildUserMessage } = require("../coach/prompt.js");
+  const msg = buildUserMessage(readySummary(), READY_CARDS, null);
+  // Draven and Guardian Angel are in hand but neither readies anything.
+  const block = msg.split("WAYS TO READY SOMETHING THIS TURN")[1].split("\n\n")[0];
+  assert.doesNotMatch(block, /Draven/);
+  assert.doesNotMatch(block, /Guardian Angel/);
+});
