@@ -275,3 +275,39 @@ test(
     }
   })
 );
+
+/* The fidelity gate's false positives. The hook list originally came from the
+ * engine's own audit script and covered only on(Resolve|Trigger|Activate|...).
+ * That missed applyReplacement, so Guardian Angel — whose replacement effect
+ * is implemented in full, and which sits in the deck this project was built
+ * around — was called a stub. A false STUB blocks a search that would have
+ * been sound: the same sin as a false "illegal" in legality.js. */
+test(
+  "a card implemented through a replacement effect is not a stub",
+  withIndex(() => {
+    const files = Fid.scanCardFiles();
+    if (!files.size) return;
+    const r = A.resolve(index, { code: "SFD-051", name: "Guardian Angel" });
+    assert.ok(!r.miss);
+    const v = Fid.verdictFor(r.card, files);
+    assert.equal(v.verdict, "OK", v.why);
+  })
+);
+
+test("the hook list covers the engine's non-obvious behaviour points", () => {
+  for (const hook of ["applyReplacement", "applyPassiveAura", "equippedKeywords",
+                      "alternativePlayCost", "optionalAdditionalCost"]) {
+    assert.ok(Fid.BEHAVIOUR_HOOKS.includes(hook), `${hook} missing from the hook list`);
+  }
+});
+
+test(
+  "a card inheriting a behaviour base counts as implemented",
+  withIndex(() => {
+    const files = Fid.scanCardFiles();
+    if (!files.size) return;
+    // SimpleEquipGear and friends carry the keyword's mechanics for the card.
+    const withBase = [...files.values()].filter((f) => f.hasBehaviour).length;
+    assert.ok(withBase > 600, `expected most cards to carry behaviour, saw ${withBase}`);
+  })
+);

@@ -31,13 +31,40 @@ const { residualText } = require("./fetch-set.js");
 
 const ROOT = process.env.ALPHARUNE_ROOT || path.join(__dirname, "..", "..", "chorlick", "alpharune");
 
-/* The hooks a card overrides when it does something. Taken from the engine's
- * own audit script, which looks for exactly these. */
-const BEHAVIOUR_RE =
-  /\bvoid\s+on(?:Resolve|Trigger|Activate|Play|Equip|Death)\s*\(/;
-/* A card can also carry behaviour purely declaratively, by naming the
- * triggers it listens to. Counted, since such a card is implemented. */
-const TRIGGER_RE = /\btriggerTypes\s*\(\s*\)\s*const\s+override/;
+/* Every hook a card can override to do something, read off the virtuals in
+ * the engine's `cards/card.h`.
+ *
+ * The first version of this list came from the engine's own audit script and
+ * covered only on(Resolve|Trigger|Activate|Play|Equip|Death). That missed
+ * `applyReplacement`, and so called Guardian Angel a stub — a card whose
+ * replacement effect is implemented in full, and which sits in the deck this
+ * project was built around. A false STUB blocks a search that would have been
+ * sound, which is the same sin as a false "illegal" in legality.js: it teaches
+ * you to route around the check.
+ *
+ * So the list errs the other way. A card matching any of these is credited
+ * with behaviour, and a card that overrode one of them pointlessly would only
+ * cost us a search we could have refused. */
+const BEHAVIOUR_HOOKS = [
+  "onResolve", "onPlay", "onActivate", "onTrigger", "onEquip",
+  "onEquippedTrigger", "applyReplacement", "applyPassiveAura",
+  "hasReplacementEffect", "hasActivatedAbility", "hasEquipAbility",
+  "activatedAbilities", "triggerType", "triggerTypes", "equippedTriggerType",
+  "equippedKeywords", "equippedAssault", "equippedShield", "equippedDeflect",
+  "optionalAdditionalCost", "alternativePlayCost", "getActivationCost",
+  "canActivateAbility", "activationCostReduction", "restrictsPlayLocations",
+  "getPlayLocations", "ambushToEnemyBattlefields", "crossesHoldConquerTriggers",
+  "getTargetRequirements", "enumerateLegalTargets", "needsPlayTimeTarget",
+  "needsPlayTimeTargetPair", "needsEquipTimeTarget", "isActionAbility",
+  "isReactionAbility", "hasLegalTargets",
+];
+const BEHAVIOUR_RE = new RegExp(`\\b(?:${BEHAVIOUR_HOOKS.join("|")})\\s*\\([^;]*?\\)[^;{]*?override`, "s");
+
+/* A card can also inherit behaviour from a shared base — SimpleEquipGear and
+ * friends carry the keyword's mechanics — so deriving from anything other than
+ * the plain type base counts too. */
+const BASE_RE = /class\s+\w+\s*:\s*public\s+(?!UnitCard\b|SpellCard\b|GearCard\b|RuneCard\b|BattlefieldCard\b|LegendCard\b)\w+/;
+const TRIGGER_RE = BASE_RE;
 
 /** Every card file the engine has, keyed by def_id. */
 function scanCardFiles(root = ROOT) {
@@ -54,7 +81,7 @@ function scanCardFiles(root = ROOT) {
       for (const m of text.matchAll(/d\.def_id\s*=\s*R"RB\(([^)]*)\)RB"/g)) {
         out.set(m[1], {
           file: `${sub}/${file}`,
-          hasBehaviour: BEHAVIOUR_RE.test(text) || TRIGGER_RE.test(text),
+          hasBehaviour: BEHAVIOUR_RE.test(text) || BASE_RE.test(text),
         });
       }
     }
@@ -132,4 +159,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { scanCardFiles, verdictFor, gate };
+module.exports = { scanCardFiles, verdictFor, gate, BEHAVIOUR_HOOKS };
