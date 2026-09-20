@@ -20,6 +20,16 @@ LOG="${TMPDIR:-/tmp}/riftbound-verify.log"
 # exits — which is how a dozen stray waiters and several concurrent builds
 # ended up thrashing this machine. Run the build in the foreground here and
 # let the shell wait on it properly.
+# One build at a time. Two ninja processes on the same build directory
+# corrupt each other's state, and killing a cmake leaves its ninja orphaned
+# and still writing — which is how this tree ended up with two.
+lock="$ROOT/build/.verify.lock"
+exec 9>"$lock"
+if ! flock -n 9; then
+  echo "another build is running against $ROOT/build; waiting for it ..." >&2
+  flock 9
+fi
+
 echo "building $ROOT ..."
 if ! (cd "$ROOT" && cmake --build build) > "$LOG" 2>&1; then
   echo "BUILD FAILED:"
