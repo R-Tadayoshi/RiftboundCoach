@@ -75,8 +75,8 @@ Hard rules:
 End every answer with a machine-readable block, exactly like this:
 
 ACTIONS:
-- play Tideturner to base
-- move Treasure Hunter from base to battlefield A
+- play <unit> to base
+- move <unit> from base to battlefield A
 - pass
 
 One line per action, in the order you would take them, using only the verbs
@@ -88,15 +88,17 @@ If something readies a unit mid-line, WRITE IT DOWN — "ready <card> using
 illegal, and the step you left in prose is usually the step the whole line
 depends on:
 
-- play Draven, Audacious to base
-- play En Garde targeting Draven, Audacious
-- ready Draven, Audacious using Blade Dancer
-- move Draven, Audacious from base to battlefield A
+- play <unit> to base
+- play <spell> targeting <unit>
+- ready <unit> using <legend or card>
+- move <unit> from base to battlefield A
 
 If an action chooses a target, say so with "targeting <card>":
 
-- play Charm targeting Akali, Silent
-- move Tideturner from base to battlefield B
+- play <spell> targeting <their unit>
+- move <unit> from base to battlefield B
+
+Use the real names from this message in place of the placeholders.
 
 This block is checked against the rules by code before it reaches the player,
 so a line you cannot write down plainly is a line you have not thought

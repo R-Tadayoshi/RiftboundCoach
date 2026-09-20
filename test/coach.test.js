@@ -1061,3 +1061,23 @@ test("cards that say nothing about readying are left out of the list", () => {
   assert.doesNotMatch(block, /Draven/);
   assert.doesNotMatch(block, /Guardian Angel/);
 });
+
+/* The prompt must not carry one deck's cards. Examples written from the deck
+ * in front of me read as generic guidance and are not: they bias the coach
+ * toward cards another deck does not have, and they are how a tool for one
+ * player gets mistaken for a tool for any player. */
+test("no card name from any particular deck is shipped in the system prompt", () => {
+  const { SYSTEM } = require("../coach/prompt.js");
+  const names = SYSTEM.match(
+    /\b(Draven|Blade Dancer|En Garde|Akali|Tideturner|Charm|Irelia|Guardian Angel|Stellacorn|Targon's Peak|Treasure Hunter|Defy|Flash)\b/g
+  );
+  assert.equal(names, null, `deck-specific names in the prompt: ${names}`);
+});
+
+test("the rules file names no cards either", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const names = loadRules().match(
+    /\b(Draven|Blade Dancer|En Garde|Akali|Tideturner|Irelia|Guardian Angel|Stellacorn|Treasure Hunter)\b/g
+  );
+  assert.equal(names, null, `deck-specific names in rules.md: ${names}`);
+});
