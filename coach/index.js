@@ -18,15 +18,32 @@ const { ask, DEFAULT_MODEL } = require("./openrouter.js");
 const cards = require("./cards.js");
 const archetypes = require("./archetypes.js");
 const legality = require("./legality.js");
+const engine = require("./engine.js");
 
 const SIDECAR = process.env.RBC_SIDECAR || "http://127.0.0.1:8787";
 const POLL_MS = Number(process.env.RBC_POLL_MS || 1500);
 
-const args = new Set(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const args = new Set(argv);
+
+/** --flag value, or the environment, or nothing. */
+function argValue(flag, envKey) {
+  const i = argv.indexOf(flag);
+  if (i >= 0 && argv[i + 1] && !argv[i + 1].startsWith("--")) return argv[i + 1];
+  return envKey ? process.env[envKey] : undefined;
+}
 const DRY_RUN = args.has("--dry-run");
 const ONCE = args.has("--once");
 const EVERY = args.has("--every");
 const COMPARE = args.has("--compare");
+
+/* --rank runs the engine over this exact board and hands the model a ranked
+ * list instead of asking it to rank in its head. Needs both decklists: ours is
+ * known, theirs is a guess, and a wrong guess means the opponent's unseen
+ * cards get sampled from the wrong pool. So it is opt-in and explicit. */
+const RANK = args.has("--rank");
+const DECK_MINE = argValue("--deck-mine", "RBC_DECK_MINE");
+const DECK_THEIRS = argValue("--deck-theirs", "RBC_DECK_THEIRS");
 
 /* Whether a bigger model — or a harder think — is worth it here is a question
  * about THIS prompt on YOUR boards, and no amount of arguing about it
@@ -123,9 +140,33 @@ async function coach(snapshot) {
   archetypes.observe(snapshot);
 
   const cardText = await cards.resolve(codesToResolve(snapshot));
-  const user = buildUserMessage(summary, cardText, prior);
+  let user = buildUserMessage(summary, cardText, prior);
 
   console.log(banner(snapshot));
+
+  /* The engine's ranking, if it can be had. Every failure here is reported
+   * and then stepped over: the coach reasoning unaided is the behaviour we
+   * had all along and it is not worthless. What would be worthless is a
+   * percentage attached to a board the engine could not faithfully build. */
+  if (RANK) {
+    const started = Date.now();
+    process.stdout.write("  [engine] ranking this board ... ");
+    const r = engine.rankBoard(summary, { deck1: DECK_MINE, deck2: DECK_THEIRS });
+    if (!r.ok) {
+      console.log(`no.\n  [engine] ${r.why}`);
+      console.log("  [engine] answering without it — the advice below is the model's alone.");
+    } else {
+      const secs = ((Date.now() - started) / 1000).toFixed(0);
+      const block = engine.rankingBlock(r.ranking, r.caveats);
+      console.log(`done (${secs}s)\n`);
+      console.log(block + "\n");
+      user = `${user}\n\n---\n${block}\n\nExplain the engine's answer. It ranked ` +
+        `these lines by playing this board out; you did not. Where it separates ` +
+        `an option, lead with that one and say why it is good in Riftbound terms. ` +
+        `Where it does not separate them, say they are equivalent rather than ` +
+        `picking one.`;
+    }
+  }
 
   if (DRY_RUN) {
     console.log("\n[system]\n" + SYSTEM + "\n\n[user]\n" + user);

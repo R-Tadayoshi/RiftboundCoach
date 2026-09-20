@@ -7,6 +7,57 @@ It reads the board the way a screenshot would — passively, through the DOM —
 and hands a structured snapshot to a local process. It never clicks, drags, or
 writes to the page.
 
+
+## Ranking your options with a real engine
+
+The coach reads the board and never proposes an illegal play, but nothing in
+it ranks one legal line above another — it says "here is an option", never
+"this one is better". That needs search, and search needs an engine that knows
+the cards.
+
+`chorlick/alpharune` is a C++ Riftbound engine. The bridge is in `engine/`
+and `coach/engine.js`; `docs/alpharune-integration.md` records what was
+checked against its source rather than its README.
+
+```bash
+# once: build the engine, then our probes against it
+cd ../chorlick/alpharune && cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release && cmake --build build
+cd -   && ./engine/build.sh
+
+node coach/index.js --rank --deck-mine decks/mine.txt --deck-theirs decks/theirs.txt
+```
+
+What it prints:
+
+```
+ENGINE RANKING — rollouts from this exact board, not opinion:
+  82.7%  P1: PlayCard card=2
+  37.2%  P1: EndTurn
+
+The engine separates "P1: PlayCard card=2" from the rest. Lead with it.
+Worst by a clear margin: "P1: EndTurn" at 37.2%.
+```
+
+The ranking then goes into the prompt, and the model's job shrinks to
+explaining it. That is the division of labour: the engine decides which line
+is better, the model says why in words. It was never bad at explaining — it
+was bad at knowing.
+
+**It fails closed, every way in.** No engine build, no decklists, a card the
+engine holds only as a stub, a ranking whose rows will not parse — each one
+prints the reason and falls back to the model reasoning unaided. What it never
+does is attach a percentage to a board the engine could not faithfully build.
+
+**Both decklists are required, and theirs is a guess.** Their unseen cards are
+sampled from what is left of the list you give, so a wrong list samples from
+the wrong pool. Seeded archetypes are the place to get one.
+
+**Rollouts default to 1200** because that is what the measurement supports: on
+the position this was built against, the top four options sat inside the noise
+at 40, 150 and 400 rollouts and only separated at 1200. Five actions at that
+count is about 80 seconds. Below roughly a thousand the ranker honestly reports
+TOO CLOSE TO CALL, which is worse than slow. `RBC_ROLLOUTS` overrides it.
+
 ## Status
 
 | Phase | State |
