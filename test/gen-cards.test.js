@@ -177,3 +177,45 @@ test("a card id is registered exactly once across the engine's card tree", () =>
   }
   assert.ok(seen.size > 900, `expected the full registry, saw ${seen.size}`);
 });
+
+/* Reprints. A card printed again in a later set is a second entry with its
+ * own id and its own file, so implementing one leaves the other a stub — and
+ * which one a board resolves to depends on the printing that was played.
+ * Draven, Showboat found this the slow way. */
+test("no card has one printing working and another not", () => {
+  let index, files;
+  try {
+    index = require("../coach/alpharune.js").loadIndex();
+    files = require("../coach/fidelity.js").scanCardFiles();
+  } catch (_) { return; }
+  if (!files.size) return;
+
+  const { mismatched } = require("../coach/port-reprint.js");
+  const bad = mismatched(index, files);
+  assert.deepEqual(
+    bad.map((b) => `${b.name}: ${b.from.public_code} works, ${b.to.map((t) => t.public_code)} does not`),
+    [],
+    "run: node coach/port-reprint.js --write"
+  );
+});
+
+test("porting keeps each printing's own CardDef and class name", () => {
+  const { split } = require("../coach/port-reprint.js");
+  const src = [
+    '#include "cards/card.h"',
+    "namespace riftbound {",
+    "class AlphaCard : public UnitCard {",
+    "public:",
+    "    void onPlay(CardContext& ctx) override {}",
+    "    const CardDef def_ = [] {",
+    "        CardDef d;",
+    "        d.id = 1;",
+    "    }();",
+    "};",
+  ].join("\n");
+  const parts = split(src);
+  assert.ok(parts, "a card file should split into head / class / CardDef");
+  assert.match(parts.cls, /onPlay/, "behaviour belongs to the class half");
+  assert.match(parts.def, /d\.id = 1;/, "the id belongs to the CardDef half");
+  assert.doesNotMatch(parts.cls, /d\.id/, "the id must not travel with the behaviour");
+});
