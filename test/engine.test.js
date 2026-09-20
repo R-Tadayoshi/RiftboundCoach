@@ -27,7 +27,8 @@ test("a ranking report parses into rows, rates and counts", () => {
   const r = E.parseRanking(SAMPLE_CLEAR);
   assert.equal(r.rows.length, 2);
   assert.equal(r.rows[0].action, "P1: PlayCard card=2");
-  assert.equal(r.rows[0].rate, 0.827);
+  // Float division: 82.7/100 is not exactly 0.827.
+  assert.ok(Math.abs(r.rows[0].rate - 0.827) < 1e-9);
   assert.equal(r.rows[0].wins, 992);
   assert.equal(r.worst.action, "P1: EndTurn");
 });
