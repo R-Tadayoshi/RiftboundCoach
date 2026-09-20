@@ -82,3 +82,43 @@ test(
     assert.ok(r.miss, "Akali, Silent should not resolve");
   })
 );
+
+/* Importing a set. The classifier decides how much of a set the engine gets
+ * for nothing, so it has to be honest in the conservative direction: a card
+ * counted as "free" that actually needs code becomes a stub, and a stub makes
+ * the search wrong while still returning a number. */
+const F = require("../coach/fetch-set.js");
+
+test("a card with no text at all needs nothing", () => {
+  assert.equal(F.classify({ description: "" }), "vanilla");
+  assert.equal(F.classify({}), "vanilla");
+});
+
+test("a card whose text is only keyword reminders needs nothing", () => {
+  assert.equal(
+    F.classify({
+      description: "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.)",
+    }),
+    "keywords-only"
+  );
+});
+
+test("real rules text is never counted as free", () => {
+  assert.equal(
+    F.classify({
+      description:
+        "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me.)When you choose or ready me, give me +1 :rb_might: this turn.",
+    }),
+    "needs-behaviour"
+  );
+  assert.equal(F.classify({ description: "Move an enemy unit." }), "needs-behaviour");
+  assert.equal(
+    F.classify({ description: "I can't be chosen by enemy spells and abilities unless I'm in combat." }),
+    "needs-behaviour"
+  );
+});
+
+test("the residual is the text an implementation would have to cover", () => {
+  assert.equal(F.residualText({ description: "Kill a gear." }), "Kill a gear.");
+  assert.equal(F.residualText({ description: "[Temporary] (Kill me at the start of your Beginning Phase.)" }), "");
+});

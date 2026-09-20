@@ -134,6 +134,44 @@ added to the engine. `scripts/fetch_cards.py` pulls from the official gallery
 and writes engine-ready JSON, and the per-card C++ is a generated aggregator,
 so the path exists; it is work, not a wall.
 
+## What adding a set actually costs
+
+`coach/fetch-set.js` imports a set from RiftScribe (the official gallery that
+alpharune's own `fetch_cards.py` reads is outside this environment's network
+policy). `node coach/fetch-set.js VEN` pulls all 197 base printings, caches
+every record so a re-run only fetches what is new, and reports how much of the
+set the engine gets for free:
+
+```
+  vanilla             0   0%
+  keywords-only       4   2%
+  needs-behaviour   193  98%
+```
+
+That is the real number, and it is not a surprise once you look at what is
+already there: of alpharune's 787 card files, **605 carry a behaviour body**
+and only 182 are pure data. Writing card behaviour IS the work of supporting a
+set, and alpharune has done it four times.
+
+Good news in it: **VEN introduces no new keywords.** Every bracketed keyword in
+the set is already one of the engine's 23, and keywords are declarative
+(`d.keywords.set(Keyword::Deflect)`) with the engine handling them centrally.
+So no engine changes are needed, only cards.
+
+### A stub is worse than a missing card
+
+For a *search*, an unimplemented card is more dangerous than an absent one. The
+engine happily plays a card whose text does nothing, so the search evaluates
+lines on a board that is quietly wrong and returns a confident number anyway —
+the same failure as the ISMCTS `Clone()` resampler, in a different coat.
+
+There is no runtime way to tell. `CardDef` has no fidelity field, and only 13
+of 787 card files carry any "partial implementation" note. So before the coach
+trusts any search result, every card in the position has to be checked against
+a list of cards known to be really implemented, and an unknown one has to stop
+the search rather than colour it. That gate comes before the first number this
+thing ever reports.
+
 ## Names, and two rules that took finding
 
 The mapper is `coach/alpharune.js`, and both of its rules were found by making
