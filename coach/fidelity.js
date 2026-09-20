@@ -107,7 +107,9 @@ function scanCardFiles(root = ROOT) {
       for (const m of text.matchAll(/d\.def_id\s*=\s*R"RB\(([^)]*)\)RB"/g)) {
         out.set(m[1], {
           file: `${sub}/${file}`,
-          hasBehaviour: BEHAVIOUR_RE.test(text) || BASE_RE.test(text),
+          hasBehaviour: BEHAVIOUR_RE.test(text) || BASE_RE.test(text) ||
+                        COVERED_RE.test(text),
+          covered: COVERED_RE.test(text),
           partial: PARTIAL_RE.test(text),
         });
       }
@@ -135,6 +137,16 @@ function scanCardFiles(root = ROOT) {
  * Akali, Silent: her file's header explains that she "carried ENGINE GAP
  * notes" — past tense, describing the gap this project closed. Prose about a
  * fixed problem is not a declaration that the card is broken. */
+/* The other half of believing the file.
+ *
+ * Some cards need no hook at all because the engine handles their text
+ * centrally — Rek'Sai, Breacher's three clauses are all keyword or cost-path
+ * behaviour — and those files say so with a COVERAGE-OK note. Without reading
+ * it, the gate sees a file with no behaviour hook and calls a fully working
+ * card a stub. Same anchoring rule as PARTIAL: the marker opens a comment
+ * line, so prose mentioning one does not count as declaring one. */
+const COVERED_RE = /^[ \t]*(?:\/\/+|\/\*+|\*)[ \t]*COVERAGE-OK\b/m;
+
 const PARTIAL_RE =
   /^[ \t]*(?:\/\/+|\/\*+|\*)[ \t]*(?:PARTIAL|ENGINE GAP|NOT IMPLEMENTED|TODO: implement)\b/m;
 
@@ -153,6 +165,9 @@ function verdictFor(card, files) {
       why: `${impl.file} says it is incomplete — a card that does most of what ` +
         `it says is worse to search over than one that does nothing`,
     };
+  }
+  if (impl.covered) {
+    return { verdict: "OK", why: `${impl.file} declares the engine handles it centrally` };
   }
   if (impl.hasBehaviour) return { verdict: "OK", why: `implemented in ${impl.file}` };
   return {
@@ -254,4 +269,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, hooksFromHeader, PARTIAL_RE };
+module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, hooksFromHeader, PARTIAL_RE, COVERED_RE };

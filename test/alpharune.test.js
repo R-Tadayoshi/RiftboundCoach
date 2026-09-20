@@ -422,3 +422,42 @@ test(
       `only through one of these would be called a stub: ${missing.join(", ")}`);
   })
 );
+
+/* Believing the file, both ways. A card can declare itself incomplete
+ * (PARTIAL) or declare that the engine handles it centrally (COVERAGE-OK).
+ * Rek'Sai, Breacher is the second kind: all three of its clauses are keyword
+ * or cost-path behaviour, so it has no hook and is entirely correct. Without
+ * reading its note the gate called it a stub and blocked a deck that ships
+ * with the engine. */
+test("a card declaring engine coverage is not a stub", () => {
+  const files = new Map([
+    ["x-1", { file: "a.cpp", hasBehaviour: true, covered: true, partial: false }],
+    ["x-2", { file: "b.cpp", hasBehaviour: false, covered: false, partial: false }],
+  ]);
+  const card = (id) => ({ id, ability_text: "Friendly units have [Accelerate]." });
+  assert.equal(Fid.verdictFor(card("x-1"), files).verdict, "OK");
+  assert.match(Fid.verdictFor(card("x-1"), files).why, /handles it centrally/);
+  assert.equal(Fid.verdictFor(card("x-2"), files).verdict, "STUB");
+});
+
+test("the coverage marker must open a comment, like the partial one", () => {
+  assert.match("// COVERAGE-OK: engine-handled keywords", Fid.COVERED_RE);
+  assert.match("    /// COVERAGE-OK: nothing to write", Fid.COVERED_RE);
+  assert.doesNotMatch("// see the COVERAGE-OK note on the other card", Fid.COVERED_RE);
+});
+
+test(
+  "a deck the engine ships with is fully rankable",
+  withIndex(() => {
+    const fs2 = require("fs");
+    const files = Fid.scanCardFiles();
+    const deck = "/home/user/chorlick/alpharune/decks/draven_test.txt";
+    if (!files.size || !fs2.existsSync(deck)) return;
+    const logs = [];
+    const real = console.log;
+    console.log = (...a) => logs.push(a.join(" "));
+    let blocking;
+    try { blocking = Fid.reportDeck(deck, index, files); } finally { console.log = real; }
+    assert.equal(blocking, 0, `the engine's own test deck should rank:\n${logs.join("\n")}`);
+  })
+);
