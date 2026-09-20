@@ -1,5 +1,9 @@
 node_modules/
+# Live capture and card caches are machine-local.
 state/
-state/sets/
+# Except imported set data: small once slimmed, and keeping it makes
+# `coach/gen-cards.js <SET>` reproducible with no network.
+!state/sets/
+!state/sets/*.json
 engine/probe
 engine/position

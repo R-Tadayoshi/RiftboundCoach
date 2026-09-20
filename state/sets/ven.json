@@ -1,0 +1,5662 @@
+{
+ "ven-001-166": {
+  "id": "ven-001-166",
+  "public_code": "VEN-001/166",
+  "name": "Baccai Sandspinner",
+  "set_id": "VEN",
+  "collector_number": 1,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-001-166-376608d05f5062d2.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_5:. This ability costs :rb_energy_3: less if you control 4 or fewer runes. (Pay the cost: Empower me. Use only if not Empowered.)[Empowered][>] I have [Deflect] and [Assault 2]. (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability. +2 :rb_might: while I'm an attacker.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": null,
+  "next_card_id": "ven-r01"
+ },
+ "ven-002-166": {
+  "id": "ven-002-166",
+  "public_code": "VEN-002/166",
+  "name": "Blade Twirler",
+  "set_id": "VEN",
+  "collector_number": 2,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-002-166-d6cc75b92c3454c6.png",
+  "is_banned": false,
+  "description": "The first time I move each turn, choose a player. They [Burn 1]. (They put the top card of their Main Deck into their trash.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-sp1-006",
+  "next_card_id": "ven-r02"
+ },
+ "ven-003-166": {
+  "id": "ven-003-166",
+  "public_code": "VEN-003/166",
+  "name": "Brittle Steel",
+  "set_id": "VEN",
+  "collector_number": 3,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-003-166-945f2584bab4ff63.png",
+  "is_banned": false,
+  "description": "Kill a gear.[Flow] :rb_energy_4::rb_rune_fury: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-sp2-006",
+  "next_card_id": "ven-r03"
+ },
+ "ven-004-166": {
+  "id": "ven-004-166",
+  "public_code": "VEN-004/166",
+  "name": "Dune Surfer",
+  "set_id": "VEN",
+  "collector_number": 4,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-004-166-ac80379372e24976.png",
+  "is_banned": false,
+  "description": "You ignore [Tank] while assigning combat damage here.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-sp3-006",
+  "next_card_id": "ven-r04"
+ },
+ "ven-005-166": {
+  "id": "ven-005-166",
+  "public_code": "VEN-005/166",
+  "name": "Forsaken Baccai",
+  "set_id": "VEN",
+  "collector_number": 5,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-005-166-9024b5d89a18a5e8.png",
+  "is_banned": false,
+  "description": "If you control fewer runes than an opponent at the start of your Beginning Phase, give me +1 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-t04",
+  "next_card_id": "ven-r05"
+ },
+ "ven-006-166": {
+  "id": "ven-006-166",
+  "public_code": "VEN-006/166",
+  "name": "Oasis Raider",
+  "set_id": "VEN",
+  "collector_number": 6,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-006-166-39504a42422b4cd6.png",
+  "is_banned": false,
+  "description": "If you control fewer runes than an opponent at the start of your Beginning Phase, give me +2 :rb_might: and [Ganking] this turn. (I can move from battlefield to battlefield.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-sp5-006",
+  "next_card_id": "ven-r06"
+ },
+ "ven-007-166": {
+  "id": "ven-007-166",
+  "public_code": "VEN-007/166",
+  "name": "Punching Poro",
+  "set_id": "VEN",
+  "collector_number": 7,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-007-166-928dac4d45766aeb.png",
+  "is_banned": false,
+  "description": "[Empower] — Discard 1 (Pay the cost: Empower me. Use only if not Empowered.)[Empowered][>] I have +1 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-sp6-006",
+  "next_card_id": "ven-008-166"
+ },
+ "ven-008-166": {
+  "id": "ven-008-166",
+  "public_code": "VEN-008/166",
+  "name": "Ruthless Strike",
+  "set_id": "VEN",
+  "collector_number": 8,
+  "variant": "",
+  "rarity": "common",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-008-166-4c163c1144bcfa2e.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)As an additional cost to play this, you may discard 1.Deal 3 to a unit at a battlefield. If you paid the additional cost, deal 5 to it instead.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-007-166",
+  "next_card_id": "ven-009-166"
+ },
+ "ven-009-166": {
+  "id": "ven-009-166",
+  "public_code": "VEN-009/166",
+  "name": "Baccai Reaper",
+  "set_id": "VEN",
+  "collector_number": 9,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-009-166-e60474dd237514e3.png",
+  "is_banned": false,
+  "description": "When I attack, you may pay :rb_rune_fury: to give me [Assault 2] this turn. (+2 :rb_might: while I'm an attacker.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-008-166",
+  "next_card_id": "ven-010-166"
+ },
+ "ven-010-166": {
+  "id": "ven-010-166",
+  "public_code": "VEN-010/166",
+  "name": "Consuming Curse",
+  "set_id": "VEN",
+  "collector_number": 10,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-010-166-702bb9554e23e1eb.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)Deal 2 to a unit at a battlefield. This deals 1 Bonus Damage for each card with this name in your trash.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-009-166",
+  "next_card_id": "ven-011-166"
+ },
+ "ven-011-166": {
+  "id": "ven-011-166",
+  "public_code": "VEN-011/166",
+  "name": "Pendulum Blade",
+  "set_id": "VEN",
+  "collector_number": 11,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-011-166-b663b10791e40c61.png",
+  "is_banned": false,
+  "description": "[Equip] :rb_rune_fury: (:rb_rune_fury:: Attach this to a unit you control.)",
+  "flavor_text": null,
+  "keywords": [
+   "equip"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-010-166",
+  "next_card_id": "ven-012-166"
+ },
+ "ven-012-166": {
+  "id": "ven-012-166",
+  "public_code": "VEN-012/166",
+  "name": "Perfect Execution",
+  "set_id": "VEN",
+  "collector_number": 12,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-012-166-ce2d5033cbb2b3a1.png",
+  "is_banned": false,
+  "description": "Ready a unit and give it [Assault 3] this turn. (+3 :rb_might: while it's an attacker.)[Flow] :rb_energy_3::rb_rune_fury: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-011-166",
+  "next_card_id": "ven-013-166"
+ },
+ "ven-013-166": {
+  "id": "ven-013-166",
+  "public_code": "VEN-013/166",
+  "name": "Shadow Assassin",
+  "set_id": "VEN",
+  "collector_number": 13,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-013-166-f41d7e96bc558e64.png",
+  "is_banned": false,
+  "description": "I enter ready if you have a card with my name in your trash.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-012-166",
+  "next_card_id": "ven-014-166"
+ },
+ "ven-014-166": {
+  "id": "ven-014-166",
+  "public_code": "VEN-014/166",
+  "name": "Shadow Fiend",
+  "set_id": "VEN",
+  "collector_number": 14,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-014-166-eabd0a3b285bcbd5.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2::rb_rune_fury: (:rb_energy_2::rb_rune_fury:: Empower me. Use only if not Empowered.)[Empowered][>] I have [Assault 3]. (+3 :rb_might: while I'm an attacker.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-013-166",
+  "next_card_id": "ven-015-166"
+ },
+ "ven-015-166": {
+  "id": "ven-015-166",
+  "public_code": "VEN-015/166",
+  "name": "Decree of Rage",
+  "set_id": "VEN",
+  "collector_number": 15,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-015-166-6840be7922560dd6.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)This can't be countered.Deal 4 to an enemy Calm (:rb_rune_calm:) unit.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-014-166",
+  "next_card_id": "ven-016-166"
+ },
+ "ven-016-166": {
+  "id": "ven-016-166",
+  "public_code": "VEN-016/166",
+  "name": "Eclipse Dragon",
+  "set_id": "VEN",
+  "collector_number": 16,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 8,
+   "might": 8,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-016-166-05749cb15b94b74f.png",
+  "is_banned": false,
+  "description": "[Accelerate] (You may pay :rb_energy_1::rb_rune_fury: as an additional cost to have me enter ready.)When I move, if you control 4 or fewer runes, draw 1.",
+  "flavor_text": null,
+  "keywords": [
+   "accelerate"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-015-166",
+  "next_card_id": "ven-017-166"
+ },
+ "ven-017-166": {
+  "id": "ven-017-166",
+  "public_code": "VEN-017/166",
+  "name": "Morgana, Vindictive",
+  "set_id": "VEN",
+  "collector_number": 17,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-017-166-0cc25f7e209613c9.png",
+  "is_banned": false,
+  "description": "[Ambush] (You may play me as a [Reaction] to a battlefield where you have units.)When you play me, deal damage to a unit equal to the damage marked on it.",
+  "flavor_text": null,
+  "keywords": [
+   "ambush"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-016-166",
+  "next_card_id": "ven-018-166"
+ },
+ "ven-018-166": {
+  "id": "ven-018-166",
+  "public_code": "VEN-018/166",
+  "name": "Rage Amplifier",
+  "set_id": "VEN",
+  "collector_number": 18,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-018-166-a8d49c0d2a331c88.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_6::rb_rune_fury: (:rb_energy_6::rb_rune_fury:: Empower this. Use only if not Empowered.)Your units have +1 :rb_might:. If I'm [Empowered], they have +2 :rb_might: instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-017-166",
+  "next_card_id": "ven-019-166"
+ },
+ "ven-019-166": {
+  "id": "ven-019-166",
+  "public_code": "VEN-019/166",
+  "name": "Renekton, Rage Fueled",
+  "set_id": "VEN",
+  "collector_number": 19,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-019-166-c8715fa4e30a349c.png",
+  "is_banned": false,
+  "description": "[Accelerate] (You may pay :rb_energy_1::rb_rune_fury: as an additional cost to have me enter ready.)When I attack, if you control 4 or fewer runes, deal 2 to all enemy units here.",
+  "flavor_text": null,
+  "keywords": [
+   "accelerate"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-018-166",
+  "next_card_id": "ven-019a-166"
+ },
+ "ven-020-166": {
+  "id": "ven-020-166",
+  "public_code": "VEN-020/166",
+  "name": "Twilight Reveler",
+  "set_id": "VEN",
+  "collector_number": 20,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-020-166-4cc763e1d38bdbd3.png",
+  "is_banned": false,
+  "description": "When I attack, ready another friendly unit.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-019a-166",
+  "next_card_id": "ven-021-166"
+ },
+ "ven-021-166": {
+  "id": "ven-021-166",
+  "public_code": "VEN-021/166",
+  "name": "Akali, Deadly Weapon",
+  "set_id": "VEN",
+  "collector_number": 21,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-021-166-f2f9a04e726a4d32.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2::rb_rune_fury: (:rb_energy_2::rb_rune_fury:: Empower me. Use only if not Empowered.)When I move, you may deal 1 to a unit at a battlefield I moved to or from. If I'm [Empowered], deal 2 instead.[Empowered][>] I have +1 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-020-166",
+  "next_card_id": "ven-021a-166"
+ },
+ "ven-022-166": {
+  "id": "ven-022-166",
+  "public_code": "VEN-022/166",
+  "name": "Endless Riches",
+  "set_id": "VEN",
+  "collector_number": 22,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-022-166-7eb2b3669fabc799.png",
+  "is_banned": false,
+  "description": "When you play this, banish your hand and trash, then [Burn 7].Skip your Draw Phase.You may play cards from your trash.If a card would go to your trash from anywhere other than your Main Deck, banish it instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-021a-166",
+  "next_card_id": "ven-023-166"
+ },
+ "ven-023-166": {
+  "id": "ven-023-166",
+  "public_code": "VEN-023/166",
+  "name": "Zed, From the Shadows",
+  "set_id": "VEN",
+  "collector_number": 23,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-023-166-a3b55ea3a01c7879.png",
+  "is_banned": false,
+  "description": "You may discard 1 as an additional cost to play me.When you play me, if you paid the additional cost, play a 0 :rb_might: Shadow Clone unit token. (It has \"When I attack, you may banish a unit from your trash. If you do, give me [Assault 4] this turn.\")",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-022-166",
+  "next_card_id": "ven-023a-166"
+ },
+ "ven-024-166": {
+  "id": "ven-024-166",
+  "public_code": "VEN-024/166",
+  "name": "Affectionate Poro",
+  "set_id": "VEN",
+  "collector_number": 24,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-024-166-0e2b769b63271ce7.png",
+  "is_banned": false,
+  "description": "When a combat that I was in ends, if I haven't been dealt damage this turn, draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-023a-166",
+  "next_card_id": "ven-025-166"
+ },
+ "ven-025-166": {
+  "id": "ven-025-166",
+  "public_code": "VEN-025/166",
+  "name": "Esteemed Hierophant",
+  "set_id": "VEN",
+  "collector_number": 25,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-025-166-2d599ea726aa77e3.png",
+  "is_banned": false,
+  "description": "While you control 7 or more runes, prevent all damage that enemy spells and abilities would deal to me.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-024-166",
+  "next_card_id": "ven-026-166"
+ },
+ "ven-026-166": {
+  "id": "ven-026-166",
+  "public_code": "VEN-026/166",
+  "name": "Field Musicians",
+  "set_id": "VEN",
+  "collector_number": 26,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-026-166-ddb1461fc7e5f94e.png",
+  "is_banned": false,
+  "description": "When you play me, give a unit +3 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-025-166",
+  "next_card_id": "ven-027-166"
+ },
+ "ven-027-166": {
+  "id": "ven-027-166",
+  "public_code": "VEN-027/166",
+  "name": "Hand Hammer",
+  "set_id": "VEN",
+  "collector_number": 27,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-027-166-0c278bbbce411f6f.png",
+  "is_banned": false,
+  "description": "[Equip] :rb_rune_calm: (:rb_rune_calm:: Attach this to a unit you control.)",
+  "flavor_text": null,
+  "keywords": [
+   "equip"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-026-166",
+  "next_card_id": "ven-028-166"
+ },
+ "ven-028-166": {
+  "id": "ven-028-166",
+  "public_code": "VEN-028/166",
+  "name": "Mournful Witness",
+  "set_id": "VEN",
+  "collector_number": 28,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-028-166-d4b64d953b980290.png",
+  "is_banned": false,
+  "description": "When a combat that I was in ends, empower me. (I become Empowered if I'm not already.)[Empowered][>] I have +2 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-027-166",
+  "next_card_id": "ven-029-166"
+ },
+ "ven-029-166": {
+  "id": "ven-029-166",
+  "public_code": "VEN-029/166",
+  "name": "Ol' Poro",
+  "set_id": "VEN",
+  "collector_number": 29,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-029-166-091603af5076943c.png",
+  "is_banned": false,
+  "description": "I can't be played on your first, second, or third turns.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-028-166",
+  "next_card_id": "ven-030-166"
+ },
+ "ven-030-166": {
+  "id": "ven-030-166",
+  "public_code": "VEN-030/166",
+  "name": "Serene Ascetic",
+  "set_id": "VEN",
+  "collector_number": 30,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-030-166-2598353b63827011.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3: (:rb_energy_3:: Empower me. Use only if not Empowered.)[Empowered][>] I have [Deflect] and [Shield 3]. (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.+3 :rb_might: while I'm a defender.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-029-166",
+  "next_card_id": "ven-031-166"
+ },
+ "ven-031-166": {
+  "id": "ven-031-166",
+  "public_code": "VEN-031/166",
+  "name": "Twilight Shroud",
+  "set_id": "VEN",
+  "collector_number": 31,
+  "variant": "",
+  "rarity": "common",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-031-166-bf2b8d7374516e17.png",
+  "is_banned": false,
+  "description": "Give a friendly unit +1 :rb_might: this turn. It can't be chosen by enemy spells and abilities this turn.[Flow] :rb_energy_2: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-030-166",
+  "next_card_id": "ven-032-166"
+ },
+ "ven-032-166": {
+  "id": "ven-032-166",
+  "public_code": "VEN-032/166",
+  "name": "Frostcoat Mother",
+  "set_id": "VEN",
+  "collector_number": 32,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-032-166-4673357e85b7cb5d.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_12:. This ability costs :rb_energy_1: less for each rune you control. (Pay the cost: Empower me. Use only if not Empowered.)[Empowered][>] I have +3 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-031-166",
+  "next_card_id": "ven-033-166"
+ },
+ "ven-033-166": {
+  "id": "ven-033-166",
+  "public_code": "VEN-033/166",
+  "name": "Pakaa Protector",
+  "set_id": "VEN",
+  "collector_number": 33,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-033-166-c3d51edc146465fb.png",
+  "is_banned": false,
+  "description": "When I move, reveal the top card of your Main Deck. If it's a unit, draw it. Otherwise, put it in your trash and give me +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-032-166",
+  "next_card_id": "ven-034-166"
+ },
+ "ven-034-166": {
+  "id": "ven-034-166",
+  "public_code": "VEN-034/166",
+  "name": "Resonating Strike",
+  "set_id": "VEN",
+  "collector_number": 34,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-034-166-b7cd9d18eb00cf83.png",
+  "is_banned": false,
+  "description": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)[Reaction] (Play on your turn or in showdowns.)Choose a battlefield you control and a unit you control at a different location. Move that unit to that battlefield and give it +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "hidden",
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-033-166",
+  "next_card_id": "ven-035-166"
+ },
+ "ven-035-166": {
+  "id": "ven-035-166",
+  "public_code": "VEN-035/166",
+  "name": "Sanction",
+  "set_id": "VEN",
+  "collector_number": 35,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-035-166-182855d3308b9ae1.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Choose one —Empower a unit. Disempower it at end of turn.Disempower a unit that's [Empowered]. Empower it at end of turn.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-034-166",
+  "next_card_id": "ven-036-166"
+ },
+ "ven-036-166": {
+  "id": "ven-036-166",
+  "public_code": "VEN-036/166",
+  "name": "Sandstone Chimera",
+  "set_id": "VEN",
+  "collector_number": 36,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 7,
+   "might": 8,
+   "power": 2
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-036-166-d3f0334c98470d0a.png",
+  "is_banned": false,
+  "description": "While I'm at a battlefield, players only channel 1 rune at the start of their Channel Phase.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-035-166",
+  "next_card_id": "ven-037-166"
+ },
+ "ven-037-166": {
+  "id": "ven-037-166",
+  "public_code": "VEN-037/166",
+  "name": "Tomb-Raider Barbara",
+  "set_id": "VEN",
+  "collector_number": 37,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-037-166-40d4fb29709d18b2.png",
+  "is_banned": false,
+  "description": "When you play me, if you control 7 or more runes, choose an enemy gear. If it's [Empowered], disempower it. Otherwise, kill it.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-036-166",
+  "next_card_id": "ven-038-166"
+ },
+ "ven-038-166": {
+  "id": "ven-038-166",
+  "public_code": "VEN-038/166",
+  "name": "Akali, Silent",
+  "set_id": "VEN",
+  "collector_number": 38,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-038-166-211f5a4c7d5a6c47.png",
+  "is_banned": false,
+  "description": "I can't be chosen by enemy spells and abilities unless I'm in combat.When I move to a battlefield, give me +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-037-166",
+  "next_card_id": "ven-038a-166"
+ },
+ "ven-039-166": {
+  "id": "ven-039-166",
+  "public_code": "VEN-039/166",
+  "name": "Crumbling Sands",
+  "set_id": "VEN",
+  "collector_number": 39,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-039-166-5517272b06eaf0ef.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Counter a spell if an opponent has played another spell this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-038a-166",
+  "next_card_id": "ven-040-166"
+ },
+ "ven-040-166": {
+  "id": "ven-040-166",
+  "public_code": "VEN-040/166",
+  "name": "Decree of Focus",
+  "set_id": "VEN",
+  "collector_number": 40,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-040-166-11a576db48aef9fb.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Choose a friendly unit that's in combat with an enemy Fury (:rb_rune_fury:) unit or that's being chosen by an enemy Fury spell. Give it +4 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-039-166",
+  "next_card_id": "ven-041-166"
+ },
+ "ven-041-166": {
+  "id": "ven-041-166",
+  "public_code": "VEN-041/166",
+  "name": "Riven, Shattered",
+  "set_id": "VEN",
+  "collector_number": 41,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-041-166-ceeaa9f3adc93e7a.png",
+  "is_banned": false,
+  "description": "[Weaponmaster] (When you play me, you may [Equip] one of your Equipment to me for :rb_rune_rainbow: less, even if it's already attached.)When I attack, choose an enemy unit here. Deal 2 to it for each Equipment attached to me.",
+  "flavor_text": null,
+  "keywords": [
+   "weaponmaster"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-040-166",
+  "next_card_id": "ven-042-166"
+ },
+ "ven-042-166": {
+  "id": "ven-042-166",
+  "public_code": "VEN-042/166",
+  "name": "Shen, Scourge of Shadows",
+  "set_id": "VEN",
+  "collector_number": 42,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-042-166-3a26168a7926a850.png",
+  "is_banned": false,
+  "description": "When I hold, if there is exactly one other unit you control here, draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-041-166",
+  "next_card_id": "ven-042a-166"
+ },
+ "ven-043-166": {
+  "id": "ven-043-166",
+  "public_code": "VEN-043/166",
+  "name": "Steel Paws",
+  "set_id": "VEN",
+  "collector_number": 43,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": 0,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-043-166-70534fd1ae32fe81.png",
+  "is_banned": false,
+  "description": "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.)[Empower] :rb_energy_7: (:rb_energy_7:: Empower me. Use only if not Empowered.)[Empowered][>] I have +7 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [
+   "deflect"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-042a-166",
+  "next_card_id": "ven-044-166"
+ },
+ "ven-044-166": {
+  "id": "ven-044-166",
+  "public_code": "VEN-044/166",
+  "name": "Astral Heron",
+  "set_id": "VEN",
+  "collector_number": 44,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 7,
+   "might": 7,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-044-166-831613dfcdd2b87e.png",
+  "is_banned": false,
+  "description": "When you play your first card each turn, if I'm at a battlefield, your next card costs :rb_energy_2::rb_rune_rainbow::rb_rune_rainbow: less.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-043-166",
+  "next_card_id": "ven-045-166"
+ },
+ "ven-045-166": {
+  "id": "ven-045-166",
+  "public_code": "VEN-045/166",
+  "name": "Helm of Suppression",
+  "set_id": "VEN",
+  "collector_number": 45,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-045-166-28cdfe57a16a7af7.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_4::rb_rune_calm: (:rb_energy_4::rb_rune_calm:: Empower this. Use only if not Empowered.)Opponents' spells cost :rb_energy_1: more. If this is [Empowered], they cost :rb_energy_1::rb_rune_rainbow: more instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-044-166",
+  "next_card_id": "ven-046-166"
+ },
+ "ven-046-166": {
+  "id": "ven-046-166",
+  "public_code": "VEN-046/166",
+  "name": "Nasus, Ascended",
+  "set_id": "VEN",
+  "collector_number": 46,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 8,
+   "might": 8,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-046-166-24f2768f05dfd827.png",
+  "is_banned": false,
+  "description": "[Deflect 2] (Opponents must pay :rb_rune_rainbow::rb_rune_rainbow: to choose me with a spell or ability.)[Empower] :rb_energy_8: (:rb_energy_8:: Empower me. Use only if not Empowered.)[Empowered][>] When I conquer, you score 1 point.",
+  "flavor_text": null,
+  "keywords": [
+   "deflect 2"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-045-166",
+  "next_card_id": "ven-046a-166"
+ },
+ "ven-047-166": {
+  "id": "ven-047-166",
+  "public_code": "VEN-047/166",
+  "name": "Apprentice Mage",
+  "set_id": "VEN",
+  "collector_number": 47,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-047-166-f14c43c0ba9bcc53.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2: (:rb_energy_2:: Empower me. Use only if not Empowered.)When I become [Empowered], [Predict 2]. (Look at the top 2 cards of your Main Deck. Recycle any of them and put the rest back in any order.)[Empowered][>] I have +1 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-046a-166",
+  "next_card_id": "ven-048-166"
+ },
+ "ven-048-166": {
+  "id": "ven-048-166",
+  "public_code": "VEN-048/166",
+  "name": "Cloud Drake",
+  "set_id": "VEN",
+  "collector_number": 48,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-048-166-13639723ece0a8f3.png",
+  "is_banned": false,
+  "description": "When you play me, draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-047-166",
+  "next_card_id": "ven-049-166"
+ },
+ "ven-049-166": {
+  "id": "ven-049-166",
+  "public_code": "VEN-049/166",
+  "name": "Dredge Up",
+  "set_id": "VEN",
+  "collector_number": 49,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-049-166-b16c98ccd4282f9a.png",
+  "is_banned": false,
+  "description": "Draw 1.[Flow] :rb_energy_2: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-048-166",
+  "next_card_id": "ven-050-166"
+ },
+ "ven-050-166": {
+  "id": "ven-050-166",
+  "public_code": "VEN-050/166",
+  "name": "Grumpy Rockbear",
+  "set_id": "VEN",
+  "collector_number": 50,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-050-166-121759380fe6d41c.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_12:. This ability costs :rb_energy_1: less for each rune you control. (Pay the cost: Empower me. Use only if not Empowered.)[Empowered][>] I have [Deflect] and [Shield 3]. (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.+3 :rb_might: while I'm a defender.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-049-166",
+  "next_card_id": "ven-051-166"
+ },
+ "ven-051-166": {
+  "id": "ven-051-166",
+  "public_code": "VEN-051/166",
+  "name": "Iterative Design",
+  "set_id": "VEN",
+  "collector_number": 51,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-051-166-6ad74a17ade09309.png",
+  "is_banned": false,
+  "description": "Play a 3 :rb_might: Mech unit token.[Flow] :rb_energy_2::rb_rune_mind: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-050-166",
+  "next_card_id": "ven-052-166"
+ },
+ "ven-052-166": {
+  "id": "ven-052-166",
+  "public_code": "VEN-052/166",
+  "name": "Mesmerize",
+  "set_id": "VEN",
+  "collector_number": 52,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-052-166-50c8c79ce86bfd1d.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Choose one —Return a friendly unit to its owner's hand.Give an enemy unit -2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-051-166",
+  "next_card_id": "ven-053-166"
+ },
+ "ven-053-166": {
+  "id": "ven-053-166",
+  "public_code": "VEN-053/166",
+  "name": "Otterpus",
+  "set_id": "VEN",
+  "collector_number": 53,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-053-166-965bd85625f3991b.png",
+  "is_banned": false,
+  "description": "If a player would score 1 point from conquering or holding during their first or second turn, they draw 1 instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-052-166",
+  "next_card_id": "ven-054-166"
+ },
+ "ven-054-166": {
+  "id": "ven-054-166",
+  "public_code": "VEN-054/166",
+  "name": "Questionable Tome",
+  "set_id": "VEN",
+  "collector_number": 54,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-054-166-f91aee7fcc0570f6.png",
+  "is_banned": false,
+  "description": "[Empower] —  :rb_exhaust: (Pay the cost: Empower me. Use only if not Empowered.)Disempower this, :rb_energy_1:, :rb_exhaust:: Draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-053-166",
+  "next_card_id": "ven-055-166"
+ },
+ "ven-055-166": {
+  "id": "ven-055-166",
+  "public_code": "VEN-055/166",
+  "name": "Applied Researchers",
+  "set_id": "VEN",
+  "collector_number": 55,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-055-166-58555a6635340aa3.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3: (:rb_energy_3:: Empower me. Use only if not Empowered.)[Empowered][>] Your spells cost :rb_energy_1::rb_rune_rainbow: less, to a minimum of :rb_energy_1:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-054-166",
+  "next_card_id": "ven-056-166"
+ },
+ "ven-056-166": {
+  "id": "ven-056-166",
+  "public_code": "VEN-056/166",
+  "name": "Clairvoyance",
+  "set_id": "VEN",
+  "collector_number": 56,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 7,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-056-166-e65bfd5fefbe8e66.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)[Predict 5]. (Look at the top 5 cards of your Main Deck. Recycle any of them and put the rest back in any order.)Draw 2.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction",
+   "predict 5"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-055-166",
+  "next_card_id": "ven-057-166"
+ },
+ "ven-057-166": {
+  "id": "ven-057-166",
+  "public_code": "VEN-057/166",
+  "name": "Covert Informant",
+  "set_id": "VEN",
+  "collector_number": 57,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-057-166-eb6dba1b688ddbe5.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3: (:rb_energy_3:: Empower me. Use only if not Empowered.)[Empowered][>] When I move, draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-056-166",
+  "next_card_id": "ven-058-166"
+ },
+ "ven-058-166": {
+  "id": "ven-058-166",
+  "public_code": "VEN-058/166",
+  "name": "Patched Porobot",
+  "set_id": "VEN",
+  "collector_number": 58,
+  "variant": "",
+  "rarity": "common",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-058-166-83b7edbd3de3c806.png",
+  "is_banned": false,
+  "description": "(I enter exhausted.)When you play me, if you control 3 or more other gear, draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-057-166",
+  "next_card_id": "ven-059-166"
+ },
+ "ven-059-166": {
+  "id": "ven-059-166",
+  "public_code": "VEN-059/166",
+  "name": "Shock Blast",
+  "set_id": "VEN",
+  "collector_number": 59,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-059-166-597c313b69d137a4.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)This costs :rb_energy_2: less if you control something that's [Empowered].Deal 4 to a unit at a battlefield.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-058-166",
+  "next_card_id": "ven-060-166"
+ },
+ "ven-060-166": {
+  "id": "ven-060-166",
+  "public_code": "VEN-060/166",
+  "name": "Sky Cruiser",
+  "set_id": "VEN",
+  "collector_number": 60,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-060-166-7eeb51068105537f.png",
+  "is_banned": false,
+  "description": "Discard a gear, :rb_energy_1:, :rb_exhaust:: Deal 4 to a unit at a battlefield.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-059-166",
+  "next_card_id": "ven-061-166"
+ },
+ "ven-061-166": {
+  "id": "ven-061-166",
+  "public_code": "VEN-061/166",
+  "name": "Decree of Insight",
+  "set_id": "VEN",
+  "collector_number": 61,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-061-166-f398578602537a91.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Ignore [Deflect] while paying this spell's cost.Give an enemy Body (:rb_rune_body:) unit -5 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-060-166",
+  "next_card_id": "ven-062-166"
+ },
+ "ven-062-166": {
+  "id": "ven-062-166",
+  "public_code": "VEN-062/166",
+  "name": "Hextech Formula",
+  "set_id": "VEN",
+  "collector_number": 62,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-062-166-1578a8d37b1fde1e.png",
+  "is_banned": false,
+  "description": "This enters exhausted.:rb_exhaust:: Empower another gear. (It becomes Empowered if it's not already.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-061-166",
+  "next_card_id": "ven-063-166"
+ },
+ "ven-063-166": {
+  "id": "ven-063-166",
+  "public_code": "VEN-063/166",
+  "name": "Nasus, Guardian of Knowledge",
+  "set_id": "VEN",
+  "collector_number": 63,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-063-166-5ddb809a090094e9.png",
+  "is_banned": false,
+  "description": "Once each turn, when an enemy unit here dies, channel 1 rune exhausted.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-062-166",
+  "next_card_id": "ven-063a-166"
+ },
+ "ven-064-166": {
+  "id": "ven-064-166",
+  "public_code": "VEN-064/166",
+  "name": "Plaza Guardian",
+  "set_id": "VEN",
+  "collector_number": 64,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 10,
+   "might": 8,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-064-166-e24176ee8801943e.png",
+  "is_banned": false,
+  "description": "I cost :rb_energy_1: less for each gear you control.[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability.)",
+  "flavor_text": null,
+  "keywords": [
+   "deflect"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-063a-166",
+  "next_card_id": "ven-065-166"
+ },
+ "ven-065-166": {
+  "id": "ven-065-166",
+  "public_code": "VEN-065/166",
+  "name": "Swain, Visionary",
+  "set_id": "VEN",
+  "collector_number": 65,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-065-166-a2323af2d1e1ef2d.png",
+  "is_banned": false,
+  "description": "[Vision] (When you play me, look at the top card of your Main Deck. You may recycle it.)When I conquer, if you've played a non-token unit, a non-token gear, and a spell this turn, you score 1 point.",
+  "flavor_text": null,
+  "keywords": [
+   "vision"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-064-166",
+  "next_card_id": "ven-066-166"
+ },
+ "ven-066-166": {
+  "id": "ven-066-166",
+  "public_code": "VEN-066/166",
+  "name": "Temporal Breach",
+  "set_id": "VEN",
+  "collector_number": 66,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-066-166-741b3e4ee3eaf417.png",
+  "is_banned": false,
+  "description": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)Banish a unit, then its owner plays it to the same location, ignoring its cost.",
+  "flavor_text": null,
+  "keywords": [
+   "hidden"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-065-166",
+  "next_card_id": "ven-067-166"
+ },
+ "ven-067-166": {
+  "id": "ven-067-166",
+  "public_code": "VEN-067/166",
+  "name": "Bottled Constellation",
+  "set_id": "VEN",
+  "collector_number": 67,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 10,
+   "might": null,
+   "power": 2
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-067-166-8a4e72461e0543fe.png",
+  "is_banned": false,
+  "description": "At the start of your Main Phase, you may kill 3 other friendly units and/or gear to score 1 point.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-066-166",
+  "next_card_id": "ven-068-166"
+ },
+ "ven-068-166": {
+  "id": "ven-068-166",
+  "public_code": "VEN-068/166",
+  "name": "Jayce, Brilliant Inventor",
+  "set_id": "VEN",
+  "collector_number": 68,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-068-166-6fc33edc896fb713.png",
+  "is_banned": false,
+  "description": "When you play me or the first time you play a non-token gear each turn, you may ready something besides me that's exhausted.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-067-166",
+  "next_card_id": "ven-068a-166"
+ },
+ "ven-069-166": {
+  "id": "ven-069-166",
+  "public_code": "VEN-069/166",
+  "name": "Mel, Newly Awakened",
+  "set_id": "VEN",
+  "collector_number": 69,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-069-166-23c7e43d014e82e8.png",
+  "is_banned": false,
+  "description": "When you play me, draw 1.[Empower] :rb_energy_3: (:rb_energy_3:: Empower me. Use only if not Empowered.)[Empowered][>] Your spells and abilities can't be countered. If a spell or ability you control would give -:rb_might: to a unit it chooses, it gives an additional -1 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-068a-166",
+  "next_card_id": "ven-069a-166"
+ },
+ "ven-070-166": {
+  "id": "ven-070-166",
+  "public_code": "VEN-070/166",
+  "name": "Brutal Hunter",
+  "set_id": "VEN",
+  "collector_number": 70,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-070-166-f7484bcf55355c38.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3: (:rb_energy_3:: Empower me. Use only if not Empowered.)[Empowered][>] I have +2 :rb_might: and [Ganking]. (I can move from battlefield to battlefield.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-069a-166",
+  "next_card_id": "ven-071-166"
+ },
+ "ven-071-166": {
+  "id": "ven-071-166",
+  "public_code": "VEN-071/166",
+  "name": "Fretful Feline",
+  "set_id": "VEN",
+  "collector_number": 71,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-071-166-71bd7c4ba7f14cdc.png",
+  "is_banned": false,
+  "description": "When I become ready, give me +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-070-166",
+  "next_card_id": "ven-072-166"
+ },
+ "ven-072-166": {
+  "id": "ven-072-166",
+  "public_code": "VEN-072/166",
+  "name": "Guttural Roar",
+  "set_id": "VEN",
+  "collector_number": 72,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-072-166-fe5479c9343f2c7e.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)Give a unit +2 :rb_might: this turn. If it's [Empowered], give it +4 :rb_might: this turn instead.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-071-166",
+  "next_card_id": "ven-073-166"
+ },
+ "ven-073-166": {
+  "id": "ven-073-166",
+  "public_code": "VEN-073/166",
+  "name": "Jagged Cutlass",
+  "set_id": "VEN",
+  "collector_number": 73,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-073-166-7e1176cb08f33fd3.png",
+  "is_banned": false,
+  "description": "Equip :rb_rune_body: (:rb_rune_body:: Attach this to a unit you control.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-072-166",
+  "next_card_id": "ven-074-166"
+ },
+ "ven-074-166": {
+  "id": "ven-074-166",
+  "public_code": "VEN-074/166",
+  "name": "Legion Marauder",
+  "set_id": "VEN",
+  "collector_number": 74,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-074-166-51d7d4fec92af118.png",
+  "is_banned": false,
+  "description": "[Empower] — :rb_energy_1: or :rb_rune_body: (Pay either cost: Empower me. Use only if not Empowered.)[Empowered][>] I have +1 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-073-166",
+  "next_card_id": "ven-075-166"
+ },
+ "ven-075-166": {
+  "id": "ven-075-166",
+  "public_code": "VEN-075/166",
+  "name": "Platewyrm Egg",
+  "set_id": "VEN",
+  "collector_number": 75,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-075-166-04883ccafc965bea.png",
+  "is_banned": false,
+  "description": "This enters exhausted.[Empower] — :rb_energy_1:, :rb_exhaust: (Pay the cost: Empower this. Use only if not Empowered.)[Reaction][>] :rb_exhaust:: [Add] :rb_energy_1:. If this is [Empowered], [Add] :rb_energy_2: instead.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-074-166",
+  "next_card_id": "ven-076-166"
+ },
+ "ven-076-166": {
+  "id": "ven-076-166",
+  "public_code": "VEN-076/166",
+  "name": "Repair Specialist",
+  "set_id": "VEN",
+  "collector_number": 76,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-076-166-d7deb0952e8e7577.png",
+  "is_banned": false,
+  "description": "I have [Assault] equal to the number of gear you control. (+1 :rb_might: while I'm an attacker for each instance of Assault.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-075-166",
+  "next_card_id": "ven-077-166"
+ },
+ "ven-077-166": {
+  "id": "ven-077-166",
+  "public_code": "VEN-077/166",
+  "name": "Tools of Empire",
+  "set_id": "VEN",
+  "collector_number": 77,
+  "variant": "",
+  "rarity": "common",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-077-166-74c23d86d5607a8e.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2: (:rb_energy_2:: Empower this. Use only if not Empowered.):rb_exhaust:: Give a unit +2 :rb_might: this turn. If this is [Empowered], give that unit +4 :rb_might: this turn instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-076-166",
+  "next_card_id": "ven-078-166"
+ },
+ "ven-078-166": {
+  "id": "ven-078-166",
+  "public_code": "VEN-078/166",
+  "name": "Baccai Witherclaw",
+  "set_id": "VEN",
+  "collector_number": 78,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-078-166-7ce677d363515d55.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_1::rb_rune_rainbow::rb_rune_rainbow: (:rb_energy_1::rb_rune_rainbow::rb_rune_rainbow:: Empower me. Use only if not Empowered.)[Empowered][>] I have +2 :rb_might:.[Empowered][>][>>][Deathknell][>] Channel 2 runes exhausted. (When I die while Empowered, get the effect.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-077-166",
+  "next_card_id": "ven-079-166"
+ },
+ "ven-079-166": {
+  "id": "ven-079-166",
+  "public_code": "VEN-079/166",
+  "name": "Dame the Despoiler",
+  "set_id": "VEN",
+  "collector_number": 79,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-079-166-492de79c19135ada.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_5::rb_rune_body: (:rb_energy_5::rb_rune_body:: Empower me. Use only if not Empowered.)[Empowered][>] When I attack or defend, choose a unit here. Increase my Might to its Might this turn, then give me +1 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-078-166",
+  "next_card_id": "ven-080-166"
+ },
+ "ven-080-166": {
+  "id": "ven-080-166",
+  "public_code": "VEN-080/166",
+  "name": "Noxian Demolitionist",
+  "set_id": "VEN",
+  "collector_number": 80,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 1,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-080-166-681101e92f2fb1f1.png",
+  "is_banned": false,
+  "description": "When I conquer, you may kill a gear with Energy cost no more than my Might.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-079-166",
+  "next_card_id": "ven-081-166"
+ },
+ "ven-081-166": {
+  "id": "ven-081-166",
+  "public_code": "VEN-081/166",
+  "name": "Onslaught",
+  "set_id": "VEN",
+  "collector_number": 81,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-081-166-b0fe7d3210065a4d.png",
+  "is_banned": false,
+  "description": "Give a unit +6 :rb_might: this turn.[Flow] :rb_energy_4: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-080-166",
+  "next_card_id": "ven-082-166"
+ },
+ "ven-082-166": {
+  "id": "ven-082-166",
+  "public_code": "VEN-082/166",
+  "name": "Profiteer",
+  "set_id": "VEN",
+  "collector_number": 82,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-082-166-b80dd42a8cdc418b.png",
+  "is_banned": false,
+  "description": "When you play me, you may disempower something you control to empower a legend, unit, or gear.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-081-166",
+  "next_card_id": "ven-083-166"
+ },
+ "ven-083-166": {
+  "id": "ven-083-166",
+  "public_code": "VEN-083/166",
+  "name": "Rampage",
+  "set_id": "VEN",
+  "collector_number": 83,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-083-166-90a099bb2332b5e8.png",
+  "is_banned": false,
+  "description": "As you play this, you may pay :rb_rune_body: as an additional cost.Choose a friendly unit and an enemy unit. If you paid the additional cost, give the friendly unit +2 :rb_might: this turn. They deal damage equal to their Mights to each other.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-082-166",
+  "next_card_id": "ven-084-166"
+ },
+ "ven-084-166": {
+  "id": "ven-084-166",
+  "public_code": "VEN-084/166",
+  "name": "Ambessa, The Wolf",
+  "set_id": "VEN",
+  "collector_number": 84,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-084-166-04a650becbf9e713.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3::rb_rune_body: (:rb_energy_3::rb_rune_body:: Empower me. Use only if not Empowered.)[Empowered][>] I have +3 :rb_might: and can't be dealt damage unless I'm in combat.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-083-166",
+  "next_card_id": "ven-084a-166"
+ },
+ "ven-085-166": {
+  "id": "ven-085-166",
+  "public_code": "VEN-085/166",
+  "name": "Decree of Strength",
+  "set_id": "VEN",
+  "collector_number": 85,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-085-166-80bab34468ef28d5.png",
+  "is_banned": false,
+  "description": "Choose an opponent. They reveal their hand and you choose a Mind (:rb_rune_mind:) card from it. They recycle that card.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-084a-166",
+  "next_card_id": "ven-086-166"
+ },
+ "ven-086-166": {
+  "id": "ven-086-166",
+  "public_code": "VEN-086/166",
+  "name": "Gangplank, Naval",
+  "set_id": "VEN",
+  "collector_number": 86,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-086-166-4514a0cc3a8df753.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_rune_body::rb_rune_body: (:rb_rune_body::rb_rune_body:: Empower me. Use only if not Empowered.)[Empowered][>] If a spell or ability that chooses me would stun me, give me -:rb_might:, or return me to hand, give me +3 :rb_might: instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-085-166",
+  "next_card_id": "ven-087-166"
+ },
+ "ven-087-166": {
+  "id": "ven-087-166",
+  "public_code": "VEN-087/166",
+  "name": "Hextech Disc",
+  "set_id": "VEN",
+  "collector_number": 87,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-087-166-67a493806fa469dc.png",
+  "is_banned": false,
+  "description": "[Empower] — :rb_exhaust: (Pay the cost: Empower this. Use only if not Empowered.)Disempower this, :rb_energy_1:, :rb_exhaust:: Play a 3 :rb_might: Mech unit token to your base.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-086-166",
+  "next_card_id": "ven-088-166"
+ },
+ "ven-088-166": {
+  "id": "ven-088-166",
+  "public_code": "VEN-088/166",
+  "name": "Jayce, Hammer in Hand",
+  "set_id": "VEN",
+  "collector_number": 88,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 5,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-088-166-0cfb4ef5904496e5.png",
+  "is_banned": false,
+  "description": "When I become ready, choose one to give me this turn —[Assault 2] (+2 :rb_might: while I'm an attacker.)[Deflect 2] (Opponents must pay :rb_rune_rainbow::rb_rune_rainbow: to choose me with a spell or ability.)[Ganking] (I can move from battlefield to battlefield.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-087-166",
+  "next_card_id": "ven-088a-166"
+ },
+ "ven-089-166": {
+  "id": "ven-089-166",
+  "public_code": "VEN-089/166",
+  "name": "Wild Claw",
+  "set_id": "VEN",
+  "collector_number": 89,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 7,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-089-166-c595561259ba173b.png",
+  "is_banned": false,
+  "description": "Look at the top 5 cards of your Main Deck. You may banish a unit or gear from among them and play it, reducing its Energy cost by :rb_energy_5:. Recycle the rest. Then you may do this: Empower it. (It becomes Empowered if it's not already.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-088a-166",
+  "next_card_id": "ven-090-166"
+ },
+ "ven-090-166": {
+  "id": "ven-090-166",
+  "public_code": "VEN-090/166",
+  "name": "Cataclysmic Duel",
+  "set_id": "VEN",
+  "collector_number": 90,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 8,
+   "might": null,
+   "power": 3
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-090-166-85c1f2dca981385f.png",
+  "is_banned": false,
+  "description": "Each player chooses a unit they control. Kill the rest.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-089-166",
+  "next_card_id": "ven-091-166"
+ },
+ "ven-091-166": {
+  "id": "ven-091-166",
+  "public_code": "VEN-091/166",
+  "name": "Corrupted Dragon",
+  "set_id": "VEN",
+  "collector_number": 91,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 10,
+   "might": 10,
+   "power": 2
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-091-166-de58d3d0fbf10651.png",
+  "is_banned": false,
+  "description": "If your score is not within 3 points of the Victory Score, I enter ready.When I attack, you may move any number of enemy units here each with 5 :rb_might: or less to their base.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-090-166",
+  "next_card_id": "ven-092-166"
+ },
+ "ven-092-166": {
+  "id": "ven-092-166",
+  "public_code": "VEN-092/166",
+  "name": "Renekton, Brute",
+  "set_id": "VEN",
+  "collector_number": 92,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-092-166-14e117245a23e636.png",
+  "is_banned": false,
+  "description": ":rb_energy_1:: Give me +1 :rb_might: this turn.When my Might becomes 10 or more, empower me. (I become Empowered if I'm not already.)[Empowered][>] I have [Deflect] and [Ganking]. (Opponents must pay :rb_rune_rainbow: to choose me with a spell or ability. I can move from battlefield to battlefield.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-091-166",
+  "next_card_id": "ven-092a-166"
+ },
+ "ven-093-166": {
+  "id": "ven-093-166",
+  "public_code": "VEN-093/166",
+  "name": "Kinkou Lifeblade",
+  "set_id": "VEN",
+  "collector_number": 93,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-093-166-d090211b12d76838.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2: (:rb_energy_2:: Empower me. Use only if not Empowered.)[Empowered][>] I have +1 :rb_might: and [Ganking]. (I can move from battlefield to battlefield.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-092a-166",
+  "next_card_id": "ven-094-166"
+ },
+ "ven-094-166": {
+  "id": "ven-094-166",
+  "public_code": "VEN-094/166",
+  "name": "Mask Mother",
+  "set_id": "VEN",
+  "collector_number": 94,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-094-166-21f61d79ce349d01.png",
+  "is_banned": false,
+  "description": "When you discard me, you may pay :rb_energy_1: to give a friendly unit +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-093-166",
+  "next_card_id": "ven-095-166"
+ },
+ "ven-095-166": {
+  "id": "ven-095-166",
+  "public_code": "VEN-095/166",
+  "name": "Shadow Order Disciple",
+  "set_id": "VEN",
+  "collector_number": 95,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-095-166-6a347713d086afd3.png",
+  "is_banned": false,
+  "description": "When I move, you may [Burn 1] to give me +1 :rb_might: this turn. (To Burn 1, put the top card of your Main Deck into your trash.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-094-166",
+  "next_card_id": "ven-096-166"
+ },
+ "ven-096-166": {
+  "id": "ven-096-166",
+  "public_code": "VEN-096/166",
+  "name": "Shadowblade Lurker",
+  "set_id": "VEN",
+  "collector_number": 96,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-096-166-a23e0265f04e1890.png",
+  "is_banned": false,
+  "description": "I cost :rb_energy_2: less for each card with my name in your trash.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-095-166",
+  "next_card_id": "ven-097-166"
+ },
+ "ven-097-166": {
+  "id": "ven-097-166",
+  "public_code": "VEN-097/166",
+  "name": "Spiderling",
+  "set_id": "VEN",
+  "collector_number": 97,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 1,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-097-166-7b8bdb8249148b95.png",
+  "is_banned": false,
+  "description": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)I have +1 :rb_might: for each other unit you control here with my name.Your deck can have any number of cards named Spiderling.",
+  "flavor_text": null,
+  "keywords": [
+   "hidden"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-096-166",
+  "next_card_id": "ven-098-166"
+ },
+ "ven-098-166": {
+  "id": "ven-098-166",
+  "public_code": "VEN-098/166",
+  "name": "Stargazer",
+  "set_id": "VEN",
+  "collector_number": 98,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-098-166-eb8ce03fc30e58fa.png",
+  "is_banned": false,
+  "description": "Spells with [Flow] you play from your trash cost :rb_energy_2: less, to a minimum of :rb_energy_1:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-097-166",
+  "next_card_id": "ven-099-166"
+ },
+ "ven-099-166": {
+  "id": "ven-099-166",
+  "public_code": "VEN-099/166",
+  "name": "Tornado Warrior",
+  "set_id": "VEN",
+  "collector_number": 99,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-099-166-92fb521a001b7ffc.png",
+  "is_banned": false,
+  "description": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)When you play me from face down, you may empower something here. Disempower it at end of turn.",
+  "flavor_text": null,
+  "keywords": [
+   "hidden"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-098-166",
+  "next_card_id": "ven-100-166"
+ },
+ "ven-100-166": {
+  "id": "ven-100-166",
+  "public_code": "VEN-100/166",
+  "name": "Up from the Deep",
+  "set_id": "VEN",
+  "collector_number": 100,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-100-166-27fe093f57bbd337.png",
+  "is_banned": false,
+  "description": "Play two 1 :rb_might: Tentacle unit tokens from Bilgewater.[Flow] :rb_energy_3: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-099-166",
+  "next_card_id": "ven-101-166"
+ },
+ "ven-101-166": {
+  "id": "ven-101-166",
+  "public_code": "VEN-101/166",
+  "name": "Gust Monk",
+  "set_id": "VEN",
+  "collector_number": 101,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-101-166-338f22b21fb0f05c.png",
+  "is_banned": false,
+  "description": "You may pay :rb_energy_1: as an additional cost to play me.When you play me, if you paid the additional cost, banish a card from any trash to give a unit [Assault 2] this turn. (+2 :rb_might: while it's an attacker.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-100-166",
+  "next_card_id": "ven-102-166"
+ },
+ "ven-102-166": {
+  "id": "ven-102-166",
+  "public_code": "VEN-102/166",
+  "name": "Ravenbloom Prefect",
+  "set_id": "VEN",
+  "collector_number": 102,
+  "variant": "",
+  "rarity": "common",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-102-166-d8a4132e8ca348ba.png",
+  "is_banned": false,
+  "description": "When an opponent plays a gear, you may banish me to banish it.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-101-166",
+  "next_card_id": "ven-103-166"
+ },
+ "ven-103-166": {
+  "id": "ven-103-166",
+  "public_code": "VEN-103/166",
+  "name": "Shadows of the Past",
+  "set_id": "VEN",
+  "collector_number": 103,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-103-166-2015115f433e21b6.png",
+  "is_banned": false,
+  "description": "Return up to 2 units from trashes to their owners' hands.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-102-166",
+  "next_card_id": "ven-104-166"
+ },
+ "ven-104-166": {
+  "id": "ven-104-166",
+  "public_code": "VEN-104/166",
+  "name": "Tail-Cloaked Matriarch",
+  "set_id": "VEN",
+  "collector_number": 104,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-104-166-31d5ec36a8f66907.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2::rb_rune_chaos: (:rb_energy_2::rb_rune_chaos:: Empower me. Use only if not Empowered.)When I become [Empowered], you may choose a unit in your trash with Energy cost no more than :rb_energy_3: and Power cost no more than :rb_rune_rainbow:. Play it to your base, ignoring its cost.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-103-166",
+  "next_card_id": "ven-105-166"
+ },
+ "ven-105-166": {
+  "id": "ven-105-166",
+  "public_code": "VEN-105/166",
+  "name": "Twilight Step",
+  "set_id": "VEN",
+  "collector_number": 105,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-105-166-3705b1009001724d.png",
+  "is_banned": false,
+  "description": "Move a unit with 3 :rb_might: or less.[Flow] :rb_energy_4::rb_rune_chaos: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-104-166",
+  "next_card_id": "ven-106-166"
+ },
+ "ven-106-166": {
+  "id": "ven-106-166",
+  "public_code": "VEN-106/166",
+  "name": "Wind and Ghosts",
+  "set_id": "VEN",
+  "collector_number": 106,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-106-166-3867de68c34736ef.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)Choose a unit at a battlefield. If it has 3 :rb_might: or less, banish it. Otherwise, return it to its owner's hand.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-105-166",
+  "next_card_id": "ven-107-166"
+ },
+ "ven-107-166": {
+  "id": "ven-107-166",
+  "public_code": "VEN-107/166",
+  "name": "Decree of Discord",
+  "set_id": "VEN",
+  "collector_number": 107,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-107-166-a953676796f513d1.png",
+  "is_banned": false,
+  "description": "Return any number of enemy Order (:rb_rune_order:) units with total Might 5 or less to their owners' hands.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-106-166",
+  "next_card_id": "ven-108-166"
+ },
+ "ven-108-166": {
+  "id": "ven-108-166",
+  "public_code": "VEN-108/166",
+  "name": "Forgotten Relic",
+  "set_id": "VEN",
+  "collector_number": 108,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-108-166-d9a9d0c7ae9409a8.png",
+  "is_banned": false,
+  "description": "When you play this or at the start of your Beginning Phase, [Burn 1]. When you burn a unit this way, do this: Give a friendly unit +:rb_might: equal to the burned card's Might this turn. (To Burn 1, put the top card of your Main Deck into your trash.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-107-166",
+  "next_card_id": "ven-109-166"
+ },
+ "ven-109-166": {
+  "id": "ven-109-166",
+  "public_code": "VEN-109/166",
+  "name": "Illaoi, Prophet of the Great Kraken",
+  "set_id": "VEN",
+  "collector_number": 109,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-109-166-26d0c0e61c470ffc.png",
+  "is_banned": false,
+  "description": "When you play me or when I score, play a :rb_energy_1: :rb_might: Tentacle unit token from Bilgewater.I have +1 :rb_might: for each token unit you control.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-108-166",
+  "next_card_id": "ven-110-166"
+ },
+ "ven-110-166": {
+  "id": "ven-110-166",
+  "public_code": "VEN-110/166",
+  "name": "Mel, Defiant Soul",
+  "set_id": "VEN",
+  "collector_number": 110,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-110-166-85639a75280828ce.png",
+  "is_banned": false,
+  "description": "[Empower] — Discard a spell (Pay the cost: Empower me. Use only if not Empowered.)When I become [Empowered], banish an enemy unit at a battlefield with 3 :rb_might: or less.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-109-166",
+  "next_card_id": "ven-110a-166"
+ },
+ "ven-111-166": {
+  "id": "ven-111-166",
+  "public_code": "VEN-111/166",
+  "name": "Minah Swiftfoot",
+  "set_id": "VEN",
+  "collector_number": 111,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-111-166-68a7b07c8c77a80d.png",
+  "is_banned": false,
+  "description": "When I move to a battlefield, choose one —Each player discards 1.Each player draws 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-110a-166",
+  "next_card_id": "ven-112-166"
+ },
+ "ven-112-166": {
+  "id": "ven-112-166",
+  "public_code": "VEN-112/166",
+  "name": "Zed, Without a Sound",
+  "set_id": "VEN",
+  "collector_number": 112,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-112-166-27ac261c7b33c7f9.png",
+  "is_banned": false,
+  "description": "When I conquer, play a 0 :rb_might: Shadow Clone unit token to your base. (It has \"When I attack, you may banish a unit from your trash. If you do, give me [Assault 4] this turn.\")[Action][>] :rb_energy_1::rb_rune_chaos:: Move me and a Shadow Clone you control to each other's locations.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-111-166",
+  "next_card_id": "ven-112a-166"
+ },
+ "ven-113-166": {
+  "id": "ven-113-166",
+  "public_code": "VEN-113/166",
+  "name": "Kennen, Storm of Shuriken",
+  "set_id": "VEN",
+  "collector_number": 113,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-113-166-6f0b20a963933fa4.png",
+  "is_banned": false,
+  "description": "When you play me, [Burn 2]. (Put the top 2 cards of your Main Deck into your trash.)When I conquer, give a spell in your trash [Flow] equal to its cost this turn. (You may play it from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-112a-166",
+  "next_card_id": "ven-113a-166"
+ },
+ "ven-114-166": {
+  "id": "ven-114-166",
+  "public_code": "VEN-114/166",
+  "name": "Kharox",
+  "set_id": "VEN",
+  "collector_number": 114,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-114-166-0fb2ef3c68b641c9.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_6::rb_rune_chaos::rb_rune_chaos: (:rb_energy_6::rb_rune_chaos::rb_rune_chaos:: Empower me. Use only if not Empowered.)When I become [Empowered], choose an opponent. They [Burn 3]. Then you may do this: Choose a unit in their trash and play it, ignoring its cost. (To Burn 3, they put the top 3 cards of their Main Deck into their trash.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-113a-166",
+  "next_card_id": "ven-115-166"
+ },
+ "ven-115-166": {
+  "id": "ven-115-166",
+  "public_code": "VEN-115/166",
+  "name": "Ocean Drake",
+  "set_id": "VEN",
+  "collector_number": 115,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 8,
+   "might": 7,
+   "power": 2
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-115-166-47b2c3977fce7b6c.png",
+  "is_banned": false,
+  "description": "You may play me to an open battlefield.When you play me, you may return a non-Dragon unit to its owner's hand.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-114-166",
+  "next_card_id": "ven-116-166"
+ },
+ "ven-116-166": {
+  "id": "ven-116-166",
+  "public_code": "VEN-116/166",
+  "name": "Dragon Form",
+  "set_id": "VEN",
+  "collector_number": 116,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-116-166-ae314604a5e09f5f.png",
+  "is_banned": false,
+  "description": "Choose a unit. Its base Might becomes 5 this turn.[Flow] :rb_energy_3: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-115-166",
+  "next_card_id": "ven-117-166"
+ },
+ "ven-117-166": {
+  "id": "ven-117-166",
+  "public_code": "VEN-117/166",
+  "name": "Disciple of Shen",
+  "set_id": "VEN",
+  "collector_number": 117,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 1,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-117-166-54db5b4a916a7d02.png",
+  "is_banned": false,
+  "description": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)I have [Shield 3] while I'm at a battlefield with exactly one other unit you control. (+3 :rb_might: while I'm a defender.)",
+  "flavor_text": null,
+  "keywords": [
+   "hidden"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-116-166",
+  "next_card_id": "ven-118-166"
+ },
+ "ven-118-166": {
+  "id": "ven-118-166",
+  "public_code": "VEN-118/166",
+  "name": "Horns of the Dragon",
+  "set_id": "VEN",
+  "collector_number": 118,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-118-166-2e97ccfa29d814b0.png",
+  "is_banned": false,
+  "description": "[Tank] (I must be assigned combat damage first.)",
+  "flavor_text": null,
+  "keywords": [
+   "tank"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-117-166",
+  "next_card_id": "ven-119-166"
+ },
+ "ven-119-166": {
+  "id": "ven-119-166",
+  "public_code": "VEN-119/166",
+  "name": "Keeper of Law",
+  "set_id": "VEN",
+  "collector_number": 119,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-119-166-0fae72427fcdb6f3.png",
+  "is_banned": false,
+  "description": "I cost :rb_energy_2::rb_rune_order: less if you control a battlefield with exactly two units there.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-118-166",
+  "next_card_id": "ven-120-166"
+ },
+ "ven-120-166": {
+  "id": "ven-120-166",
+  "public_code": "VEN-120/166",
+  "name": "Masa, Crashing Thunder",
+  "set_id": "VEN",
+  "collector_number": 120,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-120-166-ed113b63ab0831ba.png",
+  "is_banned": false,
+  "description": "You may pay :rb_rune_order: as an additional cost to play me.When you play me, if you paid the additional cost, [Stun] an enemy unit at a battlefield. (It doesn't deal combat damage this turn.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-119-166",
+  "next_card_id": "ven-121-166"
+ },
+ "ven-121-166": {
+  "id": "ven-121-166",
+  "public_code": "VEN-121/166",
+  "name": "Reluctant Leader",
+  "set_id": "VEN",
+  "collector_number": 121,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-121-166-50d3d0ca67d89269.png",
+  "is_banned": false,
+  "description": "When you play another unit, give me +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-120-166",
+  "next_card_id": "ven-122-166"
+ },
+ "ven-122-166": {
+  "id": "ven-122-166",
+  "public_code": "VEN-122/166",
+  "name": "Solari Sunhawk",
+  "set_id": "VEN",
+  "collector_number": 122,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-122-166-42876032b815a04d.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2: (:rb_energy_2:: Empower me. Use only if not Empowered.)[Empowered][>] I have +1 :rb_might: and [Deflect 2]. (Opponents must pay :rb_rune_rainbow::rb_rune_rainbow: to choose me with a spell or ability.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-121-166",
+  "next_card_id": "ven-123-166"
+ },
+ "ven-123-166": {
+  "id": "ven-123-166",
+  "public_code": "VEN-123/166",
+  "name": "Soulspinner",
+  "set_id": "VEN",
+  "collector_number": 123,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-123-166-a2e0ff9cf72bdc3f.png",
+  "is_banned": false,
+  "description": "[Ambush] (You may play me as a [Reaction] to a battlefield where you have units.)",
+  "flavor_text": null,
+  "keywords": [
+   "ambush"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-122-166",
+  "next_card_id": "ven-124-166"
+ },
+ "ven-124-166": {
+  "id": "ven-124-166",
+  "public_code": "VEN-124/166",
+  "name": "Escaped Grayback",
+  "set_id": "VEN",
+  "collector_number": 124,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-124-166-a221a1c5818af772.png",
+  "is_banned": false,
+  "description": "[Empower] — Kill a friendly unit (Pay the cost: Empower me. Use only if not Empowered.)[Empowered][>] I have +2 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-123-166",
+  "next_card_id": "ven-125-166"
+ },
+ "ven-125-166": {
+  "id": "ven-125-166",
+  "public_code": "VEN-125/166",
+  "name": "Hungry Wolf",
+  "set_id": "VEN",
+  "collector_number": 125,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-125-166-db5ca7d242b13a5b.png",
+  "is_banned": false,
+  "description": ":rb_rune_order:: Ready me and give me +1 :rb_might: this turn. Use only if you've chosen an enemy unit this turn and only once each turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-124-166",
+  "next_card_id": "ven-126-166"
+ },
+ "ven-126-166": {
+  "id": "ven-126-166",
+  "public_code": "VEN-126/166",
+  "name": "Ki Barrier",
+  "set_id": "VEN",
+  "collector_number": 126,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-126-166-d814a2b183499279.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Choose a unit. Prevent the next 7 damage that would be dealt to it this turn. (Opponents can assign it extra combat damage to kill it.)",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-125-166",
+  "next_card_id": "ven-127-166"
+ },
+ "ven-127-166": {
+  "id": "ven-127-166",
+  "public_code": "VEN-127/166",
+  "name": "Lacerate",
+  "set_id": "VEN",
+  "collector_number": 127,
+  "variant": "",
+  "rarity": "common",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-127-166-4421bd0081e10f4a.png",
+  "is_banned": false,
+  "description": "Choose a unit. If it's [Empowered], disempower it. Then kill it if it has 3 :rb_might: or less.[Flow] :rb_energy_4::rb_rune_order::rb_rune_order: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-126-166",
+  "next_card_id": "ven-128-166"
+ },
+ "ven-128-166": {
+  "id": "ven-128-166",
+  "public_code": "VEN-128/166",
+  "name": "Noxian Emissary",
+  "set_id": "VEN",
+  "collector_number": 128,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-128-166-883915969bb42d12.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_1::rb_rune_order: (:rb_energy_1::rb_rune_order:: Empower me. Use only if not Empowered.)[Empowered][>][>>][Deathknell][>] Play two 1 :rb_might: Recruit unit tokens to your base. (When I die while Empowered, get the effect.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-127-166",
+  "next_card_id": "ven-129-166"
+ },
+ "ven-129-166": {
+  "id": "ven-129-166",
+  "public_code": "VEN-129/166",
+  "name": "Sacred Protector",
+  "set_id": "VEN",
+  "collector_number": 129,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-129-166-22c60733f185eaf7.png",
+  "is_banned": false,
+  "description": "I don't deal combat damage unless I'm at a battlefield with exactly one other unit you control.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-128-166",
+  "next_card_id": "ven-130-166"
+ },
+ "ven-130-166": {
+  "id": "ven-130-166",
+  "public_code": "VEN-130/166",
+  "name": "Aurok General",
+  "set_id": "VEN",
+  "collector_number": 130,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-130-166-4282e9aa64e43b08.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3::rb_rune_order: (:rb_energy_3::rb_rune_order:: Empower me. Use only if not Empowered.)[Empowered][>] Your units that are [Empowered] have +2 :rb_might: (including me).",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-129-166",
+  "next_card_id": "ven-131-166"
+ },
+ "ven-131-166": {
+  "id": "ven-131-166",
+  "public_code": "VEN-131/166",
+  "name": "Decree of Unity",
+  "set_id": "VEN",
+  "collector_number": 131,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-131-166-0b12d9ad6d99312c.png",
+  "is_banned": false,
+  "description": "Kill an enemy Chaos (:rb_rune_chaos:) unit or gear.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-130-166",
+  "next_card_id": "ven-132-166"
+ },
+ "ven-132-166": {
+  "id": "ven-132-166",
+  "public_code": "VEN-132/166",
+  "name": "Fallen Feline",
+  "set_id": "VEN",
+  "collector_number": 132,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-132-166-0959db0d7689c30b.png",
+  "is_banned": false,
+  "description": "When you play me, name a spell.While I'm at a battlefield, opponents can't play spells with that name.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-131-166",
+  "next_card_id": "ven-133-166"
+ },
+ "ven-133-166": {
+  "id": "ven-133-166",
+  "public_code": "VEN-133/166",
+  "name": "Glowstone",
+  "set_id": "VEN",
+  "collector_number": 133,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-133-166-29c693b67122b56d.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_rune_rainbow::rb_rune_rainbow: (:rb_rune_rainbow::rb_rune_rainbow:: Empower me. Use only if not Empowered.)Disempower this, :rb_exhaust:: Choose a player. They gain control of this and recall it. (Send it to their base.)At the end of your turn, kill this and deal 5 to all units you control.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-132-166",
+  "next_card_id": "ven-134-166"
+ },
+ "ven-134-166": {
+  "id": "ven-134-166",
+  "public_code": "VEN-134/166",
+  "name": "Kayle, Justified",
+  "set_id": "VEN",
+  "collector_number": 134,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-134-166-4aa9ebc0db8e6744.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3: (:rb_energy_3:: Empower me.)I can be [Empowered] up to three times.I have +2 :rb_might: for each time I'm [Empowered].While I'm [Empowered] three times, I have [Deflect 3] and [Ganking].",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-133-166",
+  "next_card_id": "ven-135-166"
+ },
+ "ven-135-166": {
+  "id": "ven-135-166",
+  "public_code": "VEN-135/166",
+  "name": "Kennen, Keeper of Balance",
+  "set_id": "VEN",
+  "collector_number": 135,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 2,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-135-166-3e7fd2bca685433e.png",
+  "is_banned": false,
+  "description": "[Hidden] (Hide now for :rb_rune_rainbow: to react with later for :rb_energy_0:.)When you play me or I attack, you may pay :rb_energy_2: to [Stun] a unit. (It doesn't deal combat damage this turn.)While there's a stunned enemy unit here, I have +2 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [
+   "hidden"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-134-166",
+  "next_card_id": "ven-135a-166"
+ },
+ "ven-136-166": {
+  "id": "ven-136-166",
+  "public_code": "VEN-136/166",
+  "name": "Ambessa, Respected and Feared",
+  "set_id": "VEN",
+  "collector_number": 136,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-136-166-6ca0305f92843a91.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_1::rb_rune_order::rb_rune_order: (:rb_energy_1::rb_rune_order::rb_rune_order:: Empower me. Use only if not Empowered.)[Empowered][>] I have [Assault 2]. (+2 :rb_might: while I'm an attacker.)[Empowered][>] When I attack, kill an enemy unit here with less Might than me.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-135a-166",
+  "next_card_id": "ven-136a-166"
+ },
+ "ven-137-166": {
+  "id": "ven-137-166",
+  "public_code": "VEN-137/166",
+  "name": "Shady Spectacles",
+  "set_id": "VEN",
+  "collector_number": 137,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Gear",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-137-166-2cd91f42e7d4e58f.png",
+  "is_banned": false,
+  "description": "[Equip] :rb_energy_1::rb_rune_order: (:rb_energy_1::rb_rune_order:: Attach this to a unit you control.)As this is attached to a unit, choose another friendly unit. The equipped unit becomes a copy of that unit for as long as this is attached to it.",
+  "flavor_text": null,
+  "keywords": [
+   "equip"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-136a-166",
+  "next_card_id": "ven-138-166"
+ },
+ "ven-138-166": {
+  "id": "ven-138-166",
+  "public_code": "VEN-138/166",
+  "name": "Shen, Leader of the Kinkou Order",
+  "set_id": "VEN",
+  "collector_number": 138,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 7,
+   "power": 2
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-138-166-fc0e9ee3ba5a096f.png",
+  "is_banned": false,
+  "description": "[Shield] (+1 :rb_might: while I'm a defender.)When I hold, if there is exactly one other unit you control here, you score 1 point.",
+  "flavor_text": null,
+  "keywords": [
+   "shield"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-137-166",
+  "next_card_id": "ven-138a-166"
+ },
+ "ven-139-166": {
+  "id": "ven-139-166",
+  "public_code": "VEN-139/166",
+  "name": "Rogue Assassin",
+  "set_id": "VEN",
+  "collector_number": 139,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Calm",
+   "Fury"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-139-166-0261ac396ebdd3bb.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3::rb_rune_rainbow: (:rb_energy_3::rb_rune_rainbow:: Empower this. Use only if not Empowered.)[Action][>] :rb_exhaust:: If it's your turn, move a friendly unit in a showdown to base and if I'm [Empowered], ready it.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-138a-166",
+  "next_card_id": "ven-140-166"
+ },
+ "ven-140-166": {
+  "id": "ven-140-166",
+  "public_code": "VEN-140/166",
+  "name": "Shuriken Flip",
+  "set_id": "VEN",
+  "collector_number": 140,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Calm",
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-140-166-dd27b75aeeedadb1.png",
+  "is_banned": false,
+  "description": "Deal 2 to up to one enemy unit at a battlefield, then move a friendly unit.[Flow] :rb_energy_3::rb_rune_rainbow: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-139-166",
+  "next_card_id": "ven-141-166"
+ },
+ "ven-141-166": {
+  "id": "ven-141-166",
+  "public_code": "VEN-141/166",
+  "name": "Butcher of the Sands",
+  "set_id": "VEN",
+  "collector_number": 141,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Body",
+   "Fury"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-141-166-f67e04254c4b61f0.png",
+  "is_banned": false,
+  "description": "[Reaction][>] :rb_rune_rainbow::rb_rune_rainbow:, :rb_exhaust:: [Add] :rb_energy_2:. Spend this Energy only to play units or activated abilities of units.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-140-166",
+  "next_card_id": "ven-142-166"
+ },
+ "ven-142-166": {
+  "id": "ven-142-166",
+  "public_code": "VEN-142/166",
+  "name": "Dominus",
+  "set_id": "VEN",
+  "collector_number": 142,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Body",
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-142-166-111d11d6821b40a3.png",
+  "is_banned": false,
+  "description": "[Action] (Play on your turn or in showdowns.)This turn, double a unit's Might and give it \":rb_rune_rainbow::rb_rune_rainbow:: Ready me.\"",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-141-166",
+  "next_card_id": "ven-143-166"
+ },
+ "ven-143-166": {
+  "id": "ven-143-166",
+  "public_code": "VEN-143/166",
+  "name": "Master of Shadows",
+  "set_id": "VEN",
+  "collector_number": 143,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Chaos",
+   "Fury"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-143-166-63b0859eb76a3b14.png",
+  "is_banned": false,
+  "description": "When you banish a card you own, empower me. (I become Empowered if I'm not already.)[Action][>] Disempower me, :rb_exhaust:: Discard 1, then draw 1.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-142-166",
+  "next_card_id": "ven-144-166"
+ },
+ "ven-144-166": {
+  "id": "ven-144-166",
+  "public_code": "VEN-144/166",
+  "name": "Death Mark",
+  "set_id": "VEN",
+  "collector_number": 144,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Chaos",
+   "Fury"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-144-166-187c8c5a602e8cc0.png",
+  "is_banned": false,
+  "description": "[Burn 3]. (Put the top 3 cards of your Main Deck into your trash.)Play a 0 :rb_might: Shadow Clone unit token. (It has \"When I attack, you may banish a unit from your trash. If you do, give me [Assault 4] this turn.\")[Flow] :rb_energy_1::rb_rune_rainbow::rb_rune_rainbow: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-143-166",
+  "next_card_id": "ven-145-166"
+ },
+ "ven-145-166": {
+  "id": "ven-145-166",
+  "public_code": "VEN-145/166",
+  "name": "Curator of the Sands",
+  "set_id": "VEN",
+  "collector_number": 145,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm",
+   "Mind"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-145-166-b75888d5d842213b.png",
+  "is_banned": false,
+  "description": "When you play a unit, gear, or activated ability with Energy cost :rb_energy_7: or more, you may exhaust me to ready up to 2 runes.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-144-166",
+  "next_card_id": "ven-146-166"
+ },
+ "ven-146-166": {
+  "id": "ven-146-166",
+  "public_code": "VEN-146/166",
+  "name": "Siphoning Strike",
+  "set_id": "VEN",
+  "collector_number": 146,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "calm",
+  "domains": [
+   "Calm",
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-146-166-fac853d4bdd6fe47.png",
+  "is_banned": false,
+  "description": "Deal 4 to a unit at a battlefield. If you control 7 or more runes, deal 7 to it instead. When it dies this turn, channel 1 rune exhausted.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-145-166",
+  "next_card_id": "ven-147-166"
+ },
+ "ven-147-166": {
+  "id": "ven-147-166",
+  "public_code": "VEN-147/166",
+  "name": "Eye of Twilight",
+  "set_id": "VEN",
+  "collector_number": 147,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm",
+   "Order"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-147-166-83dd1d46dfa9f456.png",
+  "is_banned": false,
+  "description": "[Action][>] :rb_exhaust:: Give a friendly unit [Tank] this turn. (It must be assigned combat damage first.)",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-146-166",
+  "next_card_id": "ven-148-166"
+ },
+ "ven-148-166": {
+  "id": "ven-148-166",
+  "public_code": "VEN-148/166",
+  "name": "Shadow Dash",
+  "set_id": "VEN",
+  "collector_number": 148,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "calm",
+  "domains": [
+   "Calm",
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-148-166-75667c2036ca351e.png",
+  "is_banned": false,
+  "description": "Move an enemy unit to a battlefield where you have units. If you have exactly two units there, they each get +1 :rb_might: this turn.[Flow] :rb_energy_5::rb_rune_rainbow::rb_rune_rainbow: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-147-166",
+  "next_card_id": "ven-149-166"
+ },
+ "ven-149-166": {
+  "id": "ven-149-166",
+  "public_code": "VEN-149/166",
+  "name": "Defender of Tomorrow",
+  "set_id": "VEN",
+  "collector_number": 149,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Body",
+   "Mind"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-149-166-d841846f9d678061.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2::rb_rune_rainbow::rb_rune_rainbow: (:rb_energy_2::rb_rune_rainbow::rb_rune_rainbow:: Empower me. Use only if not Empowered.):rb_energy_1:, :rb_exhaust:: Ready a gear.[Empowered][>] :rb_energy_1:, :rb_exhaust:: Ready 2 gear.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-148-166",
+  "next_card_id": "ven-150-166"
+ },
+ "ven-150-166": {
+  "id": "ven-150-166",
+  "public_code": "VEN-150/166",
+  "name": "Acceleration Gate",
+  "set_id": "VEN",
+  "collector_number": 150,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "mind",
+  "domains": [
+   "Body",
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-150-166-5b6f71297ffd340b.png",
+  "is_banned": false,
+  "description": "Ready up to 4 units, gear, and/or runes.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-149-166",
+  "next_card_id": "ven-151-166"
+ },
+ "ven-151-166": {
+  "id": "ven-151-166",
+  "public_code": "VEN-151/166",
+  "name": "Soul's Reflection",
+  "set_id": "VEN",
+  "collector_number": 151,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Chaos",
+   "Mind"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-151-166-e6aa4b0b79f1887a.png",
+  "is_banned": false,
+  "description": "When you empower something else, empower me. (I become Empowered if I'm not already.)Disempower me, :rb_exhaust:: Give a unit at a battlefield -2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-150-166",
+  "next_card_id": "ven-152-166"
+ },
+ "ven-152-166": {
+  "id": "ven-152-166",
+  "public_code": "VEN-152/166",
+  "name": "Rebuttal",
+  "set_id": "VEN",
+  "collector_number": 152,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "mind",
+  "domains": [
+   "Chaos",
+   "Mind"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-152-166-776377f44a75ba52.png",
+  "is_banned": false,
+  "description": "[Reaction] (Play any time, even before spells and abilities resolve.)Choose a spell with Energy cost no more than :rb_energy_4:.  You may pay :rb_rune_rainbow:. If you do, gain control of it and you may make new choices for it. Otherwise, counter it.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-151-166",
+  "next_card_id": "ven-153-166"
+ },
+ "ven-153-166": {
+  "id": "ven-153-166",
+  "public_code": "VEN-153/166",
+  "name": "Matriarch of War",
+  "set_id": "VEN",
+  "collector_number": 153,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body",
+   "Order"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-153-166-227b8336f47f608a.png",
+  "is_banned": false,
+  "description": "When you empower something else, empower me. (I become Empowered if I'm not already.)Disempower me, :rb_rune_rainbow:, :rb_exhaust:: Ready a unit.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-152-166",
+  "next_card_id": "ven-154-166"
+ },
+ "ven-154-166": {
+  "id": "ven-154-166",
+  "public_code": "VEN-154/166",
+  "name": "Public Execution",
+  "set_id": "VEN",
+  "collector_number": 154,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body",
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": null,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-154-166-2a11717f8bb2620a.png",
+  "is_banned": false,
+  "description": "Choose a friendly unit. Kill an enemy unit with less Might than it.[Flow] :rb_energy_5::rb_rune_rainbow::rb_rune_rainbow: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-153-166",
+  "next_card_id": "ven-155-166"
+ },
+ "ven-155-166": {
+  "id": "ven-155-166",
+  "public_code": "VEN-155/166",
+  "name": "Heart of the Tempest",
+  "set_id": "VEN",
+  "collector_number": 155,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Chaos",
+   "Order"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-155-166-de7407b898e09d80.png",
+  "is_banned": false,
+  "description": "When you play a card from anywhere other than your hand, empower me.[Action][>] Disempower me, :rb_exhaust:: Give a unit [Assault 2] this turn. (+2 :rb_might: while it's an attacker.)",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-154-166",
+  "next_card_id": "ven-156-166"
+ },
+ "ven-156-166": {
+  "id": "ven-156-166",
+  "public_code": "VEN-156/166",
+  "name": "Lightning Rush",
+  "set_id": "VEN",
+  "collector_number": 156,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "order",
+  "domains": [
+   "Chaos",
+   "Order"
+  ],
+  "type": "Spell",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 1,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-156-166-2aeadd5901b5821b.png",
+  "is_banned": false,
+  "description": "Look at the top 3 cards of your Main Deck. You may choose a card from among them and draw it. Put the rest into your trash.[Flow] :rb_energy_2::rb_rune_rainbow: (You may play this from your trash for its Flow cost. Then banish it.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-155-166",
+  "next_card_id": "ven-157-166"
+ },
+ "ven-157-166": {
+  "id": "ven-157-166",
+  "public_code": "VEN-157/166",
+  "name": "Dragon Roost",
+  "set_id": "VEN",
+  "collector_number": 157,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-157-166-cd476a9c59f40350.png",
+  "is_banned": false,
+  "description": "Any player may pay :rb_rune_rainbow::rb_rune_rainbow: as an additional cost to play a Dragon. If they do, they play it to this battlefield.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-156-166",
+  "next_card_id": "ven-158-166"
+ },
+ "ven-158-166": {
+  "id": "ven-158-166",
+  "public_code": "VEN-158/166",
+  "name": "Heisho, Shell of the World",
+  "set_id": "VEN",
+  "collector_number": 158,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-158-166-e5992a2d576c9178.png",
+  "is_banned": false,
+  "description": "Players ignore [Deflect] while paying for spells and abilities choosing something here.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-157-166",
+  "next_card_id": "ven-159-166"
+ },
+ "ven-159-166": {
+  "id": "ven-159-166",
+  "public_code": "VEN-159/166",
+  "name": "Kinkou Temple",
+  "set_id": "VEN",
+  "collector_number": 159,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-159-166-a1d174e65d6e5014.png",
+  "is_banned": false,
+  "description": "Units here with [Tank] have +1 :rb_might:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-158-166",
+  "next_card_id": "ven-160-166"
+ },
+ "ven-160-166": {
+  "id": "ven-160-166",
+  "public_code": "VEN-160/166",
+  "name": "Mystic Vortex",
+  "set_id": "VEN",
+  "collector_number": 160,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-160-166-72bc280fc7eecb99.png",
+  "is_banned": false,
+  "description": "During showdowns here, cards with [Reaction] cost :rb_rune_rainbow: more to play. (Hidden cards have [Reaction].)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-159-166",
+  "next_card_id": "ven-161-166"
+ },
+ "ven-161-166": {
+  "id": "ven-161-166",
+  "public_code": "VEN-161/166",
+  "name": "Piltovan Forge",
+  "set_id": "VEN",
+  "collector_number": 161,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-161-166-503a2a4c910035ec.png",
+  "is_banned": false,
+  "description": "While you control this battlefield, the first friendly gear activated ability played each turn costs :rb_energy_1: less.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-160-166",
+  "next_card_id": "ven-162-166"
+ },
+ "ven-162-166": {
+  "id": "ven-162-166",
+  "public_code": "VEN-162/166",
+  "name": "Protective Sands",
+  "set_id": "VEN",
+  "collector_number": 162,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-162-166-c942e77d75478f59.png",
+  "is_banned": false,
+  "description": "When you conquer here, if you control 4 or fewer runes, you may pay :rb_energy_1: to draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-161-166",
+  "next_card_id": "ven-163-166"
+ },
+ "ven-163-166": {
+  "id": "ven-163-166",
+  "public_code": "VEN-163/166",
+  "name": "Risen Altar",
+  "set_id": "VEN",
+  "collector_number": 163,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-163-166-9fc63c74e08deb10.png",
+  "is_banned": false,
+  "description": "[Empower] costs of your units here cost :rb_energy_1: or :rb_rune_rainbow: less.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-162-166",
+  "next_card_id": "ven-164-166"
+ },
+ "ven-164-166": {
+  "id": "ven-164-166",
+  "public_code": "VEN-164/166",
+  "name": "Sandswept Tomb",
+  "set_id": "VEN",
+  "collector_number": 164,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-164-166-fbc89b6cf771b713.png",
+  "is_banned": false,
+  "description": "Each spell that chooses one or more units here that are friendly to it costs :rb_rune_rainbow: less.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-163-166",
+  "next_card_id": "ven-165-166"
+ },
+ "ven-165-166": {
+  "id": "ven-165-166",
+  "public_code": "VEN-165/166",
+  "name": "Shadow Temple",
+  "set_id": "VEN",
+  "collector_number": 165,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-165-166-dc3f6e4ed7fa1a7e.png",
+  "is_banned": false,
+  "description": "When you hold here, [Burn 3]. (Put the top 3 cards of your Main Deck into your trash.)",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-164-166",
+  "next_card_id": "ven-166-166"
+ },
+ "ven-166-166": {
+  "id": "ven-166-166",
+  "public_code": "VEN-166/166",
+  "name": "Threshold of the Gray",
+  "set_id": "VEN",
+  "collector_number": 166,
+  "variant": "",
+  "rarity": "uncommon",
+  "faction": "colorless",
+  "domains": [
+   "Colorless"
+  ],
+  "type": "Battlefield",
+  "orientation": "landscape",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-166-166-2afa8e7322ef27eb.png",
+  "is_banned": false,
+  "description": "When combat starts here, the attacker and defender each [Add] :rb_energy_1:.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-165-166",
+  "next_card_id": "ven-167-166"
+ },
+ "ven-167-166": {
+  "id": "ven-167-166",
+  "public_code": "VEN-167/166",
+  "name": "Vi, Destructive",
+  "set_id": "VEN",
+  "collector_number": 167,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 2,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-167-166-361df019f5871ec0.png",
+  "is_banned": false,
+  "description": "[Ganking]Recycle 1 from your trash: Give me +1 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "ganking"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-166-166",
+  "next_card_id": "ven-168-166"
+ },
+ "ven-168-166": {
+  "id": "ven-168-166",
+  "public_code": "VEN-168/166",
+  "name": "Jinx, Demolitionist",
+  "set_id": "VEN",
+  "collector_number": 168,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-168-166-1613f29cb59875f4.png",
+  "is_banned": false,
+  "description": "[Accelerate][Assault 2]When you play me, discard 2.",
+  "flavor_text": null,
+  "keywords": [
+   "accelerate",
+   "assault 2"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-167-166",
+  "next_card_id": "ven-169-166"
+ },
+ "ven-169-166": {
+  "id": "ven-169-166",
+  "public_code": "VEN-169/166",
+  "name": "Zed, From the Shadows",
+  "set_id": "VEN",
+  "collector_number": 169,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-169-166-5d66507b015e37da.png",
+  "is_banned": false,
+  "description": "You may discard 1 as an additional cost to play me.When you play me, if you paid the additional cost, play a 0 :rb_might: Shadow Clone unit token.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-168-166",
+  "next_card_id": "ven-170-166"
+ },
+ "ven-170-166": {
+  "id": "ven-170-166",
+  "public_code": "VEN-170/166",
+  "name": "Shen, Scourge of Shadows",
+  "set_id": "VEN",
+  "collector_number": 170,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-170-166-e1e24d335f7e31e4.png",
+  "is_banned": false,
+  "description": "When I hold, if there is exactly one other unit you control here, draw 1.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-169-166",
+  "next_card_id": "ven-171-166"
+ },
+ "ven-171-166": {
+  "id": "ven-171-166",
+  "public_code": "VEN-171/166",
+  "name": "Riven, Shattered",
+  "set_id": "VEN",
+  "collector_number": 171,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-171-166-b29a965405611cc5.png",
+  "is_banned": false,
+  "description": "[Weaponmaster]When I attack, choose an enemy unit here. Deal 2 to it for each Equipment attached to me.",
+  "flavor_text": null,
+  "keywords": [
+   "weaponmaster"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-170-166",
+  "next_card_id": "ven-172-166"
+ },
+ "ven-172-166": {
+  "id": "ven-172-166",
+  "public_code": "VEN-172/166",
+  "name": "Draven, Showboat",
+  "set_id": "VEN",
+  "collector_number": 172,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-172-166-81846bb0f605a41e.png",
+  "is_banned": false,
+  "description": "My Might is increased by your points.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-171-166",
+  "next_card_id": "ven-173-166"
+ },
+ "ven-173-166": {
+  "id": "ven-173-166",
+  "public_code": "VEN-173/166",
+  "name": "Swain, Visionary",
+  "set_id": "VEN",
+  "collector_number": 173,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-173-166-ed04a1f72ce22859.png",
+  "is_banned": false,
+  "description": "[Vision]When I conquer, if you've played a non-token unit, a non-token gear, and a spell this turn, you score 1 point.",
+  "flavor_text": null,
+  "keywords": [
+   "vision"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-172-166",
+  "next_card_id": "ven-174-166"
+ },
+ "ven-174-166": {
+  "id": "ven-174-166",
+  "public_code": "VEN-174/166",
+  "name": "Irelia, Fervent",
+  "set_id": "VEN",
+  "collector_number": 174,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "calm",
+  "domains": [
+   "Calm"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-174-166-3092324c12d9e93b.png",
+  "is_banned": false,
+  "description": "[Deflect]When you choose or ready me, give me +1 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "deflect"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-173-166",
+  "next_card_id": "ven-175-166"
+ },
+ "ven-175-166": {
+  "id": "ven-175-166",
+  "public_code": "VEN-175/166",
+  "name": "Jayce, Man of Progress",
+  "set_id": "VEN",
+  "collector_number": 175,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-175-166-d703430d7f55f4f0.png",
+  "is_banned": false,
+  "description": "When you play me, you may kill a friendly gear. If you do, you may play a gear with Energy cost no more than :rb_energy_7: from hand this turn, ignoring its Energy cost.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-174-166",
+  "next_card_id": "ven-176-166"
+ },
+ "ven-176-166": {
+  "id": "ven-176-166",
+  "public_code": "VEN-176/166",
+  "name": "Viktor, Innovator",
+  "set_id": "VEN",
+  "collector_number": 176,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-176-166-afa65d54ef5835e5.png",
+  "is_banned": false,
+  "description": "When you play a card on an opponent's turn, play a 1 :rb_might: Recruit unit token to your base.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-175-166",
+  "next_card_id": "ven-177-166"
+ },
+ "ven-177-166": {
+  "id": "ven-177-166",
+  "public_code": "VEN-177/166",
+  "name": "Renekton, Brute",
+  "set_id": "VEN",
+  "collector_number": 177,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-177-166-f6e3c39dfb1445ab.png",
+  "is_banned": false,
+  "description": ":rb_energy_1:: Give me +1 :rb_might: this turn.When my Might becomes 10 or more, empower me.[Empowered][>] I have [Ganking] and [Deflect].",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-176-166",
+  "next_card_id": "ven-178-166"
+ },
+ "ven-178-166": {
+  "id": "ven-178-166",
+  "public_code": "VEN-178/166",
+  "name": "Nasus, Guardian of Knowledge",
+  "set_id": "VEN",
+  "collector_number": 178,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Mind"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-178-166-0483d5984ec9d54e.png",
+  "is_banned": false,
+  "description": "Once each turn, when an enemy unit here dies, channel 1 rune exhausted.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-177-166",
+  "next_card_id": "ven-179-166"
+ },
+ "ven-179-166": {
+  "id": "ven-179-166",
+  "public_code": "VEN-179/166",
+  "name": "Rengar, Trophy Hunter",
+  "set_id": "VEN",
+  "collector_number": 179,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 6,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-179-166-b61ec10b0ecbc6b2.png",
+  "is_banned": false,
+  "description": "[Ambush]I can be played to a battlefield where there are enemy units.",
+  "flavor_text": null,
+  "keywords": [
+   "ambush"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-178-166",
+  "next_card_id": "ven-180-166"
+ },
+ "ven-180-166": {
+  "id": "ven-180-166",
+  "public_code": "VEN-180/166",
+  "name": "Kha'Zix, Evolving Hunter",
+  "set_id": "VEN",
+  "collector_number": 180,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-180-166-6523cf8dae9ffa6d.png",
+  "is_banned": false,
+  "description": "[Hunt]When I attack, you may spend 3 XP to deal damage equal to my Might to an enemy unit here.",
+  "flavor_text": null,
+  "keywords": [
+   "hunt"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-179-166",
+  "next_card_id": "ven-181-166"
+ },
+ "ven-181-166": {
+  "id": "ven-181-166",
+  "public_code": "VEN-181/166",
+  "name": "Gangplank, Naval",
+  "set_id": "VEN",
+  "collector_number": 181,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 6,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-181-166-903cf3353b6419d9.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_rune_body::rb_rune_body:[Empowered][>] If a spell or ability that chooses me would stun me, give me -:rb_might:, or return me to hand, give me +3 :rb_might: instead.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-180-166",
+  "next_card_id": "ven-182-166"
+ },
+ "ven-182-166": {
+  "id": "ven-182-166",
+  "public_code": "VEN-182/166",
+  "name": "Illaoi, Prophet of the Great Kraken",
+  "set_id": "VEN",
+  "collector_number": 182,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 6,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-182-166-a7298c50d8d2ff1c.png",
+  "is_banned": false,
+  "description": "When you play me or when I score, play a :rb_energy_1: :rb_might: Tentacle unit token from Bilgewater.I have +1 :rb_might: for each token unit you control.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-181-166",
+  "next_card_id": "ven-183-166"
+ },
+ "ven-183-166": {
+  "id": "ven-183-166",
+  "public_code": "VEN-183/166",
+  "name": "Diana, No Longer Human",
+  "set_id": "VEN",
+  "collector_number": 183,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 3,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-183-166-088e3c5762010226.png",
+  "is_banned": false,
+  "description": "[Ambush]When you play a spell, give me +2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "ambush"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-182-166",
+  "next_card_id": "ven-184-166"
+ },
+ "ven-184-166": {
+  "id": "ven-184-166",
+  "public_code": "VEN-184/166",
+  "name": "Leona, Determined",
+  "set_id": "VEN",
+  "collector_number": 184,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 4,
+   "might": 4,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-184-166-6eb668868ab6b2a5.png",
+  "is_banned": false,
+  "description": "[Shield]When I attack, stun an enemy unit here.",
+  "flavor_text": null,
+  "keywords": [
+   "shield"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-183-166",
+  "next_card_id": "ven-185-166"
+ },
+ "ven-185-166": {
+  "id": "ven-185-166",
+  "public_code": "VEN-185/166",
+  "name": "Kayle, Justified",
+  "set_id": "VEN",
+  "collector_number": 185,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 3,
+   "might": 3,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-185-166-3a1b08195111b5e2.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3: (:rb_energy_3:: Empower me.)I can be [Empowered] up to three times.I have +2 :rb_might: for each time I’m [Empowered].While I'm [Empowered] three times, I have [Deflect 3] and [Ganking].",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-184-166",
+  "next_card_id": "ven-186-166"
+ },
+ "ven-186-166": {
+  "id": "ven-186-166",
+  "public_code": "VEN-186/166",
+  "name": "Morgana, Vindictive",
+  "set_id": "VEN",
+  "collector_number": 186,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Fury"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": 1
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-186-166-5a9614780541b5b6.png",
+  "is_banned": false,
+  "description": "[Ambush]When you play me, deal damage to a unit equal to the damage marked on it.",
+  "flavor_text": null,
+  "keywords": [
+   "ambush"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-185-166",
+  "next_card_id": "ven-187-166"
+ },
+ "ven-187-166": {
+  "id": "ven-187-166",
+  "public_code": "VEN-187/166",
+  "name": "Ambessa, Respected and Feared",
+  "set_id": "VEN",
+  "collector_number": 187,
+  "variant": "",
+  "rarity": "epic",
+  "faction": "order",
+  "domains": [
+   "Order"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 5,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-187-166-f86db5af1f218c59.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_1::rb_rune_order::rb_rune_order:[Empowered][>] I have [Assault 2].[Empowered][>] When I attack, kill an enemy unit here with less Might than me.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-186-166",
+  "next_card_id": "ven-188-166"
+ },
+ "ven-188-166": {
+  "id": "ven-188-166",
+  "public_code": "VEN-188/166",
+  "name": "Mel, Defiant Soul",
+  "set_id": "VEN",
+  "collector_number": 188,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "chaos",
+  "domains": [
+   "Chaos"
+  ],
+  "type": "Unit",
+  "orientation": "portrait",
+  "stats": {
+   "energy": 5,
+   "might": 4,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-188-166-ba49f78a2ad6610b.png",
+  "is_banned": false,
+  "description": "[Empower] — Discard a spellWhen I become [Empowered], banish an enemy unit at a battlefield with 3 :rb_might: or less.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-187-166",
+  "next_card_id": "ven-189-166"
+ },
+ "ven-189-166": {
+  "id": "ven-189-166",
+  "public_code": "VEN-189/166",
+  "name": "Rogue Assassin",
+  "set_id": "VEN",
+  "collector_number": 189,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Calm",
+   "Fury"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-189-166-3a5af02c24d93aef.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_3::rb_rune_rainbow:[Action][>] :rb_exhaust:: If it's your turn, move a friendly unit in a showdown to base and if I'm [Empowered], ready it.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-188-166",
+  "next_card_id": "ven-190-166"
+ },
+ "ven-190-166": {
+  "id": "ven-190-166",
+  "public_code": "VEN-190/166",
+  "name": "Butcher of the Sands",
+  "set_id": "VEN",
+  "collector_number": 190,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Body",
+   "Fury"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-190-166-e4cb3ccb2f25487c.png",
+  "is_banned": false,
+  "description": "[Reaction][>] :rb_rune_rainbow::rb_rune_rainbow:, :rb_exhaust:: [Add] :rb_energy_2:. Spend this Energy only to play units or activated abilities of units.",
+  "flavor_text": null,
+  "keywords": [
+   "reaction"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-189-166",
+  "next_card_id": "ven-191-166"
+ },
+ "ven-191-166": {
+  "id": "ven-191-166",
+  "public_code": "VEN-191/166",
+  "name": "Master of Shadows",
+  "set_id": "VEN",
+  "collector_number": 191,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "fury",
+  "domains": [
+   "Chaos",
+   "Fury"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-191-166-41eaf3787d022411.png",
+  "is_banned": false,
+  "description": "When you banish a card you own, empower me.[Action][>] Disempower me, :rb_exhaust:: Discard 1, then draw 1.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-190-166",
+  "next_card_id": "ven-192-166"
+ },
+ "ven-192-166": {
+  "id": "ven-192-166",
+  "public_code": "VEN-192/166",
+  "name": "Curator of the Sands",
+  "set_id": "VEN",
+  "collector_number": 192,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm",
+   "Mind"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-192-166-8d4b3170e8ceb1ff.png",
+  "is_banned": false,
+  "description": "When you play a unit, gear, or activated ability with Energy cost :rb_energy_7: or more, you may exhaust me to ready up to 2 runes.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-191-166",
+  "next_card_id": "ven-193-166"
+ },
+ "ven-193-166": {
+  "id": "ven-193-166",
+  "public_code": "VEN-193/166",
+  "name": "Eye of Twilight",
+  "set_id": "VEN",
+  "collector_number": 193,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "calm",
+  "domains": [
+   "Calm",
+   "Order"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-193-166-da973c25f76678cd.png",
+  "is_banned": false,
+  "description": "[Action][>] :rb_exhaust:: Give a friendly unit [Tank] this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-192-166",
+  "next_card_id": "ven-194-166"
+ },
+ "ven-194-166": {
+  "id": "ven-194-166",
+  "public_code": "VEN-194/166",
+  "name": "Defender of Tomorrow",
+  "set_id": "VEN",
+  "collector_number": 194,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Body",
+   "Mind"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-194-166-f44646126741ab20.png",
+  "is_banned": false,
+  "description": "[Empower] :rb_energy_2::rb_rune_rainbow::rb_rune_rainbow::rb_energy_1:, :rb_exhaust:: Ready a gear.[Empowered][>] :rb_energy_1:, :rb_exhaust:: Ready 2 gear.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-193-166",
+  "next_card_id": "ven-195-166"
+ },
+ "ven-195-166": {
+  "id": "ven-195-166",
+  "public_code": "VEN-195/166",
+  "name": "Soul's Reflection",
+  "set_id": "VEN",
+  "collector_number": 195,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "mind",
+  "domains": [
+   "Chaos",
+   "Mind"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-195-166-7613e0ccccf6d9e8.png",
+  "is_banned": false,
+  "description": "When you empower something else, empower me.Disempower me, :rb_exhaust:: Give a unit at a battlefield -2 :rb_might: this turn.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-194-166",
+  "next_card_id": "ven-196-166"
+ },
+ "ven-196-166": {
+  "id": "ven-196-166",
+  "public_code": "VEN-196/166",
+  "name": "Matriarch of War",
+  "set_id": "VEN",
+  "collector_number": 196,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "body",
+  "domains": [
+   "Body",
+   "Order"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-196-166-2df29cd4f593f210.png",
+  "is_banned": false,
+  "description": "When you empower something else, empower me.Disempower me, :rb_rune_rainbow:, :rb_exhaust:: Ready a unit.",
+  "flavor_text": null,
+  "keywords": [],
+  "tags": [],
+  "prev_card_id": "ven-195-166",
+  "next_card_id": "ven-197-166"
+ },
+ "ven-197-166": {
+  "id": "ven-197-166",
+  "public_code": "VEN-197/166",
+  "name": "Heart of the Tempest",
+  "set_id": "VEN",
+  "collector_number": 197,
+  "variant": "",
+  "rarity": "rare",
+  "faction": "order",
+  "domains": [
+   "Chaos",
+   "Order"
+  ],
+  "type": "Legend",
+  "orientation": "portrait",
+  "stats": {
+   "energy": null,
+   "might": null,
+   "power": null
+  },
+  "image": "https://cdn.riftscribe.gg/cards/originals/ven-197-166-65b98a36daa15269.png",
+  "is_banned": false,
+  "description": "When you play a card from anywhere other than your hand, empower me.[Action][>] Disempower me, :rb_exhaust:: Give a unit [Assault 2] this turn.",
+  "flavor_text": null,
+  "keywords": [
+   "action"
+  ],
+  "tags": [],
+  "prev_card_id": "ven-196-166",
+  "next_card_id": null
+ }
+}

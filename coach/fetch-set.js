@@ -83,8 +83,17 @@ async function fetchSet(setId, { onProgress } = {}) {
     onProgress?.(cards.length, index.length, fetched);
   }
 
-  fs.writeFileSync(cacheFile, JSON.stringify(cached, null, 1));
-  return { cards, fetched, cacheFile };
+  /* Blur placeholders and thumbnail sets are a quarter-megabyte of base64
+   * that nothing downstream reads. Dropped so the cache is a card list rather
+   * than an image cache — 480K becomes 126K, small enough to keep in the
+   * repository, which makes the import reproducible without a network. */
+  const slim = {};
+  for (const [id, card] of Object.entries(cached)) {
+    const { image_blur_data_url, image_thumb, art, ...rest } = card;
+    slim[id] = art?.artist ? { ...rest, art: { artist: art.artist } } : rest;
+  }
+  fs.writeFileSync(cacheFile, JSON.stringify(slim, null, 1));
+  return { cards: Object.values(slim), fetched, cacheFile };
 }
 
 /* Is this card's whole text just the reminder lines for keywords it already
