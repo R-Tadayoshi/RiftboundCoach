@@ -389,6 +389,25 @@ The coach also re-checks the room mode and refuses anything but solo practice,
 even though the extractor already refuses to capture it. The guard that matters
 is the one nearest the thing being guarded.
 
+
+## Checking the rule numbers
+
+`coach/rules.md` gives a rule number for every constraint, and the system
+prompt calls that section authoritative and binding. Two of those numbers were
+wrong: `806.3` was cited for where a unit may be played (806 is the **Action**
+keyword and says nothing about placement — the real rule is `355.2.a`), and
+`174.6`–`174.8` for legend abilities (rule 174 does not exist; 170 is
+Battlefields). A wrong number is worse than none: it reads as checkable, so
+nobody checks it.
+
+```bash
+node coach/check-citations.js
+```
+
+Every citation is looked up in `rules/*.pdf` via `pdftotext`. Without poppler
+installed it exits 2 and says the citations are *unverified* rather than
+claiming a pass. `npm test` runs the same check and skips loudly.
+
 ## Solo-only, and why
 
 `content.js` sets `soloOnly: true`. When a second player is seated, capture

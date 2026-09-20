@@ -12,6 +12,10 @@
  *   // Can always play to base (CR 355.2.a)
  *   bool can_play_here = controlled;   // battlefields: controlled only
  *
+ * Every rule number here was checked against the rulebook text rather than
+ * recalled. The placement check originally cited 806.3, which is the Action
+ * keyword and says nothing about placement; the real rule is 355.2.a.
+ *
  * The rule that governs this file: NEVER flag something that might be legal.
  * A false "illegal" teaches the player to ignore the checker, which is worse
  * than missing a violation — so every check below either proves illegality
@@ -72,13 +76,21 @@ function parseActions(text) {
       continue;
     }
 
+    /* An optional "targeting <card>" tail, split off first so it never lands
+     * in the card or destination. Without it a spell's target is invisible to
+     * the checker, and a target is where the rules bite hardest. */
+    const aim = /^(.*?)\s+(?:targeting|targeting:|target)\s+(.*)$/i.exec(rest);
+    const head = aim ? aim[1] : rest;
+    const target = aim ? aim[2].trim().replace(/[.,;]+$/, "") : null;
+
     // "<card> to <dest>" / "<card> from <origin> to <dest>"
-    const to = /^(.*?)\s+(?:from\s+(.*?)\s+)?to\s+(.*)$/i.exec(rest);
+    const to = /^(.*?)\s+(?:from\s+(.*?)\s+)?to\s+(.*)$/i.exec(head);
     actions.push({
       verb,
-      card: (to ? to[1] : rest).trim(),
+      card: (to ? to[1] : head).trim(),
       from: to?.[2]?.trim() || null,
       to: to?.[3]?.trim() || null,
+      target,
       raw: line.trim(),
     });
   }
@@ -128,6 +140,15 @@ function cardTextFor(name, summary, cardText) {
   return inHand && cardText?.[inHand.code] ? cardText[inHand.code] : null;
 }
 
+/* Only units are placed at a location (355.2). Type is the answer when the
+ * card resolved; might is the fallback, since units have might and spells do
+ * not. An unresolved card is neither, and is left alone. */
+function isUnit(card) {
+  if (!card) return false;
+  if (card.type) return /unit/i.test(card.type);
+  return typeof card.might === "number";
+}
+
 const hasKeyword = (card, re) =>
   !!card && (re.test(card.text || "") || (card.keywords || []).some((k) => re.test(k)));
 
@@ -142,19 +163,67 @@ function checkPlay(action, summary, cardText) {
   const key = resolveBattlefield(action.to, summary);
   if (!key) return null; // unrecognised destination: say nothing
 
+  /* 355.2 is "For Units, choose a valid Location where that Unit will enter."
+   * A spell is not played TO a location at all, so a spell named with a
+   * destination is loose phrasing, not an illegal placement — and flagging it
+   * puts a rule number on something the rule does not cover. Judge a card
+   * only once it is known to be a unit. */
+  if (!isUnit(card)) return null;
+
   // A card that names its own placement permission is not ours to judge.
   if (hasKeyword(card, PLACEMENT_KEYWORDS)) return null;
 
   if (definitelyNotControlled(summary, key)) {
     return {
-      rule: "806.3",
+      rule: "355.2.a",
       why:
         `"${action.card}" cannot be played to battlefield ${key} — you have no ` +
-        `units there, so you do not control it. A card can only be played to ` +
-        `your Base or a battlefield you already control.`,
+        `units there, so you do not control it. Valid locations for playing a ` +
+        `unit are your Base or a battlefield you already control.`,
     };
   }
   return null;
+}
+
+/* Units that cannot be chosen outside combat.
+ *
+ * Akali, Silent reads "I can't be chosen by enemy spells and abilities unless
+ * I'm in combat." Asked about a board with her on it, the coach proposed
+ * Charm on her and justified it with "that clause doesn't stop Charm since
+ * you're targeting it outside combat" — the condition read backwards. The
+ * action was legal in shape, so nothing here caught it.
+ *
+ * Only this one unambiguous shape is matched: a prohibition on being chosen,
+ * conditioned on combat. Anything wordier is left alone. */
+const NO_CHOOSE_OUTSIDE_COMBAT =
+  /\b(?:can'?t|cannot)\s+be\s+chosen\b[^.]*?\bunless\b[^.]*?\bin\s+combat\b/i;
+
+/* Combat is a state of the board, and the coach is asked for a line during
+ * the Main Phase. Treat combat as possible unless the step says otherwise, so
+ * a step this does not recognise never produces a flag. */
+const MAIN_PHASE = /^(?:main|main_phase|mainPhase)$/i;
+
+function checkTarget(action, summary, cardText) {
+  if (!action.target) return null;
+
+  const target = cardTextFor(action.target, summary, cardText);
+  if (!target || !NO_CHOOSE_OUTSIDE_COMBAT.test(target.text || "")) return null;
+
+  // Only ours to judge if we can see that no combat is ongoing.
+  if (!MAIN_PHASE.test(summary.turn?.step || "")) return null;
+
+  // The clause binds ENEMY spells and abilities; our own units are exempt.
+  if (findMyUnit(summary, action.target)) return null;
+
+  return {
+    rule: "355.9.b",
+    why:
+      `"${action.target}" is not a valid target — its own text says it can't ` +
+      `be chosen by enemy spells and abilities unless it is in combat, and ` +
+      `there is no combat: it is your Main Phase. The clause forbids choosing ` +
+      `it OUTSIDE combat, which is exactly where you are. A target must meet ` +
+      `all targeting restrictions to be a valid choice.`,
+  };
 }
 
 function checkMove(action, summary) {
@@ -179,7 +248,7 @@ function checkMove(action, summary) {
   if (fromBattlefield && destKey && destKey !== where && !toBase) {
     if (!hasKeyword(unit, GANKING)) {
       return {
-        rule: "144.4.c",
+        rule: "144.4.c.1",
         why:
           `"${action.card}" cannot move from battlefield ${where} to ` +
           `battlefield ${destKey} — battlefield-to-battlefield movement needs ` +
@@ -209,6 +278,8 @@ function check(text, summary, cardText) {
     if (action.verb === "play") v = checkPlay(action, summary, cardText);
     else if (action.verb === "move") v = checkMove(action, summary);
     else if (action.verb === "hide") v = checkHide(action, summary);
+    // A target is checkable whatever the verb that chose it.
+    if (!v) v = checkTarget(action, summary, cardText);
     if (v) violations.push({ ...v, action: action.raw });
   }
   return violations;
@@ -218,6 +289,8 @@ module.exports = {
   check,
   parseActions,
   checkPlay,
+  checkTarget,
+  isUnit,
   checkMove,
   checkHide,
   resolveBattlefield,

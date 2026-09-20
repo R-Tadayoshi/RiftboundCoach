@@ -603,7 +603,12 @@ test("the rule the models broke is stated, with its rule number", () => {
   const { loadRules } = require("../coach/prompt.js");
   const rules = loadRules();
   assert.match(rules, /only be played to its controller's Base, or to a battlefield/);
-  assert.match(rules, /806\.3, 813\.3\.a/, "quotable against the source");
+  assert.match(rules, /355\.2\.a/, "quotable against the source");
+  assert.doesNotMatch(
+    rules,
+    /\(806\.3, 813\.3\.a/,
+    "806.3 is the Action keyword and says nothing about placement"
+  );
 });
 
 test("every rule area carries a rule reference", () => {
@@ -664,7 +669,7 @@ test("maintenance notes are not sent to the model", () => {
 test("the rules themselves still survive the cut", () => {
   const { loadRules } = require("../coach/prompt.js");
   const rules = loadRules();
-  assert.match(rules, /806\.3, 813\.3\.a/, "rules come before the marker");
+  assert.match(rules, /355\.2\.a/, "rules come before the marker");
   assert.match(rules, /Conquered <battlefield> and scored 1/, "and so does the observed section");
 });
 
@@ -818,7 +823,9 @@ test("the rules state that legends have activated abilities", () => {
   const { loadRules } = require("../coach/prompt.js");
   const rules = loadRules();
   assert.match(rules, /passive, triggered AND activated abilities/);
-  assert.match(rules, /174\.6, 174\.7, 174\.8/);
+  assert.match(rules, /107\.4\.c/);
+  assert.match(rules, /806\.1\.a, 813\.1\.a/);
+  assert.doesNotMatch(rules, /174\.[678]/, "174 is Battlefields; there is no 174.6");
   assert.match(rules, /not a nameplate/);
 });
 
@@ -919,4 +926,23 @@ test("a lesson's identity is its text, stripped of bullet and provenance", () =>
     key("Trade tempo for a point."),
     "stored and incoming forms must compare equal, or lessons pile up"
   );
+});
+
+/* Citations. Two rule numbers in rules.md were wrong and nothing noticed:
+ * 806.3 was given for where a unit may be played (it is the Action keyword),
+ * and 174.6-174.8 for legend abilities (rule 174 does not exist). Both rode in
+ * a system prompt that calls the rules section authoritative and binding. */
+
+test("every rule number in rules.md exists in the rulebook", () => {
+  const { citations, exists, rulebookText } = require("../coach/check-citations.js");
+  const { text, why } = rulebookText();
+  if (!text) {
+    // Unverifiable is not the same as correct, so say which it is.
+    console.warn(`  (citations unchecked: ${why})`);
+    return;
+  }
+  const bad = citations(require("../coach/prompt.js").loadRules()).filter(
+    (r) => !exists(r, text)
+  );
+  assert.deepEqual(bad, [], "these rule numbers are not in the Core Rules");
 });

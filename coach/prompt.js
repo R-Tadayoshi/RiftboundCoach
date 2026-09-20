@@ -81,9 +81,16 @@ ACTIONS:
 
 One line per action, in the order you would take them, using only the verbs
 play / move / hide / pass. Name cards exactly as this message names them, and
-name destinations as "base", "battlefield A" or "battlefield B". This block is
-checked against the rules by code before it reaches the player, so a line you
-cannot write down plainly is a line you have not thought through.
+name destinations as "base", "battlefield A" or "battlefield B".
+
+If an action chooses a target, say so with "targeting <card>":
+
+- play Charm targeting Akali, Silent
+- move Tideturner from base to battlefield B
+
+This block is checked against the rules by code before it reaches the player,
+so a line you cannot write down plainly is a line you have not thought
+through — and an unnamed target is a target nothing can check.
 
 Legality:
 - The RULES section below is authoritative and binding. Never recommend a play

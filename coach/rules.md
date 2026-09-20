@@ -16,8 +16,11 @@ rules and card-specific interactions.
 ## Where cards can be played
 
 - **A unit can only be played to its controller's Base, or to a battlefield
-  that controller already controls.** (806.3, 813.3.a — "It can only be played
-  to the controlling player's base or a battlefield they control.") This holds
+  that controller already controls.** (355.2.a — "For Units, choose a valid
+  Location where that Unit will enter upon being Played. By default, Valid
+  locations include the controller's Base or a Battlefield the controller
+  controls." Effects may add locations: 355.2.b. Reaction does not remove the
+  restriction: 813.3.a.) This holds
   for units with Action and with Reaction too; neither keyword relaxes it.
 - Units are at one of two kinds of location on the board: a battlefield, or
   their base. (141.1.a.1)
@@ -68,8 +71,11 @@ available from your next turn, not this one.
 
 - Each player's Champion Legend sits in the **Legend Zone** all game and
   cannot normally leave it. (107.4, 133.6.b.1)
-- **Legends can have passive, triggered AND activated abilities.**
-  (174.6, 174.7, 174.8)
+- **Legends can have passive, triggered AND activated abilities.** The legend
+  in the Legend Zone is a Game Object (107.4.c), a Game Object is anything that
+  can produce Game Effects (120), and the rules name "Legend Abilities"
+  directly where they say which abilities can carry Action and Reaction
+  (806.1.a, 813.1.a).
 - Legend abilities can carry Action and Reaction. (806.1.a, 813.1.a)
 
 **So the legend is a standing ability engine, not a nameplate**, and whether
@@ -148,6 +154,28 @@ the spot, and does not score on the spot. It stages a showdown, and the
 showdown is a window your opponent may act in — including by moving units in
 and making it a combat. Never describe such a move as "free", "uncontested",
 "an instant point", or as giving the opponent no window.
+
+## Choosing a target
+
+- Valid choices must be made for all targets before a spell or ability goes on
+  the chain (355.8), and a target is valid only if it **meets all targeting
+  restrictions** (355.9.b). The rulebook's own example there: *a unit that
+  reads "I can't be chosen by enemy spells or abilities" is not a valid
+  target.*
+- Choosing a game object is a Choice made while the card is being played
+  (355.5); "Stun a unit at a battlefield" is a Choice, "Kill all gear" is not
+  (355.5.a).
+- A card may forbid being chosen. **Read the condition in the direction it is
+  written.** "I can't be chosen by enemy spells and abilities **unless I'm in
+  combat**" means it can be chosen ONLY during a combat — so outside combat it
+  cannot be chosen at all. Outside combat is the restriction, not the
+  exemption.
+- Deflect is different and is not a prohibition: "Opponents must pay
+  :rune_rainbow: to choose me with a spell or ability" is an added cost, so the
+  choice is legal if the cost is paid. (822 for the keyword family.)
+
+Before naming a target, quote the target's own restriction clause to yourself
+and check which side of "unless" you are on.
 
 ## Scoring
 
