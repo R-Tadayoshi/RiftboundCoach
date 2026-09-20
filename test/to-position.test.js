@@ -88,11 +88,29 @@ test(
 test(
   "a card the engine cannot model faithfully blocks the whole position",
   withEngine(() => {
+    // Found, not named: pinning a specific card makes this test break the day
+    // that card gets implemented, reporting a regression where there is
+    // progress.
+    const index = A.loadIndex();
+    const files = Fid.scanCardFiles();
+    const stub = index.rows.find((c) => Fid.verdictFor(c, files).verdict === "STUB");
+    if (!stub) return;
+
     const s = board();
-    s.me.hand = [{ name: "Akali, Silent", code: "VEN-038", exhausted: null }];
+    s.me.hand = [{ name: stub.name, code: stub.public_code, exhausted: null }];
     const { blocked } = toPosition(s);
-    assert.ok(blocked.length >= 1);
-    assert.ok(blocked.some((b) => /VEN-038|Akali/.test(b.name + b.code)));
+    assert.ok(blocked.length >= 1, `${stub.name} should have blocked the position`);
+    assert.ok(blocked.some((b) => b.name === stub.name));
+  })
+);
+
+test(
+  "a card the engine implements does not block",
+  withEngine(() => {
+    const s = board();
+    s.me.hand = [{ name: "Draven, Audacious", code: "SFD-148", exhausted: null }];
+    const { blocked } = toPosition(s);
+    assert.deepEqual(blocked, []);
   })
 );
 

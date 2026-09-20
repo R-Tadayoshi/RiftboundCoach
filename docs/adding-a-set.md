@@ -112,6 +112,16 @@ the engine has the concept:
   has `burned_out`, which is deck-out — an unrelated name collision.
 - **Stun** is already an engine mechanic.
 
+## Engine changes go in `engine/patches/`
+
+The engine lives in a checkout that is not ours to push to, so a hand-written
+change to it would be lost on a re-clone — silently, because everything
+downstream fails closed and would simply start refusing to rank.
+
+`engine/patches/apply.sh` re-applies them and skips any already in. Generated
+cards are NOT patches: they are reproduced by `coach/gen-cards.js` from the
+committed set data.
+
 ## Naming, which has bitten five times
 
 - A **legend** is printed with its champion tag and named without it. The board

@@ -172,24 +172,45 @@ test("a card the engine does not have at all is ABSENT, not OK", () => {
   );
 });
 
-/* The card that started this: Akali, Silent, played against Zarkhil on turn 9.
- * Absent before the import and a data-only stub after it — either way the gate
- * refuses to rank a board she is on, because the engine would play her as a
- * blank and still return a percentage. */
+/* The gate must refuse a board holding an unimplemented card, whichever card
+ * that happens to be. Naming one makes the test a liability: it pinned Akali,
+ * Silent, and broke the day she was implemented — reporting a regression where
+ * there was progress. So the stub is found, not assumed. */
+function anyStub(index, files) {
+  for (const card of index.rows) {
+    if (Fid.verdictFor(card, files).verdict === "STUB") return card;
+  }
+  return null;
+}
+
 test(
   "the gate refuses a position containing an unimplemented card",
   withIndex(() => {
-    if (!Fid.scanCardFiles().size) return;
+    const files = Fid.scanCardFiles();
+    if (!files.size) return;
+    const stub = anyStub(index, files);
+    if (!stub) return; // every card implemented — nothing to refuse
+
     const r = Fid.gate([
       { code: "SFD-148", name: "Draven, Audacious" },
-      { code: "VEN-038", name: "Akali, Silent" },
+      { code: stub.public_code, name: stub.name },
     ]);
-    assert.equal(r.safe, false);
-    assert.equal(r.blocking.length, 1);
-    assert.ok(
-      ["ABSENT", "STUB"].includes(r.blocking[0].verdict),
-      `unexpected verdict ${r.blocking[0].verdict}`
-    );
+    assert.equal(r.safe, false, `expected ${stub.name} to block`);
+    assert.ok(r.blocking.some((b) => ["ABSENT", "STUB"].includes(b.verdict)));
+  })
+);
+
+/* The card that started this: Akali, Silent, played against Zarkhil on turn 9.
+ * Absent from the engine, then a generated stub, now implemented — her first
+ * clause needed a board-aware canBeChosenByEnemy, which the engine gained. */
+test(
+  "Akali, Silent no longer blocks a ranking",
+  withIndex(() => {
+    const files = Fid.scanCardFiles();
+    if (!files.size) return;
+    const r = A.resolve(index, { code: "VEN-038", name: "Akali, Silent" });
+    if (r.miss) return; // set not imported in this checkout
+    assert.equal(Fid.verdictFor(r.card, files).verdict, "OK");
   })
 );
 

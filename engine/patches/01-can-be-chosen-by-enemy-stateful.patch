@@ -1,0 +1,37 @@
+diff --git a/src/cards/card.h b/src/cards/card.h
+index bd1b268..2529ffd 100644
+--- a/src/cards/card.h
++++ b/src/cards/card.h
+@@ -557,6 +557,19 @@ public:
+     /// flag to filter out untargetable enemy candidates.
+     virtual bool canBeChosenByEnemy() const { return true; }
+ 
++    /// Same question, with the board in hand.
++    ///
++    /// The stateless form above cannot express a condition — "unless I'm in
++    /// combat", "while I'm level 16" — so cards needing one were left
++    /// unimplemented with an ENGINE GAP note (Master Yi, Unstoppable; Akali,
++    /// Silent). This overload is what the engine actually calls; it defaults
++    /// to the stateless answer, so every existing override keeps working
++    /// untouched and only cards that need the board override this one.
++    virtual bool canBeChosenByEnemy(const GameState& /*state*/,
++                                    GameObjectId /*self*/) const {
++        return canBeChosenByEnemy();
++    }
++
+     // ── Entry state ───────────────────────────────────────────────────
+     /// Whether this unit should enter the board READY (not exhausted) on
+     /// play, without paying an Accelerate cost. Default false; resolves
+diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
+index ce24a33..ca123b7 100644
+--- a/src/engine/game_engine.cpp
++++ b/src/engine/game_engine.cpp
+@@ -3829,7 +3829,7 @@ void GameEngine::recalculateAuras() {
+         if (!on_board && !legend_zone) continue;
+         if (obj.card_def_id == kInvalidId) continue;
+         const Card* card = card_registry_.get(obj.card_def_id);
+-        if (on_board && card && !card->canBeChosenByEnemy()) {
++        if (on_board && card && !card->canBeChosenByEnemy(state_, id)) {
+             obj.untargetable_by_enemy = true;
+         }
+ 
