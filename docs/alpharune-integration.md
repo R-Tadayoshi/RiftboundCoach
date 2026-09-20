@@ -158,6 +158,35 @@ the set is already one of the engine's 23, and keywords are declarative
 (`d.keywords.set(Keyword::Deflect)`) with the engine handling them centrally.
 So no engine changes are needed, only cards.
 
+### The fidelity gate (built: `coach/fidelity.js`)
+
+Derived rather than asked for, since the engine offers no way to ask. A card
+is trustworthy if its printed text needs no behaviour (vanilla, or only
+keyword reminders) **or** its C++ file overrides a behaviour hook. Anything
+else is a stub. Across the engine's 787 cards:
+
+```
+  OK       661  84%
+  STUB     126  16%
+  ABSENT     0   0%
+```
+
+Better than the README's "~240 manually implemented" suggests — the
+auto-generated cards mostly do carry bodies.
+
+Run against the real turn-11 board, 12 of 14 cards pass and two do not:
+
+| card | verdict |
+|---|---|
+| Guardian Angel | **STUB** — `gear/0374_guardian_angel.cpp` overrides nothing |
+| Akali, Silent | **ABSENT** — VEN |
+
+The Guardian Angel result is worth noting twice: the four-month-old audit says
+its death-replacement effect is unimplemented, and this gate reached the same
+conclusion from the source alone. Its `[Equip]` still works, because Equip is
+an engine keyword — so a search would find the equip-to-ready line and then
+misplay what happens when the unit dies. Exactly the quiet kind of wrong.
+
 ### A stub is worse than a missing card
 
 For a *search*, an unimplemented card is more dangerous than an absent one. The

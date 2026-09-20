@@ -122,3 +122,72 @@ test("the residual is the text an implementation would have to cover", () => {
   assert.equal(F.residualText({ description: "Kill a gear." }), "Kill a gear.");
   assert.equal(F.residualText({ description: "[Temporary] (Kill me at the start of your Beginning Phase.)" }), "");
 });
+
+/* The fidelity gate. A stub card is worse than a missing one for a search:
+ * the engine plays it as a blank and the search returns a confident number
+ * about a board that is quietly wrong. */
+const Fid = require("../coach/fidelity.js");
+
+test(
+  "cards whose text needs behaviour, with a file that has none, are stubs",
+  withIndex(() => {
+    const files = Fid.scanCardFiles();
+    if (!files.size) return;
+
+    const card = { id: "x-1", ability_text: "Kill a gear." };
+    assert.equal(
+      Fid.verdictFor(card, new Map([["x-1", { file: "f.cpp", hasBehaviour: false }]])).verdict,
+      "STUB"
+    );
+    assert.equal(
+      Fid.verdictFor(card, new Map([["x-1", { file: "f.cpp", hasBehaviour: true }]])).verdict,
+      "OK"
+    );
+  })
+);
+
+test("a card needing no behaviour is fine with no behaviour", () => {
+  const vanilla = { id: "x-2", ability_text: "" };
+  const kw = { id: "x-3", ability_text: "[Temporary] (Kill me at the start of your Beginning Phase.)" };
+  const files = new Map([
+    ["x-2", { file: "a.cpp", hasBehaviour: false }],
+    ["x-3", { file: "b.cpp", hasBehaviour: false }],
+  ]);
+  assert.equal(Fid.verdictFor(vanilla, files).verdict, "OK");
+  assert.equal(Fid.verdictFor(kw, files).verdict, "OK");
+});
+
+test("a card the engine does not have at all is ABSENT, not OK", () => {
+  assert.equal(Fid.verdictFor(null, new Map()).verdict, "ABSENT");
+  assert.equal(
+    Fid.verdictFor({ id: "nope", ability_text: "x" }, new Map()).verdict,
+    "ABSENT"
+  );
+});
+
+test(
+  "the gate refuses a position containing a VEN card",
+  withIndex(() => {
+    if (!Fid.scanCardFiles().size) return;
+    const r = Fid.gate([
+      { code: "SFD-148", name: "Draven, Audacious" },
+      { code: "VEN-038", name: "Akali, Silent" },
+    ]);
+    assert.equal(r.safe, false);
+    assert.equal(r.blocking.length, 1);
+    assert.equal(r.blocking[0].verdict, "ABSENT");
+  })
+);
+
+test(
+  "a position of fully implemented cards passes",
+  withIndex(() => {
+    if (!Fid.scanCardFiles().size) return;
+    const r = Fid.gate([
+      { code: "SFD-148", name: "Draven, Audacious" },
+      { name: "Irelia, Blade Dancer" },
+      { code: "OGN-046", name: "En Garde" },
+    ]);
+    assert.equal(r.safe, true, JSON.stringify(r.blocking));
+  })
+);
