@@ -175,7 +175,8 @@ function main() {
   console.log(
     `alpharune index: ${index.rows.length} cards, ${index.byName.size} distinct names\n` +
       `sets covered: ${Object.entries(sets).map(([s, n]) => `${s} (${n})`).join(", ")}\n` +
-      `NOT covered: VEN — a miss below is most likely a card from that set.\n`
+      `a miss below is a name this index has no entry for — a typo, a variant ` +
+      `printing, or a set that has not been imported yet (coach/fetch-set.js).\n`
   );
 
   const files = args.filter((a) => !a.startsWith("--"));
