@@ -18,15 +18,22 @@ copied=0 same=0 differs=0
 for src in "$HERE"/*.cpp; do
   [ -e "$src" ] || continue
   name="$(basename "$src")"
-  # Card type directory is implied by the class it derives from.
-  case "$(grep -oE 'public (Unit|Spell|Gear|Legend|Battlefield|Rune)Card' "$src" | head -1)" in
-    *UnitCard)        sub=units ;;
-    *SpellCard)       sub=spells ;;
-    *GearCard)        sub=gear ;;
-    *LegendCard)      sub=legends ;;
-    *BattlefieldCard) sub=battlefields ;;
-    *RuneCard)        sub=runes ;;
-    *) echo "  cannot tell the card type of $name" >&2; exit 1 ;;
+  # Card type directory, from the CardDef the file carries. Deriving it from
+  # the base class breaks on any card that inherits a helper base instead —
+  # SimpleEquipGear, and whatever comes next — so read the type the card
+  # actually declares.
+  # Anchored to the DECLARATION. An unanchored match reads whatever
+  # CardType the card's logic happens to mention first — Decree of Unity
+  # tests `obj.card_type == CardType::Gear` while looking for targets, and
+  # got installed as gear, registering card 918 twice from two directories.
+  case "$(grep -oE 'd\.card_type = CardType::(Unit|Spell|Gear|Legend|Battlefield|Rune)' "$src" | head -1)" in
+    *::Unit)        sub=units ;;
+    *::Spell)       sub=spells ;;
+    *::Gear)        sub=gear ;;
+    *::Legend)      sub=legends ;;
+    *::Battlefield) sub=battlefields ;;
+    *::Rune)        sub=runes ;;
+    *) echo "  cannot tell the card type of $name (no 'd.card_type = CardType::...')" >&2; exit 1 ;;
   esac
   dst="$ROOT/src/cards/$sub/$name"
 

@@ -133,3 +133,47 @@ test("hand-written cards do not ask a variant for a type it cannot hold", () => 
       `${f}: LocationId holds BattlefieldLocation, not BattlefieldId`);
   }
 });
+
+/* The install script picks a directory from the card's declared type. An
+ * unanchored match reads whatever CardType the card's LOGIC mentions first —
+ * Decree of Unity tests `obj.card_type == CardType::Gear` while enumerating
+ * targets, and got installed as gear, registering the same card id twice from
+ * two directories. */
+test("every hand-written card declares its type unambiguously", () => {
+  const fs2 = require("fs");
+  const path2 = require("path");
+  const dir = path2.join(__dirname, "..", "engine", "cards");
+  if (!fs2.existsSync(dir)) return;
+
+  for (const f of fs2.readdirSync(dir).filter((x) => x.endsWith(".cpp"))) {
+    const text = fs2.readFileSync(path2.join(dir, f), "utf8");
+    const decls = text.match(/d\.card_type = CardType::\w+/g) || [];
+    assert.equal(decls.length, 1, `${f}: expected exactly one d.card_type declaration`);
+  }
+});
+
+test("a card id is registered exactly once across the engine's card tree", () => {
+  const fs2 = require("fs");
+  const path2 = require("path");
+  const root = process.env.ALPHARUNE_ROOT ||
+    path2.join(__dirname, "..", "..", "chorlick", "alpharune");
+  const cardsDir = path2.join(root, "src", "cards");
+  if (!fs2.existsSync(cardsDir)) return;
+
+  const seen = new Map();
+  for (const sub of fs2.readdirSync(cardsDir)) {
+    const d = path2.join(cardsDir, sub);
+    if (!fs2.statSync(d).isDirectory()) continue;
+    for (const f of fs2.readdirSync(d).filter((x) => x.endsWith(".cpp"))) {
+      const text = fs2.readFileSync(path2.join(d, f), "utf8");
+      for (const m of text.matchAll(/void register_card_(\d+)\(CardRegistry&\s*\w*\)\s*\{/g)) {
+        const id = m[1];
+        if (seen.has(id)) {
+          assert.fail(`card ${id} registered in both ${seen.get(id)} and ${sub}/${f}`);
+        }
+        seen.set(id, `${sub}/${f}`);
+      }
+    }
+  }
+  assert.ok(seen.size > 900, `expected the full registry, saw ${seen.size}`);
+});
