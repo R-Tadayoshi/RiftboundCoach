@@ -162,8 +162,14 @@ void register_card_${id}(CardRegistry& r) {
 `;
 }
 
-/** The highest card id the engine already uses, so new ones do not collide. */
-function highestId(root) {
+/* Every card the engine already has, as def_id -> id, plus the highest id in
+ * use. Both are needed to make generation idempotent, and idempotence is not
+ * a nicety here: the first version took `highest id + 1` for everything, so
+ * running it twice rewrote all 197 files with fresh ids while the aggregator
+ * still called the old ones. The result does not link, and the reason is
+ * nowhere near the symptom. */
+function scanIds(root) {
+  const byDefId = new Map();
   let max = 0;
   const dir = path.join(root, "src", "cards");
   for (const sub of fs.readdirSync(dir)) {
@@ -171,13 +177,18 @@ function highestId(root) {
     if (!fs.statSync(p).isDirectory()) continue;
     for (const f of fs.readdirSync(p)) {
       if (!f.endsWith(".cpp")) continue;
-      for (const m of fs.readFileSync(path.join(p, f), "utf8").matchAll(/d\.id\s*=\s*(\d+);/g)) {
-        max = Math.max(max, Number(m[1]));
-      }
+      const text = fs.readFileSync(path.join(p, f), "utf8");
+      const id = /d\.id\s*=\s*(\d+);/.exec(text);
+      const def = /d\.def_id\s*=\s*R"RB\(([^)]*)\)RB"/.exec(text);
+      if (id) max = Math.max(max, Number(id[1]));
+      if (id && def) byDefId.set(def[1], Number(id[1]));
     }
   }
-  return max;
+  return { byDefId, max };
 }
+
+/** Kept for the tests and for callers that only want the ceiling. */
+const highestId = (root) => scanIds(root).max;
 
 function main() {
   const setId = (process.argv[2] || "").toUpperCase();
@@ -195,13 +206,26 @@ function main() {
   }
   const cards = Object.values(JSON.parse(fs.readFileSync(cacheFile, "utf8")));
 
-  const base = highestId(ALPHARUNE);
-  const planned = cards.map((c, i) => ({ card: c, id: base + 1 + i }));
+  const { byDefId, max } = scanIds(ALPHARUNE);
+  let next = max + 1;
+  /* A card the engine already has keeps its id, whether it came from a
+   * previous run of this script or was hand-written. Re-generating must not
+   * renumber anything. */
+  const planned = cards.map((card) => {
+    const existing = byDefId.get(card.id);
+    return { card, id: existing ?? next++, fresh: existing === undefined };
+  });
+  const regenerated = planned.filter((p) => !p.fresh).length;
 
   let vanilla = 0, stubs = 0;
   for (const { card } of planned) ((card.description || "").trim() ? stubs++ : vanilla++);
 
-  console.log(`${setId}: ${cards.length} cards, ids ${base + 1}..${base + cards.length}`);
+  const freshIds = planned.filter((p) => p.fresh).map((p) => p.id);
+  console.log(
+    `${setId}: ${cards.length} cards` +
+      (freshIds.length ? `, ${freshIds.length} new at ids ${freshIds[0]}..${freshIds[freshIds.length - 1]}` : "") +
+      (regenerated ? `, ${regenerated} already present (ids preserved)` : "")
+  );
   console.log(`  ${vanilla} vanilla — complete as generated`);
   console.log(`  ${stubs} with printed text — generated as STUBS, blocked by the fidelity gate`);
 
@@ -220,18 +244,62 @@ function main() {
     written.push({ id, file });
   }
 
+  /* The card index is the engine's own manifest, and everything on our side
+   * resolves names through it — the fidelity gate, the position translator,
+   * the deck checker. Writing the C++ without writing the index leaves the
+   * new cards invisible: present in the binary, absent from every check.
+   * Fails closed, so nothing breaks, but nothing improves either. */
+  const indexFile = path.join(ALPHARUNE, "cards", "card_index.json");
+  const indexRaw = JSON.parse(fs.readFileSync(indexFile, "utf8"));
+  const rows = Array.isArray(indexRaw) ? indexRaw : indexRaw.cards || indexRaw.data || [];
+  const have = new Set(rows.map((r) => r.id));
+  let added = 0;
+  for (const { card } of planned) {
+    if (have.has(card.id)) continue;
+    rows.push({
+      id: card.id,
+      name: card.name,
+      set: card.set_id,
+      set_name: card.set_name || card.set_id,
+      collector_number: card.collector_number,
+      public_code: card.public_code,
+      card_type: String(card.type || "unit").toLowerCase(),
+      super_type: card.super_type ?? null,
+      domains: (card.domains || []).map((d) => String(d).toLowerCase()),
+      tags: card.tags || [],
+      energy_cost: card.stats?.energy ?? 0,
+      power_cost: card.stats?.power ?? 0,
+      might: card.stats?.might ?? 0,
+      might_bonus: null,
+      rarity: String(card.rarity || "common").toLowerCase(),
+      ability_text: card.description || "",
+      effect_text: "",
+      image_url: card.image || "",
+      artist: card.art?.artist ?? null,
+    });
+    added += 1;
+  }
+  fs.writeFileSync(indexFile, JSON.stringify(Array.isArray(indexRaw) ? rows : indexRaw, null, 1));
+  console.log(`added ${added} card(s) to ${path.basename(indexFile)}`);
+
   // The aggregator is generated; extend it rather than hand-editing.
   const initFile = path.join(ALPHARUNE, "src", "cards", "cards_init.cpp");
   let init = fs.readFileSync(initFile, "utf8");
-  const decls = written.map((w) => `void register_card_${w.id}(CardRegistry&);`).join("\n");
-  const calls = written.map((w) => `    register_card_${w.id}(registry);`).join("\n");
+  // Only add registrations the aggregator does not already carry.
+  const fresh = written.filter((w) => !new RegExp(`register_card_${w.id}\\(`).test(init));
+  if (!fresh.length) {
+    console.log(`\nwrote ${written.length} card file(s); cards_init.cpp already registers them`);
+    return;
+  }
+  const decls = fresh.map((w) => `void register_card_${w.id}(CardRegistry&);`).join("\n");
+  const calls = fresh.map((w) => `    register_card_${w.id}(registry);`).join("\n");
   init = init.replace(/(\nvoid registerAllCards)/, `\n${decls}\n$1`);
   init = init.replace(/\n\}\s*\n\s*\} \/\/ namespace riftbound\s*$/, `\n${calls}\n}\n\n} // namespace riftbound\n`);
   fs.writeFileSync(initFile, init);
 
-  console.log(`\nwrote ${written.length} card file(s) and updated cards_init.cpp`);
+  console.log(`\nwrote ${written.length} card file(s), registered ${fresh.length} new`);
   console.log(`rebuild: (cd ${ALPHARUNE} && cmake --build build)`);
 }
 
 if (require.main === module) main();
-module.exports = { generate, keywordsOf, keywordValue, className, fileStem, highestId };
+module.exports = { generate, keywordsOf, keywordValue, className, fileStem, highestId, scanIds };

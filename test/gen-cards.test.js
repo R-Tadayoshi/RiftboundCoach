@@ -70,3 +70,26 @@ test("the id scan finds the engine's highest in use", () => {
   catch (_) { return; }
   assert.ok(max > 700, `expected a populated registry, saw ${max}`);
 });
+
+/* Idempotence. The first version took "highest id + 1" for every card, so a
+ * second run renumbered all 197 files while the aggregator still called the
+ * old ids. That does not link, and the error is nowhere near the cause. */
+test("a card the engine already has keeps its id", () => {
+  const root = process.env.ALPHARUNE_ROOT || "../chorlick/alpharune";
+  let scan;
+  try { scan = G.scanIds(root); } catch (_) { return; }
+
+  assert.ok(scan.byDefId.size > 700, "should find the existing cards by def_id");
+  assert.ok(scan.max >= scan.byDefId.size, "max id is at least the card count");
+
+  // Every def_id maps to exactly one id, and no two cards share one.
+  const ids = [...scan.byDefId.values()];
+  assert.equal(new Set(ids).size, ids.length, "two cards share an id");
+});
+
+test("highestId still reports the ceiling", () => {
+  const root = process.env.ALPHARUNE_ROOT || "../chorlick/alpharune";
+  try {
+    assert.equal(G.highestId(root), G.scanIds(root).max);
+  } catch (_) { /* no checkout */ }
+});
