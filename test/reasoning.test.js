@@ -32,7 +32,13 @@ test("effort is case-insensitive", () => {
  * mislabelled run gets read as a finding about effort. */
 test("an unknown effort is an error, not a silent fallback", () => {
   assert.throws(() => bodyFor("hgih"), /not a reasoning effort/);
-  assert.throws(() => bodyFor("off"), /older name for "none"/);
+});
+
+/* A shell variable set once outlives the code that read it, so the old name
+ * keeps arriving long after the rename. It maps to what the word means. */
+test("the old name off is read as none, not rejected", () => {
+  assert.deepEqual(bodyFor("off").reasoning, { effort: "none" });
+  assert.deepEqual(bodyFor("OFF").reasoning, { effort: "none" });
 });
 
 test("an omitted effort is the default, and sends nothing", () => {

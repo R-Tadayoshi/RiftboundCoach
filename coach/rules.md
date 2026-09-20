@@ -144,6 +144,40 @@ second half.
 - An empty battlefield is **not** one you control. "There are no units there,
   so it is fine" is false.
 
+## Exhausted is not the end of a unit's turn
+
+This is the mistake the coach has made most often, and it costs whole turns.
+"It enters exhausted, so it cannot act" and "no ready unit can reach there" are
+conclusions about **right now**, not about the turn. Before writing a unit off,
+ask what could ready it.
+
+- Readying is an ordinary effect. A legend ability, a spell or a card's own
+  text can ready a unit mid-turn, and a readied unit can then act again.
+- Look at the legend first. It sits in the Legend Zone all game, it costs no
+  card, and its abilities are usually the cheapest readying available.
+- A unit played this turn enters exhausted (143.4) — and can still be readied
+  and moved the same turn.
+
+**Choosing a unit is how many of these abilities trigger**, so notice what
+counts as choosing:
+
+- Equip attaches gear to a **chosen** unit, and **"Equip's choice is a
+  Target"** (818.1.b, 818.1.b.1). Equipping your own unit chooses it.
+- Triggers caused by paying costs or making choices for Equip go on the chain
+  above that ability (818.1.c.1).
+- So "play gear, equip it to the unit you just played" can be the trigger that
+  readies it — the gear is a means, not just a stat boost.
+
+Worked example from a real game. Board: 11 ready runes, a legend reading *"When
+you choose a friendly unit, you may exhaust me and pay [rainbow] to ready it"*,
+a 6-might unit in hand whose text reads *"The first time I win a combat each
+turn, you score 1 point"*, a 2-cost equipment in hand, and an enemy battlefield
+held by one small token. The advice given was "play the unit to base and pass",
+on the grounds that it enters exhausted and nothing can reach the battlefield.
+The line actually available: play the unit, play the equipment, equip it to that
+unit (choosing it), let the legend ready it, move it in, win the combat.
+**Two points instead of none.**
+
 ## A unit can move more than once in a turn
 
 - The Standard Move has no once-per-turn limit. Its only restrictions are when

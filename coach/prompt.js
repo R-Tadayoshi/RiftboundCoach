@@ -92,6 +92,13 @@ This block is checked against the rules by code before it reaches the player,
 so a line you cannot write down plainly is a line you have not thought
 through — and an unnamed target is a target nothing can check.
 
+Before you conclude that a unit cannot act:
+- "It enters exhausted" and "nothing can reach there" describe this instant,
+  not the turn. Name what could ready it first — the legend above all, whose
+  text is given to you. A readied unit acts again.
+- Ask what your own cards choose or target. Equipping gear to your unit chooses
+  that unit, and choosing is what many abilities trigger on.
+
 Legality:
 - The RULES section below is authoritative and binding. Never recommend a play
   it forbids.

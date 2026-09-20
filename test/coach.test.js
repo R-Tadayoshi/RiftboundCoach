@@ -976,3 +976,24 @@ test("the rules state that one rune can pay both Energy and Power", () => {
   assert.match(rules, /Energy is limited by how many runes are \*\*ready\*\*/);
   assert.match(rules, /Power is limited by how many runes are \*\*on the board/);
 });
+
+/* The line the coach missed on turn 11: play Draven, play Guardian Angel,
+ * equip it to Draven (which CHOOSES him), let Blade Dancer ready him, move in
+ * and win the combat. Two points. The coach said "play to base and pass",
+ * because it stopped at "he enters exhausted". */
+
+test("the rules say exhausted is not the end of a unit's turn", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /Exhausted is not the end of a unit's turn/);
+  assert.match(rules, /Look at the legend first/);
+  assert.match(rules, /Equip's choice is a\s*\n?\s*Target/);
+  assert.match(rules, /Two points instead of none/);
+});
+
+test("the coach is told to name a readying effect before writing a unit off", () => {
+  const { SYSTEM } = require("../coach/prompt.js");
+  assert.match(SYSTEM, /Before you conclude that a unit cannot act/);
+  assert.match(SYSTEM, /Name what could ready it first/);
+  assert.match(SYSTEM, /Equipping gear to your unit chooses/);
+});

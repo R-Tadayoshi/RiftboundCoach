@@ -61,15 +61,35 @@ const EFFORTS = new Set([
   "default",
 ]);
 
+/* "off" is what this used to be called, and a shell variable set once outlives
+ * the code that read it. Erroring on it every run punishes the user for a
+ * rename that was my fault, so it maps to what the word plainly means — none —
+ * and says so once. That is not the silent fallback this file warns about: the
+ * old "off" meant "send nothing", and THAT is the meaning being dropped. */
+const DEPRECATED = { off: "none" };
+const warned = new Set();
+
 function applyReasoning(body, effort) {
-  const want = (effort || "default").toLowerCase();
+  let want = (effort || "default").toLowerCase();
+
+  if (DEPRECATED[want]) {
+    const to = DEPRECATED[want];
+    if (!warned.has(want)) {
+      warned.add(want);
+      console.warn(
+        `  [note] "@${want}" is now "@${to}". Reading it as "@${to}". ` +
+          `It used to mean "send no reasoning setting", which is "@default" ` +
+          `and is not off — that is why it was renamed.`
+      );
+    }
+    want = to;
+  }
+
   /* A typo must not quietly become "provider default" — that is how a
    * mislabelled run gets read as a finding. */
   if (!EFFORTS.has(want)) {
     throw new Error(
-      `"${effort}" is not a reasoning effort. Use one of: ${[...EFFORTS].join(", ")}. ` +
-        `("off" was an older name for "none"; it used to mean "send nothing", which is ` +
-        `"default" and is not off at all.)`
+      `"${effort}" is not a reasoning effort. Use one of: ${[...EFFORTS].join(", ")}.`
     );
   }
   if (want === "default") return; // send no reasoning field
@@ -160,4 +180,4 @@ async function ask({
   };
 }
 
-module.exports = { ask, DEFAULT_MODEL, MAX_TOKENS, REASONING_EFFORT, EFFORTS, applyReasoning, ENDPOINT };
+module.exports = { ask, DEFAULT_MODEL, MAX_TOKENS, REASONING_EFFORT, EFFORTS, DEPRECATED, applyReasoning, ENDPOINT };
