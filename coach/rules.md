@@ -32,6 +32,24 @@ rules and card-specific interactions.
 **So: with no units anywhere, the only legal destination for a unit is your
 Base.** Reaching a battlefield takes a second step, next turn at the earliest.
 
+## Hidden
+
+- Hidden is a prerequisite for the **Hide** discretionary action, and appears
+  on spells, units and gear. (811.1, 811.1.a)
+- **"While this card is in your hand or in your Champion Zone on your turn
+  during an Open State, you may pay [A] to hide this facedown at a battlefield
+  you control that doesn't already have a facedown card hidden there."**
+  (811.1.b)
+- Hiding is **not** playing, and does not open a chain. Playing a card *from*
+  hidden does. (811.1.c.1, 811.1.c.2, 811.1.c.3)
+- A hidden permanent must be played to **that** battlefield — the one it was
+  hidden at — which overrides gear's normal base-only restriction.
+  (811.1.d, 811.1.d.1, 811.1.d.1.a)
+
+**So Hide needs a battlefield you already control.** With none, hiding is not
+an option this turn, however attractive the cost looks. Note also that a card
+in the **Champion Zone** can be hidden from there, not only from hand.
+
 ## Units enter exhausted
 
 - **"Units enter the Board exhausted."** (143.4) This can be altered by

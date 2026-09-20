@@ -219,25 +219,41 @@ function buildUserMessage(summary, cardText, prior) {
     .join("\n");
 
   const priorBlock = describePrior(prior);
-  /* Spelled out as an available play rather than folded into the player's
-   * name, where it read as "who you are" and was never considered. */
   const championLine = (side) =>
     side.championZone.available
-      ? `  champion in zone, PLAYABLE THIS TURN: ${side.championZone.name}`
+      ? `  champion still in its zone (playable by them): ${side.championZone.name}`
       : `  champion: already deployed or not in its zone`;
+
+  /* Your castable cards, enumerated in one place.
+   *
+   * The champion was previously a line under the player's name, next to their
+   * score and legend — where it read as biography. Three models running at
+   * three efforts all called a hand card "your only unit" with a champion
+   * sitting castable in its zone. A fact in the prompt that is never used is
+   * not in the prompt; it has to sit where the options are counted. */
+  const playableList = (side) => {
+    const rows = side.hand.map((c) => `  - ${c.name} (hand)`);
+    if (side.championZone.available) {
+      rows.push(
+        `  - ${side.championZone.name} (CHAMPION ZONE — playable from there, rule 108.3.d)`
+      );
+    }
+    return rows.length ? rows.join("\n") : "  (nothing)";
+  };
 
   return `TURN ${turn.number ?? "?"} (${turn.step ?? "?"}) — ${
     turn.isMyTurn === true ? "my turn" : turn.isMyTurn === false ? "their turn" : "turn owner unknown"
   }
 
 ME — ${me.name ?? "?"} (legend: ${me.legend ?? "?"})
-${championLine(me)}
   score ${me.score ?? "?"} of 8
   floating: energy ${me.floating.energy ?? "?"}, power ${me.floating.power ?? "?"}
   runes: ${describeRunes(me.runes)}
-  hand: ${me.handCount} card(s) — ${describeHand(me.hand)}
   base: ${describeUnits(me.base)}
   deck: ${me.deck.main ?? "?"} cards, rune deck ${me.deck.rune ?? "?"}
+
+CARDS YOU CAN PLAY THIS TURN — every one of them, not just your hand:
+${playableList(me)}
 
 THEM — ${them.name ?? "?"} (legend: ${them.legend ?? "?"})
 ${championLine(them)}

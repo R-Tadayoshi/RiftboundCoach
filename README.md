@@ -316,9 +316,12 @@ its advice against the rules:
 - **Units enter exhausted** (143.4), so a unit played this turn cannot move
   this turn — moving costs exhausting it, and it already is.
 - **The champion in its zone is a card you can play** (108.3.d), not a label
-  for who you are. The board state now says `champion in zone, PLAYABLE THIS
-  TURN` when the zone is occupied, and its card text is fetched like any
-  other.
+  for who you are. It is listed under `CARDS YOU CAN PLAY THIS TURN` alongside
+  your hand, and its card text is fetched like any other — putting it beside
+  the player's score and legend was not enough, and it went unconsidered.
+- **Hide needs a battlefield you already control** (811.1.b), so on an empty
+  board it is not an option however cheap it looks. A card in the Champion
+  Zone can be hidden from there too, not only from hand.
 - **A ready rune is worth 1 Energy or 1 domain Power, not both**, and the pool
   empties every turn, so floating resources cannot be banked. (164.2, 167)
 

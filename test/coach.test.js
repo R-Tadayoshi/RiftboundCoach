@@ -693,11 +693,37 @@ test("a deployed champion leaves an empty zone, and says so", () => {
   assert.equal(s.players.self.champion, null);
 });
 
-test("the prompt names the champion as a play, not as who you are", () => {
+test("the champion is listed where the turn's options are counted", () => {
+  // It was previously a line under the player's name, beside their score and
+  // legend — where it read as biography. Three models at three efforts all
+  // called a hand card "your only unit" with a champion sitting castable.
   fixture.build();
   const msg = buildUserMessage(summarize(Snapshot.build()), {});
-  assert.match(msg, /champion in zone, PLAYABLE THIS TURN: Yasuo/);
+
+  assert.match(msg, /CARDS YOU CAN PLAY THIS TURN/);
+  assert.match(msg, /- Yasuo \(CHAMPION ZONE — playable from there, rule 108\.3\.d\)/);
   assert.match(msg, /legend: Yasuo, the Unforgiven/, "the legend stays an identity");
+
+  const playable = msg.slice(msg.indexOf("CARDS YOU CAN PLAY"), msg.indexOf("THEM —"));
+  for (const card of ["Sweeping Blade", "Windwall", "Yasuo"]) {
+    assert.ok(playable.includes(card), `${card} is among the options`);
+  }
+});
+
+test("a deployed champion is not offered as a play", () => {
+  fixture.build();
+  globalThis.document
+    .querySelector('[data-zone-owner="self"] [data-drop-zone="champion"]')
+    .remove();
+  const msg = buildUserMessage(summarize(Snapshot.build()), {});
+  const playable = msg.slice(msg.indexOf("CARDS YOU CAN PLAY"), msg.indexOf("THEM —"));
+  assert.ok(!playable.includes("CHAMPION ZONE"), "nothing to play from an empty zone");
+});
+
+test("the opponent's champion is shown as theirs, not as your option", () => {
+  fixture.build();
+  const msg = buildUserMessage(summarize(Snapshot.build()), {});
+  assert.match(msg, /champion still in its zone \(playable by them\)/);
 });
 
 test("the champion's card text is fetched, since it can be cast", () => {
@@ -713,4 +739,15 @@ test("both new rules are stated with their numbers", () => {
   assert.match(rules, /can be played from here as normal/);
   assert.match(rules, /108\.3\.d/);
   assert.match(rules, /cannot move this turn/, "the consequence is spelled out");
+});
+
+test("Hidden requires a battlefield you control, and the rule says so", () => {
+  // A model recommended hiding Tideturner on a board where the player
+  // controlled no battlefield — illegal, and it read as the clever line.
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /hide this facedown at a battlefield\s+you control/);
+  assert.match(rules, /811\.1\.b/);
+  assert.match(rules, /Hide needs a battlefield you already control/);
+  assert.match(rules, /Champion Zone.*can be hidden from there|hidden from there/s);
 });
