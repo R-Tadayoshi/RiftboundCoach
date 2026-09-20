@@ -193,6 +193,47 @@ Passing the turn was worst at every count — 40.0%, 38.0%, 37.2% — which is t
 reassuring part. The thing the engine is sure about, it has been sure about
 from the first run.
 
+## Two things scoped and deliberately NOT built
+
+Both were looked at properly and left alone, which is worth recording so the
+next attempt starts from the findings rather than the idea.
+
+### Flow (17 VEN cards)
+
+`[Flow] <cost>` — "You may play this from your trash for its Flow cost. Then
+banish it."
+
+Most of the machinery exists. `Intent::use_alt_play_cost` is already a field,
+`Card::alternativePlayCost` is already a virtual, and `canPayAdditionalCost`
+already checks an alternate cost — the champion-zone play path uses all three
+today. What is missing is the part that matters:
+
+- `generateMainPhaseActions` iterates `ps.hand`. Flow needs it to iterate
+  `ps.trash` as well — a **new source of legal actions**, which is the thing
+  search depends on most.
+- `executePlayCard` assumes the card leaves the hand, and resolution assumes it
+  goes to the trash. Flow needs it to leave the trash and be **banished**.
+
+That second point is a change to the resolution pipeline in a 4,500-line file,
+and a half-right version produces exactly what `coach/fidelity.js` was built to
+refuse: a card that does most of what it says. Left for a session that can
+verify it against the engine's own test suite rather than by inspection.
+
+### MCTS from a constructed position
+
+`RiftboundState::makeFromSnapshot` is public and is what `Clone()` calls on
+every MCTS decision, so searching a constructed position is possible. The
+obstacle is mechanical rather than deep: OpenSpiel links into `riftbound` as
+**loose object files**, not archives, so a new binary needs a CMake target in
+the engine rather than a one-line `g++` against a `.a` the way `engine/rank`
+is built. That means a patch that adds a target, and source inside the engine
+tree.
+
+Worth doing, but the gain is smaller than it looks: alpharune's MCTS uses a
+`RandomRolloutEvaluator`, so it is tree-guided random rollouts rather than a
+different kind of evaluation. `engine/rank` already separates options cleanly
+at 1200 rollouts in 79 seconds, which a turn-based game can afford.
+
 ## Staging
 
 **Stage 1 — rank my own lines. Does not need the resampler.**
