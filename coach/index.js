@@ -17,6 +17,7 @@ const { SYSTEM, buildUserMessage } = require("./prompt.js");
 const { ask, DEFAULT_MODEL } = require("./openrouter.js");
 const cards = require("./cards.js");
 const archetypes = require("./archetypes.js");
+const legality = require("./legality.js");
 
 const SIDECAR = process.env.RBC_SIDECAR || "http://127.0.0.1:8787";
 const POLL_MS = Number(process.env.RBC_POLL_MS || 1500);
@@ -119,15 +120,68 @@ async function coach(snapshot) {
     return;
   }
 
+  /* Ask, then check what came back. A provably illegal action is handed
+   * straight back with its rule, once: the model reasons well and forgets
+   * rules, and a second look with the violation named fixes most of them.
+   * One retry only — a model that breaks the same rule twice is not going to
+   * be argued out of it, and the player is waiting. */
+  async function askChecked(opts) {
+    const first = await ask(opts);
+    const violations = legality.check(first.text, summary, cardText);
+    /* Counted so silence can be told apart from approval: an answer with no
+     * ACTIONS block is not a clean one, it is an unchecked one. */
+    const checked = legality.parseActions(first.text).length;
+    if (!violations.length) return { ...first, violations: [], checked };
+
+    const complaint =
+      "That answer contains a play the rules do not allow:\n\n" +
+      violations.map((v) => `- ${v.action}\n  ${v.why} (rule ${v.rule})`).join("\n") +
+      "\n\nGive the answer again with a legal line. Do not defend the illegal " +
+      "one — the board above is the truth.";
+
+    try {
+      const second = await ask({
+        ...opts,
+        user: `${opts.user}\n\n---\nYOUR PREVIOUS ANSWER WAS REJECTED.\n${complaint}`,
+      });
+      return {
+        ...second,
+        violations,
+        retried: true,
+        checked: legality.parseActions(second.text).length,
+        stillIllegal: legality.check(second.text, summary, cardText),
+      };
+    } catch (err) {
+      return { ...first, violations, checked, retryFailed: err.message };
+    }
+  }
+
+  function reportChecks(result) {
+    if (!result.checked) {
+      console.warn(
+        "  [checker] no ACTIONS block in that answer — nothing was checked."
+      );
+    }
+    for (const v of result.violations || []) {
+      console.warn(`  [checker] rejected: ${v.action} — ${v.why} (rule ${v.rule})`);
+    }
+    if (result.retried) {
+      console.warn(
+        result.stillIllegal?.length
+          ? "  [checker] the retry is STILL illegal — treat this answer with suspicion."
+          : "  [checker] retried, and the second answer checks out."
+      );
+    }
+  }
+
   if (COMPARE) {
     // Sequential, not parallel: the point is to read them side by side, and a
     // rate limit hit halfway through a race tells you nothing.
     for (const { model, effort, label } of COMPARE_MODELS) {
       const started = Date.now();
       try {
-        const { text, usage, reasoningTokens, truncated } = await ask({
-          system: SYSTEM, user, model, effort,
-        });
+        const result = await askChecked({ system: SYSTEM, user, model, effort });
+        const { text, usage, reasoningTokens, truncated } = result;
         const secs = ((Date.now() - started) / 1000).toFixed(1);
         const thinking = reasoningTokens ? `, ${reasoningTokens} thinking` : "";
         console.log(
@@ -136,6 +190,7 @@ async function coach(snapshot) {
           }\n`
         );
         console.log(text + "\n");
+        reportChecks(result);
       } catch (err) {
         console.error(`\n### ${label} — failed: ${err.message}\n`);
       }
@@ -144,8 +199,10 @@ async function coach(snapshot) {
   }
 
   try {
-    const { text, model, usage, truncated } = await ask({ system: SYSTEM, user });
+    const result = await askChecked({ system: SYSTEM, user });
+    const { text, model, usage, truncated } = result;
     console.log("\n" + text + "\n");
+    reportChecks(result);
     if (truncated) {
       console.warn("  [cut off before the end — raise RBC_MAX_TOKENS]");
     }
