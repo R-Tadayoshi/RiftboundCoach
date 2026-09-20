@@ -47,7 +47,11 @@ private:
     static bool opponentPlayedASpell(const GameState& state, PlayerId controller) {
         for (auto p : {PlayerId::Player1, PlayerId::Player2}) {
             if (p == controller) continue;
-            if (state.player(p).spells_played_this_turn > 0) return true;
+            // Through the accessor, never the raw field: resetTurnTracking()
+            // runs for the turn player only, so the opponent's raw count is
+            // whatever they did on their own last turn. The accessor answers
+            // with the stamp, which is what "this turn" means.
+            if (state.spellsPlayedThisTurn(p) > 0) return true;
         }
         return false;
     }

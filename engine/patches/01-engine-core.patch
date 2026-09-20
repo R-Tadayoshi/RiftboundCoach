@@ -88,10 +88,35 @@ index f3f01e4..be793ea 100644
  
  // ── Gold tokens ──
 diff --git a/src/core/game_state.h b/src/core/game_state.h
-index 9c5ca4e..a4f55cb 100644
+index 9c5ca4e..f0bced5 100644
 --- a/src/core/game_state.h
 +++ b/src/core/game_state.h
-@@ -107,6 +107,7 @@ struct PlayerState {
+@@ -79,6 +79,24 @@ struct PlayerState {
+ 
+     // Per-turn tracking
+     int cards_played_this_turn = 0;
++    /// Spells specifically, and the turn the count belongs to.
++    ///
++    /// `cards_played_this_turn` cannot answer "has an opponent played a
++    /// spell this turn" — a unit increments it too — and several VEN cards
++    /// gate on exactly that (Crumbling Sands: "Counter a spell if an
++    /// opponent has played another spell this turn").
++    ///
++    /// The stamp is not belt-and-braces. `resetTurnTracking()` runs for the
++    /// TURN PLAYER only (GameEngine::runTurn), so a plain counter on the
++    /// non-turn player still holds what they did on their own last turn —
++    /// and reactions are exactly what the opponent plays during your turn.
++    /// Reading it through GameState::spellsPlayedThisTurn() makes a count
++    /// from an older turn read as zero, which is what "this turn" means.
++    ///
++    /// Counts spells PLAYED, so one later countered still counts: the
++    /// printed text asks what they did, not what resolved.
++    int spells_played_this_turn = 0;
++    int spells_played_turn = -1;
+     int equipment_played_this_turn = 0;  // gears tagged "Equipment" played this turn
+     int gears_played_this_turn = 0;      // any gear played this turn (Ornn's Forge)
+     bool has_discarded_this_turn = false;
+@@ -107,6 +125,7 @@ struct PlayerState {
      bool grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer ("friendly units may be played to open battlefields")
      bool units_play_base_only = false;         // set on the RESTRICTED player — Mageseeker Warden ("opponents can only play units to their base")
      bool tokens_enter_ready = false;           // Renata Glasc, Industrialist ("your tokens enter ready")
@@ -99,8 +124,43 @@ index 9c5ca4e..a4f55cb 100644
      bool recall_all_on_attacker_tie = false;   // Symbol of the Solari (227): attacker-side combat tie recalls ALL units
      bool effects_cant_ready_my_units = false;  // set on the RESTRICTED player — Mageseeker Warden cl2 ("spells/abilities can't ready enemy units/gear")
      int  spells_have_repeat_energy = 0;        // Syndra, Transcendent (708): granted [Repeat] tranche cost (energy)
+@@ -211,6 +230,8 @@ struct PlayerState {
+ 
+     void resetTurnTracking() {
+         cards_played_this_turn = 0;
++        spells_played_this_turn = 0;
++        spells_played_turn = -1;
+         equipment_played_this_turn = 0;
+         gears_played_this_turn = 0;
+         has_discarded_this_turn = false;
+@@ -585,6 +606,25 @@ struct GameState {
+ 
+     // ── Player access ──
+ 
++    /// Record that `id` played a spell, rolling the count over if the last
++    /// one they played was on an earlier turn. See PlayerState::
++    /// spells_played_this_turn for why the rollover cannot be left to
++    /// resetTurnTracking().
++    void notePlayedSpell(PlayerId id) {
++        auto& ps = player(id);
++        if (ps.spells_played_turn != turn.turn_number) {
++            ps.spells_played_turn = turn.turn_number;
++            ps.spells_played_this_turn = 0;
++        }
++        ps.spells_played_this_turn++;
++    }
++
++    /// How many spells `id` has played on the CURRENT turn.
++    int spellsPlayedThisTurn(PlayerId id) const {
++        const auto& ps = player(id);
++        return ps.spells_played_turn == turn.turn_number ? ps.spells_played_this_turn : 0;
++    }
++
+     PlayerState& player(PlayerId id) {
+         return players[playerIndex(id)];
+     }
 diff --git a/src/engine/effect_executor.cpp b/src/engine/effect_executor.cpp
-index 19d2363..cee3953 100644
+index 19d2363..52ad91e 100644
 --- a/src/engine/effect_executor.cpp
 +++ b/src/engine/effect_executor.cpp
 @@ -262,6 +262,32 @@ void EffectExecutor::drawCards(PlayerId player, int count) {
@@ -136,6 +196,14 @@ index 19d2363..cee3953 100644
  void EffectExecutor::bounceToHand(GameObjectId target) {
      if (!state_.objectExists(target)) return;
      auto& obj = state_.getObject(target);
+@@ -1186,6 +1212,7 @@ void EffectExecutor::playIgnoringCost(PlayerId player, GameObjectId card,
+ 
+     auto& ps = state_.player(player);
+     ps.cards_played_this_turn++;
++    if (obj.card_type == CardType::Spell) state_.notePlayedSpell(player);
+ 
+     // Fire the card's onPlay hook (CR 355.1 "As you play me"). Without
+     // this, cards played by Dazzling Aurora / Mirror Image / etc. via
 diff --git a/src/engine/effect_executor.h b/src/engine/effect_executor.h
 index 1af2ec5..d9083d2 100644
 --- a/src/engine/effect_executor.h
@@ -171,10 +239,26 @@ index 1af2ec5..d9083d2 100644
      void giveTemporaryMight(GameObjectId target, int amount, int minimum = 0);
      void giveTemporaryKeyword(GameObjectId target, Keyword kw, int value);
 diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
-index ce24a33..b82a15e 100644
+index ce24a33..d804291 100644
 --- a/src/engine/game_engine.cpp
 +++ b/src/engine/game_engine.cpp
-@@ -1747,6 +1747,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
+@@ -1347,6 +1347,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
+ 
+     // Track play count
+     ps.cards_played_this_turn++;
++    if (card.card_type == CardType::Spell) state_.notePlayedSpell(intent.player);
+     // Per-turn gear/equipment counters (Emperor of the Sands gate; Ornn's
+     // Forge "first gear each turn"). NOTE: this runs AFTER payCardCost, so the
+     // first gear's cost reduction still sees gears_played_this_turn == 0.
+@@ -1512,6 +1513,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+ 
+     // Track play count
+     ps.cards_played_this_turn++;
++    if (card.isSpell()) state_.notePlayedSpell(intent.player);
+     int energy_spent = 0;
+     if (card.card_def_id != kInvalidId) {
+         energy_spent = card_db_.get(card.card_def_id).energy_cost;
+@@ -1747,6 +1749,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
          if (card.hasKeyword(Keyword::Ambush) && card.isAtBattlefield()) {
              enters_ready = true;
          }
@@ -190,7 +274,7 @@ index ce24a33..b82a15e 100644
          // Cards that intrinsically enter ready (e.g. Daisy! "I enter ready").
          if (card.card_def_id != kInvalidId) {
              if (const Card* cdef = card_registry_.get(card.card_def_id)) {
-@@ -3798,6 +3807,7 @@ void GameEngine::recalculateAuras() {
+@@ -3798,6 +3809,7 @@ void GameEngine::recalculateAuras() {
          ps.grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer
          ps.units_play_base_only = false;         // Mageseeker Warden
          ps.tokens_enter_ready = false;           // Renata Glasc, Industrialist
@@ -198,7 +282,7 @@ index ce24a33..b82a15e 100644
          ps.recall_all_on_attacker_tie = false;   // Symbol of the Solari
          ps.effects_cant_ready_my_units = false;  // Mageseeker Warden cl2
          ps.spells_have_repeat_energy = 0;        // Syndra, Transcendent
-@@ -3829,7 +3839,7 @@ void GameEngine::recalculateAuras() {
+@@ -3829,7 +3841,7 @@ void GameEngine::recalculateAuras() {
          if (!on_board && !legend_zone) continue;
          if (obj.card_def_id == kInvalidId) continue;
          const Card* card = card_registry_.get(obj.card_def_id);

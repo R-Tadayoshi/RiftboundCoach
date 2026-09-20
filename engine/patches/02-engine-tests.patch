@@ -1,8 +1,8 @@
 diff --git a/tests/cards/test_counter_spells.cpp b/tests/cards/test_counter_spells.cpp
-index fa5b467..118398b 100644
+index fa5b467..980bd9e 100644
 --- a/tests/cards/test_counter_spells.cpp
 +++ b/tests/cards/test_counter_spells.cpp
-@@ -399,4 +399,156 @@ TEST_F(AbandonTest, ReturnsCounteredSpellToHand) {
+@@ -399,4 +399,260 @@ TEST_F(AbandonTest, ReturnsCounteredSpellToHand) {
      (void)deck_top;
  }
  
@@ -156,6 +156,110 @@ index fa5b467..118398b 100644
 +    invokeOnResolve(src, kDecreeOfRage, P1, {victim}, exec);
 +
 +    EXPECT_EQ(state.getObject(victim).damage_marked, 4);
++}
++
++
++// ═══════════════════════════════════════════════════════════════════════════
++// Crumbling Sands (826) — counter, conditional on the opponent's turn history
++// ═══════════════════════════════════════════════════════════════════════════
++//
++// "Counter a spell if an opponent has played another spell this turn." The
++// condition is about what they did, not about what is on the chain: the spell
++// being countered may be their second, or it may be their first with an
++// earlier one already resolved and gone. So it reads
++// GameState::spellsPlayedThisTurn, which cards_played_this_turn could not
++// answer — a unit increments that too.
++
++constexpr CardDefId kCrumblingSands = 826;
++
++class CrumblingSandsTest : public CardTestFixture {};
++
++TEST_F(CrumblingSandsTest, NotPlayableWhenTheOpponentHasPlayedNoSpell) {
++    pushSpellOnChain(P2, kLunarBoon);   // on the chain, but not yet "played"
++    Card* c = card_registry.get(kCrumblingSands);
++    EXPECT_FALSE(c->hasLegalTargets(state, P1));
++}
++
++TEST_F(CrumblingSandsTest, NotPlayableWithNoSpellOnTheChain) {
++    state.notePlayedSpell(P2);
++    Card* c = card_registry.get(kCrumblingSands);
++    EXPECT_FALSE(c->hasLegalTargets(state, P1))
++        << "the condition holds but there is nothing to counter";
++}
++
++TEST_F(CrumblingSandsTest, PlayableWhenBothHold) {
++    state.notePlayedSpell(P2);
++    pushSpellOnChain(P2, kLunarBoon);
++    Card* c = card_registry.get(kCrumblingSands);
++    EXPECT_TRUE(c->hasLegalTargets(state, P1));
++}
++
++TEST_F(CrumblingSandsTest, MyOwnSpellsDoNotSatisfyTheCondition) {
++    state.notePlayedSpell(P1);
++    pushSpellOnChain(P2, kLunarBoon);
++    Card* c = card_registry.get(kCrumblingSands);
++    EXPECT_FALSE(c->hasLegalTargets(state, P1))
++        << "\"an OPPONENT has played another spell\"";
++}
++
++TEST_F(CrumblingSandsTest, CountersWhenTheConditionHolds) {
++    state.notePlayedSpell(P2);
++    auto target = pushSpellOnChain(P2, kLunarBoon);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kCrumblingSands, P1, {}, exec);
++
++    EXPECT_TRUE(state.chain.items.empty());
++    EXPECT_EQ(state.getObject(target).zone, ZoneType::Trash);
++}
++
++TEST_F(CrumblingSandsTest, DoesNothingWhenTheConditionDoesNot) {
++    auto target = pushSpellOnChain(P2, kLunarBoon);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kCrumblingSands, P1, {}, exec);
++
++    EXPECT_EQ(state.chain.items.size(), 1u);
++    EXPECT_NE(state.getObject(target).zone, ZoneType::Trash);
++}
++
++TEST_F(CrumblingSandsTest, RespectsCanBeCountered) {
++    state.notePlayedSpell(P2);
++    pushSpellOnChain(P2, kDecreeOfRage);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kCrumblingSands, P1, {}, exec);
++
++    EXPECT_EQ(state.chain.items.size(), 1u);
++}
++
++// A count from an earlier turn is not "this turn".
++//
++// resetTurnTracking() runs for the turn player only, so the non-turn player's
++// per-turn counters survive into their opponent's turn. That is precisely the
++// window in which reactions get played, so a plain counter would have made
++// Crumbling Sands read last turn's history as this turn's.
++TEST_F(CrumblingSandsTest, AStaleCountDoesNotCarryIntoTheNextTurn) {
++    state.turn.turn_number = 4;
++    state.notePlayedSpell(P2);
++    EXPECT_EQ(state.spellsPlayedThisTurn(P2), 1);
++
++    state.turn.turn_number = 5;
++    EXPECT_EQ(state.spellsPlayedThisTurn(P2), 0)
++        << "the count is stamped with its turn; an older one reads as zero";
++
++    pushSpellOnChain(P2, kLunarBoon);
++    Card* c = card_registry.get(kCrumblingSands);
++    EXPECT_FALSE(c->hasLegalTargets(state, P1));
 +}
 +
  }  // namespace
