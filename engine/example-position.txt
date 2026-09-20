@@ -1,0 +1,25 @@
+# A constructed mid-game board, in the format engine/position.cpp reads.
+#
+# clear first, always: a position must REPLACE the engine's dealt board
+# rather than add to it, or every count is wrong while looking healthy.
+clear P1 all
+clear P2 all
+
+turn 11
+phase main
+turnplayer P1
+
+score P1 5
+score P2 6
+
+# The rune POOL — what is available to spend right now. This is what
+# decides whether a card in hand shows up as playable.
+energy P1 11
+power P1 3
+
+# place <player> <card name> <zone> [ready|exhausted]
+# zones: hand base trash bfA bfB deck
+place P1 First Mate bfB ready
+place P1 Pit Rookie hand
+place P1 Challenge hand
+place P1 B.F. Sword hand
