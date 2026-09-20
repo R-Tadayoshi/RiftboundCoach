@@ -291,16 +291,24 @@ controlled — an illegal play. **The state was right; they didn't know the
 rules.** That is the worst failure available here, because it reads as advice
 and cannot be taken.
 
-The file is **mostly empty on purpose**. Every rule in it is recorded with its
-source, and nothing is written from memory: a plausible-sounding rule that
-turns out to be wrong does more damage than a missing one, since the coach will
-state it with confidence. The model is told the file is incomplete and to say
-"if you can do X" rather than assume a play is legal.
+It is distilled from the **official Core Rules (RUP4, 2026-07-16)**, and every
+rule carries its number — `806.3`, `144.4.a`, `469.1` — so any of them can be
+checked against the source rather than taken on trust. Nothing is written from
+memory: a plausible-sounding wrong rule does more damage than a missing one,
+because the coach states both with the same confidence.
 
-To fill it from the official Core Rules, add `riftbound.gg` and
-`playriftbound.com` to the cloud environment's **Custom** network allowlist —
-the same place `play.riftatlas.com` went — and they can be distilled in
-properly.
+It covers where cards can be played, how units move, how control of a
+battlefield is gained and lost, the two ways to score, and the rune economy.
+Deliberately not the whole rulebook — timing minutiae would cost tokens on
+every turn and bury the parts that decide what to do. The model is told the
+file is incomplete and to say "if you can do X" rather than assume.
+
+Two consequences it now knows that it previously got wrong:
+
+- With no units anywhere, **the only legal destination for a unit is your
+  Base** — reaching a battlefield takes a second step.
+- **A ready rune is worth 1 Energy or 1 domain Power, not both**, and the pool
+  empties every turn, so floating resources cannot be banked.
 
 ### What the coach is told it cannot do
 

@@ -599,9 +599,28 @@ test("the rules file is loaded into the system prompt", () => {
   assert.ok(SYSTEM.includes(rules), "and it rides in the system message");
 });
 
-test("the rule the models broke is stated", () => {
+test("the rule the models broke is stated, with its rule number", () => {
   const { loadRules } = require("../coach/prompt.js");
-  assert.match(loadRules(), /cannot be played directly to a battlefield you do not already\s+control/);
+  const rules = loadRules();
+  assert.match(rules, /only be played to its controller's Base, or to a battlefield/);
+  assert.match(rules, /806\.3, 813\.3\.a/, "quotable against the source");
+});
+
+test("every rule area carries a rule reference", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  // Each of these numbers was read out of the Core Rules PDF, not recalled.
+  for (const ref of ["141.1.a.1", "144.4.a", "190.4", "469.1", "167", "164.2.a"]) {
+    assert.ok(rules.includes(ref), `missing reference ${ref}`);
+  }
+});
+
+test("the rune economy is stated, since it drives what they can respond with", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /Exhaust it .*add 1 Energy/);
+  assert.match(rules, /Recycle it .*add 1 Power of that rune's domain/);
+  assert.match(rules, /rune pool empties/i, "floating resources do not carry over");
 });
 
 test("the model is told the rules bind it, and that they are incomplete", () => {
