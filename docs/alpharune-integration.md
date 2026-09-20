@@ -92,6 +92,48 @@ So the shape is:
 
 Every piece of that exists today.
 
+## Proven, not assumed (`engine/probe.cpp`)
+
+Everything above this line was reading. This runs, and it settles the one
+link that was still a hope — that a board we played can be rebuilt inside the
+engine and the engine will then say what is legal from there.
+
+```
+card db built
+decks loaded: decks/draven_test.txt / decks/fiora_test.txt
+beginGame -> NeedDecision, 3 legal action(s)
+after 40 choices -> NeedDecision, turn 36, phase 7
+setPlayerScore(P1, 5): ok
+resumeFromSnapshot -> NeedDecision, 22 legal action(s)
+P1 score: 0 before edit, 5 after resume
+   legal[0] P1: EndTurn
+   legal[1] P1: PlayCard card=34
+   ...
+```
+
+The line that matters is the last pair: the god-mode edit **survived the
+resume**, and the engine went on to generate legal actions from the edited
+board. So position construction works, on two different decks, with no
+changes to alpharune at all.
+
+`engine/build.sh` compiles the probe against a built alpharune checkout. It is
+deliberately not a CMake target — one file against the static library, so it
+stays out of alpharune's build and survives a re-clone of it.
+
+### What this does NOT yet show
+
+- **Search from a constructed position.** The probe uses `GameEngine`
+  directly. Search needs `RiftboundState::makeFromSnapshot`, which is public
+  (line 78) and is what `Clone()` calls on every MCTS decision — so the
+  machinery is there, but it has not been run from an edited state yet.
+  The CLI help warns that "StateEditor god-mode edits do not participate in
+  MCTS planning; the bot sees the state implied by `action_history` alone" —
+  that is about the existing agent flow, which rebuilds by replay. Going in
+  through `makeFromSnapshot` is the way around it, and is unproven.
+- **A position built from OUR snapshot**, rather than one reached by playing
+  forward. That is the mapping work: our zones and card codes onto
+  `moveObject` / `moveObjectToBattlefield` / `setObjectExhausted` calls.
+
 ## Staging
 
 **Stage 1 — rank my own lines. Does not need the resampler.**
