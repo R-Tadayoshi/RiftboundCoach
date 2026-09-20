@@ -946,3 +946,27 @@ test("every rule number in rules.md exists in the rulebook", () => {
   );
   assert.deepEqual(bad, [], "these rule numbers are not in the Core Rules");
 });
+
+/* Two halves of 355.2.a. The coach was corrected into never playing onto a
+ * battlefield it does not control, and then would not play onto one it does. */
+
+test("the rules state both halves of where a unit may be played", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /playing a new unit \*\*directly onto it\*\* is\s*\n?\s*legal/);
+  assert.match(rules, /An empty battlefield is \*\*not\*\* one you control/);
+});
+
+test("the rules state that a move is limited by its cost, not by a per-turn cap", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /no once-per-turn limit/);
+  assert.match(rules, /Check the legend before concluding/);
+});
+
+test("the rules state that power is a separate rune from energy", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /never both/);
+  assert.match(rules, /needs \*\*seven\*\* runes, not six/);
+});

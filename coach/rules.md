@@ -130,6 +130,31 @@ and is somewhere on the board.
 - While a combat or showdown is ongoing, control cannot change except as the
   combat's own steps instruct. (190.4.b)
 
+## You may play units to a battlefield you control
+
+The restriction above cuts both ways, and the coach keeps forgetting the
+second half.
+
+- Valid locations are the controller's Base **or a battlefield the controller
+  controls** (355.2.a). Controlling a battlefield means having units there
+  outside combat (190.4.a).
+- So while you hold a battlefield, playing a new unit **directly onto it** is
+  legal, and is usually better than playing it to your base: it defends what
+  you already hold, and it saves the move (and the exhaust) next turn.
+- An empty battlefield is **not** one you control. "There are no units there,
+  so it is fine" is false.
+
+## A unit can move more than once in a turn
+
+- The Standard Move has no once-per-turn limit. Its only restrictions are when
+  it can be performed (144.1: main phase, not in a Closed State, not during a
+  showdown or combat) and where it can go (144.4).
+- **Exhausting the unit is the Cost** (144.2). That, not a limit, is what
+  usually stops a second move.
+- So a unit that is readied again mid-turn — by a legend ability, a spell, or
+  anything else — may move again. Check the legend before concluding that a
+  unit cannot reach a battlefield.
+
 ## Moving into an empty battlefield is not free
 
 This is where the coach has been confidently wrong, so it is spelled out.
@@ -187,6 +212,18 @@ A player scores in one of exactly two ways (469):
   they have not yet scored this turn. (469.2)
 
 Each battlefield scores once per turn per player.
+
+## Paying for things
+
+- A basic rune has two abilities: exhaust it to add 1 Energy, or recycle it to
+  add 1 Power of that rune's domain (164.2, 164.2.a, 164.2.b.1).
+- **One rune produces Energy or Power, never both.** A cost written as
+  6 Energy + 1 Power needs **seven** runes, not six. Power in a cost is another
+  rune, not a rider on the energy.
+- Add up the whole line before recommending it, and say what is left standing.
+  Advice to "hold up a trick" is worthless if the line already spent every
+  rune — the rune pool empties anyway at the end of the turn (167, 167.1), so
+  what matters is what stays ready during the opponent's turn.
 
 ## Runes, energy and power
 

@@ -269,11 +269,65 @@ function checkHide(action, summary) {
   };
 }
 
+/* Can the whole line actually be paid for?
+ *
+ * Each rune produces at most one Energy OR one Power (164.2), so a line whose
+ * total cost exceeds the ready runes cannot be played whatever the domains
+ * are. Domains are deliberately NOT checked here: working out whether a
+ * specific Power is payable needs the rune spread and the recycle rules, and
+ * getting that subtly wrong would flag legal lines.
+ *
+ * This is the check the coach needed most. Asked for a line on 11 ready
+ * runes, it proposed Draven (6 Energy + 1 Power) plus Stellacorn Herder (4
+ * Energy) — exactly 11, every rune spent — and in the same breath advised
+ * "hold En Garde/Defy up in case they draw into a trick". The other answer
+ * called Draven "exactly 6 of your 11", missing the Power entirely. Both were
+ * arithmetic, which is the one thing code never gets wrong. */
+function costOf(card) {
+  if (!card) return null;
+  const energy = typeof card.energy === "number" ? card.energy : null;
+  if (energy === null) return null;
+  return energy + (typeof card.power === "number" ? card.power : 0);
+}
+
+function checkAffordable(actions, summary, cardText) {
+  const ready = summary.me?.runes?.ready;
+  if (typeof ready !== "number") return null;
+  // Runes the board could not read might be ready; assume they are.
+  const available = ready + (summary.me?.runes?.unknown || 0);
+
+  let total = 0;
+  const spent = [];
+  for (const action of actions) {
+    if (action.verb !== "play") continue;
+    const cost = costOf(cardTextFor(action.card, summary, cardText));
+    if (cost === null) return null; // one unknown cost and the sum means nothing
+    total += cost;
+    spent.push(`${action.card} (${cost})`);
+  }
+  if (!spent.length || total <= available) return null;
+
+  return {
+    rule: "164.2",
+    why:
+      `this line costs ${total} but you have ${available} ready rune(s): ` +
+      `${spent.join(" + ")}. A rune produces one Energy or one Power, never ` +
+      `both, so Power in a cost is another rune — not a free rider on the ` +
+      `Energy. There is no way to pay for all of this.`,
+    action: spent.join(" + "),
+  };
+}
+
 /* Check every action in an answer. Returns [] when nothing is provably
  * illegal, which includes the case where no actions could be parsed. */
 function check(text, summary, cardText) {
   const violations = [];
-  for (const action of parseActions(text)) {
+  const actions = parseActions(text);
+
+  const broke = checkAffordable(actions, summary, cardText);
+  if (broke) violations.push(broke);
+
+  for (const action of actions) {
     let v = null;
     if (action.verb === "play") v = checkPlay(action, summary, cardText);
     else if (action.verb === "move") v = checkMove(action, summary);
@@ -290,6 +344,8 @@ module.exports = {
   parseActions,
   checkPlay,
   checkTarget,
+  checkAffordable,
+  costOf,
   isUnit,
   checkMove,
   checkHide,

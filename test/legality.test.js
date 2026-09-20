@@ -254,3 +254,78 @@ test("the targeting clause does not leak into the card or destination", () => {
   assert.equal(m.to, "battlefield B");
   assert.equal(m.target, null);
 });
+
+/* Turn 11, Zarkhil 5 — 6, eleven ready runes. One answer proposed Draven
+ * (6 Energy + 1 Power) and Stellacorn Herder (4 Energy) — 11 runes, every one
+ * spent — while advising "hold En Garde/Defy up in case they draw into a
+ * trick". The other called Draven "exactly 6 of your 11", losing the Power. */
+
+const COSTS = {
+  "SFD-148": { name: "Draven, Audacious", type: "Unit", energy: 6, power: 1, might: 6, text: "" },
+  "SFD-048": { name: "Stellacorn Herder", type: "Unit", energy: 4, power: null, might: 3, text: "" },
+  "OGN-046": { name: "En Garde", type: "Spell", energy: 1, power: null, text: "" },
+  "MYST-001": { name: "Mystery", type: "Unit", might: 2, text: "" },
+};
+
+const withRunes = (ready, unknown = 0) => ({
+  ...board(),
+  turn: { step: "main" },
+  me: { base: [], hand: [], runes: { total: ready, ready, exhausted: 0, unknown, byDomain: {} } },
+});
+
+test("a line that costs more than the ready runes is rejected", () => {
+  const v = L.check(
+    "ACTIONS:\n- play Draven, Audacious to base\n- play Stellacorn Herder to base",
+    withRunes(10),
+    COSTS
+  );
+  assert.equal(v.length, 1);
+  assert.equal(v[0].rule, "164.2");
+  assert.match(v[0].why, /costs 11 but you have 10/);
+});
+
+test("Power is counted as its own rune, not folded into the Energy", () => {
+  // Draven alone is 7 runes, not 6 — the mistake in the answer.
+  assert.equal(L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(6), COSTS).length, 1);
+  assert.deepEqual(L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(7), COSTS), []);
+});
+
+test("spending every rune is legal, and not flagged", () => {
+  // Tapping out is a judgement call, not a rules violation.
+  assert.deepEqual(
+    L.check(
+      "ACTIONS:\n- play Draven, Audacious to base\n- play Stellacorn Herder to base",
+      withRunes(11),
+      COSTS
+    ),
+    []
+  );
+});
+
+test("one unknown cost silences the sum rather than guessing at it", () => {
+  assert.deepEqual(
+    L.check(
+      "ACTIONS:\n- play Draven, Audacious to base\n- play Mystery to base",
+      withRunes(1),
+      COSTS
+    ),
+    [],
+    "a partial total is not evidence of anything"
+  );
+});
+
+test("runes the board could not read are assumed available", () => {
+  assert.deepEqual(
+    L.check("ACTIONS:\n- play Draven, Audacious to base", withRunes(5, 2), COSTS),
+    [],
+    "never flag on the strength of an unreadable rune"
+  );
+});
+
+test("moving costs no runes, so a move never counts toward the total", () => {
+  const b = {
+    ...withRunes(0),
+    me: { base: [unit("Tideturner")], hand: [], runes: { total: 0, ready: 0, exhausted: 3, unknown: 0, byDomain: {} } },
+  };
+  assert.deepEqual(L.check("ACTIONS:\n- move Tideturner to battlefield A\n- pass", b, COSTS), []);
+});
