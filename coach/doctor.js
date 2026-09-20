@@ -14,6 +14,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const { execFileSync } = require("child_process");
 
 const ROOT = path.join(__dirname, "..");
@@ -75,6 +76,76 @@ function checkPatches() {
   } catch (err) {
     bad("engine patches", (err.stderr || err.message).trim().split("\n")[0],
       "resolve by hand — see engine/patches/README.md");
+    return;
+  }
+  checkPatchesReproduce(patches.length);
+}
+
+/* "N in place" is not the question worth asking.
+ *
+ * Running apply.sh against the checkout the patches were generated from is a
+ * check that cannot fail: every patch reverse-checks as already applied and
+ * the script cheerfully prints "0 applied, 3 already in." The patch set was
+ * in exactly that state for weeks while being unable to apply to a clean
+ * checkout at all — two patches touching game_engine.cpp each carried the
+ * other's hunks — which is the one thing engine/patches/ exists to prevent.
+ *
+ * The only honest test is a tree that has none of our changes in it. So:
+ * throwaway worktree at upstream HEAD, apply, report, delete.
+ */
+function checkPatchesReproduce(count) {
+  const dir = path.join(ROOT, "engine", "patches");
+  const tree = path.join(os.tmpdir(), `doctor-pristine-${process.pid}`);
+  const git = (args, cwd) =>
+    execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  try {
+    git(["worktree", "add", "--detach", tree, "HEAD"], ALPHARUNE);
+  } catch (err) {
+    warn("patches reproduce", "could not make a pristine worktree to test against",
+      "check by hand: ./scripts/regen-engine-patches.sh");
+    return;
+  }
+  try {
+    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".patch"))) {
+      git(["apply", path.join(dir, f)], tree);
+    }
+    ok("patches reproduce", `all ${count} apply to a clean checkout`);
+  } catch (err) {
+    bad("patches reproduce", "they do NOT apply to a clean checkout — a re-clone would lose them",
+      "./scripts/regen-engine-patches.sh");
+  } finally {
+    try { git(["worktree", "remove", "--force", tree], ALPHARUNE); } catch { /* best effort */ }
+    fs.rmSync(tree, { recursive: true, force: true });
+  }
+}
+
+/* The hand-written cards are files, not patches, and install.sh copies them
+ * in. It used to refuse any file that differed from its copy — including a
+ * pristine upstream file it was meant to replace — and report that refusal
+ * in a line nobody read, so the cards that modify an existing upstream card
+ * silently did not install. Run it and say what happened.
+ */
+function checkHandWrittenCards() {
+  const sh = path.join(ROOT, "engine", "cards", "install.sh");
+  if (!fs.existsSync(sh)) return;
+  try {
+    const out = execFileSync(sh, [], { encoding: "utf8", env: process.env });
+    const m = /(\d+) copied, (\d+) already identical, (\d+) left alone/.exec(out);
+    if (!m) return warn("hand-written cards", "install.sh said something unexpected", out.trim());
+    const [, copied, same, left] = m;
+    if (Number(copied) > 0) {
+      warn("hand-written cards", `installed ${copied} that were missing (${same} already in)`,
+        `rebuild: (cd ${ALPHARUNE} && cmake --build build) && ./engine/build.sh`);
+    } else {
+      ok("hand-written cards", `${same} in place`);
+    }
+    if (Number(left) > 0) {
+      bad("hand-written cards", `${left} differ from the checkout's copy and were left alone`,
+        "compare them, then ./engine/cards/install.sh --force");
+    }
+  } catch (err) {
+    bad("hand-written cards", (err.stdout || err.stderr || err.message).trim().split("\n").pop(),
+      "see engine/cards/README.md");
   }
 }
 
@@ -164,6 +235,7 @@ async function main() {
   let built = false;
   if (haveCheckout) {
     checkPatches();
+    checkHandWrittenCards();
     built = checkEngineBuild();
     if (built) { checkProbes(); checkCards(); }
   }
