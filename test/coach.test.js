@@ -647,3 +647,23 @@ test("observed log lines are carried, and marked weaker than rules", () => {
     "the model is told an action seen once is not a legality"
   );
 });
+
+test("maintenance notes are not sent to the model", () => {
+  // The system prompt is re-sent every turn of every game, so a paragraph of
+  // provenance is a paragraph paid for hundreds of times.
+  const fs = require("node:fs");
+  const { loadRules, SYSTEM } = require("../coach/prompt.js");
+  const onDisk = fs.readFileSync(require("../coach/prompt.js").RULES_FILE, "utf8");
+
+  assert.ok(onDisk.includes("Source and maintenance"), "the notes exist in the file");
+  assert.ok(!loadRules().includes("Source and maintenance"), "but are not loaded");
+  assert.ok(!SYSTEM.includes("41 MB"), "nor does the model hear about the PDF's size");
+  assert.ok(!SYSTEM.includes("cmsassets.rgpub.io"), "nor which hosts were blocked");
+});
+
+test("the rules themselves still survive the cut", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /806\.3, 813\.3\.a/, "rules come before the marker");
+  assert.match(rules, /Conquered <battlefield> and scored 1/, "and so does the observed section");
+});

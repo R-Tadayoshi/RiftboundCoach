@@ -297,6 +297,11 @@ checked against the source rather than taken on trust. Nothing is written from
 memory: a plausible-sounding wrong rule does more damage than a missing one,
 because the coach states both with the same confidence.
 
+Everything after the `<!-- human-only` marker in that file — provenance, how
+to extend it, what is missing — is **not** sent to the model. The system prompt
+goes out on every turn of every game, so a paragraph of upkeep notes is a
+paragraph paid for hundreds of times.
+
 It covers where cards can be played, how units move, how control of a
 battlefield is gained and lost, the two ways to score, and the rune economy.
 Deliberately not the whole rulebook — timing minutiae would cost tokens on

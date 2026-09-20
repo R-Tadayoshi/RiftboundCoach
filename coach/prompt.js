@@ -17,12 +17,21 @@ const path = require("node:path");
  * cannot be made. */
 const RULES_FILE = process.env.RBC_RULES || path.resolve(__dirname, "rules.md");
 
+/* Everything after this marker is upkeep for whoever edits the file — where
+ * the PDF came from, how to add a rule, what is missing. None of it helps the
+ * model, and the system prompt is re-sent on every turn of every game, so a
+ * paragraph of provenance is a paragraph paid for hundreds of times. */
+const HUMAN_ONLY = "<!-- human-only";
+
 function loadRules() {
+  let text;
   try {
-    return fs.readFileSync(RULES_FILE, "utf8").trim();
+    text = fs.readFileSync(RULES_FILE, "utf8");
   } catch (_) {
     return "";
   }
+  const cut = text.indexOf(HUMAN_ONLY);
+  return (cut === -1 ? text : text.slice(0, cut)).trim();
 }
 
 const BASE_SYSTEM = `You are a Riftbound coach sitting beside a player during solo practice.

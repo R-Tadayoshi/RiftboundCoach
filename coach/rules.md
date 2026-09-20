@@ -104,7 +104,13 @@ weaker than the rules above.
 - `Played <spell> from hand.` then `Chain resolved: <spell>.`
 - `Conquered <battlefield> and scored 1.` / `Scored 1 at turn start. Score: 1 → 2.`
 
+<!-- human-only: nothing below this line is sent to the model -->
+
 # Source and maintenance
+
+*(Maintenance notes. Not sent to the coach — provenance and upkeep are for
+whoever edits this file, and every token spent on them would be spent again on
+every turn of every game.)*
 
 Distilled from `rules/Riftbound Core Rules RUP4.pdf` (120 pages, 2026-07-16),
 which is in this repository because the sites hosting the rules are JavaScript
