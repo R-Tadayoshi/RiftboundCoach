@@ -267,9 +267,12 @@ function main() {
       super_type: card.super_type ?? null,
       domains: (card.domains || []).map((d) => String(d).toLowerCase()),
       tags: card.tags || [],
-      energy_cost: card.stats?.energy ?? 0,
-      power_cost: card.stats?.power ?? 0,
-      might: card.stats?.might ?? 0,
+      /* null, not 0, for an absent cost — matching the engine's own index.
+       * Writing 0 made a reprint compare unequal to its original and turned
+       * resolving that card's name into an ambiguity error. */
+      energy_cost: card.stats?.energy ?? null,
+      power_cost: card.stats?.power ?? null,
+      might: card.stats?.might ?? null,
       might_bonus: null,
       rarity: String(card.rarity || "common").toLowerCase(),
       ability_text: card.description || "",

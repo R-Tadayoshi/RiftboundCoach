@@ -85,10 +85,19 @@ function loadIndex(root = DEFAULT_ROOT) {
 /* Two entries under one name are the same card in two sets only if they play
  * the same. Checked rather than trusted, because a name collision between
  * genuinely different cards would silently build the wrong board. */
+/* null and 0 are the same cost.
+ *
+ * The engine's own index writes null for a card with no power cost; a card
+ * imported by coach/gen-cards.js wrote 0. So "Irelia, Fervent" — the same card
+ * printed in SFD-057 and reprinted in VEN-174 — compared as two different
+ * cards, and resolving her name became an ambiguity error. A reprint is the
+ * commonest thing in a card game; the comparison has to survive one. */
+const cost = (v) => (v === null || v === undefined ? 0 : v);
+
 const sameCard = (a, b) =>
-  a.energy_cost === b.energy_cost &&
-  a.power_cost === b.power_cost &&
-  a.might === b.might &&
+  cost(a.energy_cost) === cost(b.energy_cost) &&
+  cost(a.power_cost) === cost(b.power_cost) &&
+  cost(a.might) === cost(b.might) &&
   a.card_type === b.card_type;
 
 /* RiftAtlas prints a legend as "<champion tag>, <card name>" — the board says

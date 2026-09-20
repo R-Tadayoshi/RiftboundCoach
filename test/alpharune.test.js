@@ -253,3 +253,25 @@ test(
     }
   })
 );
+
+/* A reprint is the commonest thing in a card game and the comparison has to
+ * survive one. The engine's index writes null for an absent cost; the
+ * importer wrote 0, so "Irelia, Fervent" — SFD-057, reprinted as VEN-174 —
+ * compared as two different cards and her name became an ambiguity error. */
+test("null and 0 are the same cost when comparing printings", () => {
+  const a = { energy_cost: 5, power_cost: null, might: 4, card_type: "unit" };
+  const b = { energy_cost: 5, power_cost: 0, might: 4, card_type: "unit" };
+  assert.equal(A.sameCard(a, b), true);
+  assert.equal(A.sameCard(a, { ...b, energy_cost: 6 }), false);
+});
+
+test(
+  "a card reprinted in a later set still resolves by name",
+  withIndex(() => {
+    for (const name of ["Irelia, Fervent", "Lonely Poro"]) {
+      const r = A.resolve(index, { name });
+      assert.ok(!r.miss, `${name}: ${r.why}`);
+      assert.match(r.how, /printings|name/);
+    }
+  })
+);

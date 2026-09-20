@@ -254,6 +254,47 @@ already there: of alpharune's 787 card files, **605 carry a behaviour body**
 and only 182 are pure data. Writing card behaviour IS the work of supporting a
 set, and alpharune has done it four times.
 
+### VEN is imported (data), and the gate says what that is worth
+
+`coach/gen-cards.js VEN --write` generates 197 per-card C++ `CardDef`s, adds
+them to `cards/card_index.json` and extends the generated aggregator. The
+engine builds clean — all 984 card objects, 1057 engine tests still passing —
+and a deck containing VEN cards now loads and builds a position:
+
+```
+place P1 Akali, Silent bfA ready
+-> position: 9 edit(s) applied, 0 failed
+   resumed -> NeedDecision | turn 11 | 4 legal
+```
+
+What that is worth, precisely:
+
+```
+before   787 cards   661 OK   126 STUB     0 ABSENT
+after    984 cards   665 OK   319 STUB     0 ABSENT
+```
+
+VEN cards move from **ABSENT to STUB**. Decks holding them load, positions
+build, and the LLM coach — which reads card text from RiftScribe and never
+needed the engine — works on them as before. What still does not work is
+ranking a board they are on: the fidelity gate refuses, because the engine
+would play them as blanks and return a percentage anyway. Bodies turn STUB
+into OK card by card, and the gate opens per card as they land.
+
+Three bugs worth recording, all found by running the importer twice:
+
+- **Ids were "highest in use + 1"**, so a second run renumbered all 197 files
+  while the aggregator still called the first run's ids. That does not link,
+  and the error points nowhere near the cause. Cards are keyed by `def_id` now.
+- **The index was not written.** The C++ existed and every check on our side —
+  the gate, the translator, the deck checker — resolves through
+  `card_index.json`, so the new cards were in the binary and invisible. It
+  failed closed, so nothing broke; nothing improved either.
+- **`null` is not `0`.** The engine's index writes `null` for an absent cost;
+  the importer wrote `0`. So `Irelia, Fervent` (SFD-057, reprinted VEN-174)
+  compared as two different cards and resolving her name became an ambiguity
+  error. A reprint is the commonest thing in a card game.
+
 ### VEN needs engine work, not only cards
 
 I first wrote here that VEN introduces no new keywords. That was wrong, and
