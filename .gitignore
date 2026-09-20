@@ -1,3 +1,5 @@
 node_modules/
 state/
 state/sets/
+engine/probe
+engine/position
