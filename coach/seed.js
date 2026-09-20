@@ -105,7 +105,8 @@ async function resolveSection(entries, report) {
       report.failures.push(error);
       continue;
     }
-    out[card.code] = { name: card.name, copies: count };
+    // Every printing this card has, so a board using a reprint still matches.
+    out[card.code] = { name: card.name, copies: count, codes: card.codes || [card.code] };
     report.resolved += 1;
   }
   return out;

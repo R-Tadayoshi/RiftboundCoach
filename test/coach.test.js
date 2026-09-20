@@ -535,3 +535,40 @@ test("seedAll reads a folder, since dropping files in one is the obvious move", 
   const seen = fs.readdirSync(dir).filter((f) => /\.(txt|deck|list)$/i.test(f)).sort();
   assert.deepEqual(seen, ["a.txt", "b.deck"], "only decklist files, notes.md ignored");
 });
+
+test("a card reprinted across sets matches whichever printing is on the board", () => {
+  // "Irelia, Fervent" is printed in three sets: SFD-057, SFD-225, VEN-174.
+  // A list written with one and a board rendering another must still match.
+  const store = {
+    "Irelia, Fervent": {
+      matches: [], cards: {},
+      variants: {
+        Heron: {
+          name: "Heron",
+          main: {
+            "SFD-057": { name: "Irelia, Fervent", copies: 1, codes: ["SFD-057", "SFD-225", "VEN-174"] },
+          },
+          battlefields: {}, sideboard: {}, runes: [],
+        },
+      },
+    },
+  };
+
+  for (const printing of ["SFD-057", "SFD-225", "VEN-174"]) {
+    fixture.build({
+      mode: "solo_lab", opponentId: "plr_x", roomCode: "R",
+      opponentChampion: "Irelia, Fervent",
+      zones: { opponent: { ...EMPTY_ZONES, base: [{ id: "u", code: printing, name: "Irelia, Fervent" }] } },
+    });
+    const build = archetypes.priorFor(Snapshot.build(), store).variants[0];
+    assert.deepEqual(build.evidence.matches, ["Irelia, Fervent"], printing);
+    assert.deepEqual(build.evidence.absent, [], printing);
+  }
+});
+
+test("foil and alt-art suffixes normalise to the base code", () => {
+  const { baseCode } = require("../coach/cards.js");
+  assert.equal(baseCode("SFD-225*"), "SFD-225", "foil");
+  assert.equal(baseCode("SFD-057a"), "SFD-057", "alt art");
+  assert.equal(baseCode("VEN-174"), "VEN-174");
+});

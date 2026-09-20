@@ -188,9 +188,11 @@ dropping them.
 
 Every line is resolved against the card API, so a typo is **reported rather
 than stored**. `Dredge Upp` is refused; `Dredge` is refused for matching two
-cards. Alternate printings (`VEN-068` and `VEN-068a` are both Jayce, Brilliant
-Inventor) collapse to one code, so a list and a board using different printings
-still match.
+cards. A card is treated as a **name plus every code it has been printed under**.
+"Irelia, Fervent" appears in three sets (`SFD-057`, `SFD-225`, `VEN-174`), and
+alternate arts and foils add more (`SFD-057a`, `SFD-225*`). Requiring one code
+per card refused ordinary reprinted cards and would have failed to match a list
+written with one printing against a board rendering another.
 
 ### Several builds per champion
 

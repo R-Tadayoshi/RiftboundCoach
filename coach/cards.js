@@ -43,12 +43,15 @@ function save() {
  * Inventor. Codes are normalised to the base so a decklist and a board that
  * happen to use different printings still match. */
 function baseCode(code) {
-  return (code || "").replace(/^([A-Za-z]{2,4}-\d{1,4})[a-z]+$/, "$1");
+  // Trailing letters mark an alternate art, a trailing * a foil treatment.
+  return (code || "").replace(/^([A-Za-z]{2,4}-\d{1,4})[a-z*]+$/i, "$1");
 }
 
 function distil(card) {
+  const code = baseCode(card.public_code?.split("/")[0] || null);
   return {
-    code: baseCode(card.public_code?.split("/")[0] || null),
+    code,
+    codes: [code],
     name: card.name,
     type: card.type,
     domains: card.domains || [],
@@ -109,16 +112,17 @@ async function findByName(name) {
   if (exact.length === 1) return distil(exact[0]);
 
   if (exact.length > 1) {
-    /* Several exact matches are usually one card in several printings. The
-     * base printing carries an empty `variant`; prefer it rather than calling
-     * a card ambiguous with itself. */
-    const base = exact.filter((c) => !c.variant);
-    if (base.length === 1) return distil(base[0]);
-
-    // Genuinely different cards sharing a name: that is ambiguous.
-    const codes = [...new Set(exact.map((c) => baseCode(c.public_code.split("/")[0])))];
-    if (codes.length === 1) return distil(exact[0]);
-    return { ambiguous: exact.map((c) => `${c.public_code} ${c.name}`) };
+    /* Several exact matches are one card in several printings — an alternate
+     * art, a foil, or a reprint in a later set. "Irelia, Fervent" is in three
+     * sets, so requiring a single code refused a perfectly ordinary card.
+     *
+     * A card is therefore a name plus the SET of codes it has been printed
+     * under. Any of them on the board is that card. The base printing in the
+     * earliest set is the one reported, so a store written today still reads
+     * the same after a reprint adds a code. */
+    const codes = [...new Set(exact.map((c) => baseCode(c.public_code.split("/")[0])))].sort();
+    const primary = exact.find((c) => !c.variant) || exact[0];
+    return { ...distil(primary), codes };
   }
   if (hits.length === 1) return distil(hits[0]);
   return { ambiguous: hits.slice(0, 6).map((c) => `${c.public_code} ${c.name}`) };

@@ -148,9 +148,24 @@ function variantsFor(entry, snapshot) {
   if (!builds.length) return [];
 
   const seenNow = publicCards(snapshot || {});
+
+  /* A card is a name plus every code it has been printed under — "Irelia,
+   * Fervent" is in three sets — so membership is tested against the whole set
+   * rather than the one code a list happened to be written with. */
+  const codeIndex = (section) => {
+    const set = new Set();
+    for (const [primary, card] of Object.entries(section || {})) {
+      set.add(primary);
+      for (const code of card.codes || []) set.add(code);
+    }
+    return set;
+  };
+
   return builds.map((build) => {
-    const inMain = (code) => code in (build.main || {});
-    const inSide = (code) => code in (build.sideboard || {});
+    const mainCodes = codeIndex(build.main);
+    const sideCodes = codeIndex(build.sideboard);
+    const inMain = (code) => mainCodes.has(code);
+    const inSide = (code) => sideCodes.has(code);
 
     const matches = seenNow.filter((c) => inMain(c.code)).map((c) => c.name);
     const sideOnly = seenNow.filter((c) => !inMain(c.code) && inSide(c.code)).map((c) => c.name);
