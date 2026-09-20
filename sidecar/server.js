@@ -31,6 +31,10 @@ const MAX_BODY = 4 * 1024 * 1024;
 let latest = null;
 const history = [];
 let received = 0;
+/* The same warnings arrive with every snapshot while the board's condition
+ * persists, and a revealed hand persists for a whole match. Printing them per
+ * snapshot buried the snapshot lines they were attached to. */
+let lastWarnings = "";
 
 function persist(snapshot) {
   try {
@@ -108,7 +112,14 @@ const server = http.createServer(async (req, res) => {
     const seq = snapshot?.sequence ?? "?";
     const whose = snapshot?.match?.isMyTurn === true ? "mine" : snapshot?.match?.isMyTurn === false ? "theirs" : "?";
     console.log(`[rbc] snapshot #${received}  turn ${turn}  seq ${seq}  turn-owner ${whose}`);
-    for (const w of snapshot?.warnings || []) console.warn(`[rbc]   warning: ${w}`);
+
+    // Only when they change: a standing condition is said once, not per frame.
+    const warnings = snapshot?.warnings || [];
+    const fingerprint = warnings.join("\u0000");
+    if (fingerprint !== lastWarnings) {
+      lastWarnings = fingerprint;
+      for (const w of warnings) console.warn(`[rbc]   note: ${w}`);
+    }
 
     json(res, 200, { ok: true, received });
     return;

@@ -13,7 +13,7 @@
   /* Bumped whenever the reading changes. It rides along in every snapshot so
    * a capture can be told apart from one taken by an older copy still alive in
    * the page — several can be, and they are not distinguishable by eye. */
-  const EXTRACTOR_VERSION = "0.4.0";
+  const EXTRACTOR_VERSION = "0.5.1";
 
   function playerBlock(board, side) {
     return {
@@ -24,13 +24,37 @@
     };
   }
 
-  function zoneBlocks(side, warnings) {
+  /* Room modes that reveal both hands by design. In Two-Sided Practice you
+   * pilot both seats, so the client showing you their hand is the mode
+   * working, not the client leaking. The cards are withheld either way; what
+   * changes is whether the report should alarm anyone.
+   *
+   * Keeping the alarming wording for an expected condition is worse than not
+   * warning at all: it teaches you to skim past the warnings that matter. */
+  const REVEALS_BOTH_HANDS = new Set(["solo_lab"]);
+
+  function withholdNote(side, zone, withheld, mode) {
+    if (!withheld.unexpectedFaceUp) return null;
+    const n = withheld.unexpectedFaceUp;
+    const cards = `${n} face-up card${n === 1 ? "" : "s"}`;
+
+    if (REVEALS_BOTH_HANDS.has(mode)) {
+      return `${side}.${zone}: ${cards} withheld — expected in Two-Sided Practice, which shows both hands by design.`;
+    }
+    return `${side}.${zone}: ${cards} rendered in a private zone and withheld. Either an in-game reveal effect, or the client is sending more than it should.`;
+  }
+
+  function zoneBlocks(side, warnings, mode) {
     const out = {};
     for (const zone of root.RBCBoard.ZONES) {
       const cards = root.RBCBoard.zoneCards(side, zone);
       const filtered = root.RBCVisibility.filterZone(side, zone, cards);
-      warnings.push(...filtered.warnings);
-      delete filtered.warnings; // collected at the top level instead
+
+      // One line per zone, whatever the number of cards behind it.
+      const note = withholdNote(side, zone, filtered.withheld, mode);
+      if (note) warnings.push(note);
+
+      delete filtered.withheld; // the counts are already in hiddenCount
       out[zone] = filtered;
     }
     return out;
@@ -55,9 +79,10 @@
     if (!board) return null;
 
     const warnings = [];
+    const mode = root.RBCBoard.mode(board);
     const zones = {};
     for (const side of root.RBCBoard.SIDES) {
-      zones[side] = zoneBlocks(side, warnings);
+      zones[side] = zoneBlocks(side, warnings, mode);
     }
 
     const active = root.RBCBoard.activeSide(board);
@@ -181,6 +206,8 @@
   root.RBCSnapshot = {
     SCHEMA_VERSION,
     EXTRACTOR_VERSION,
+    REVEALS_BOTH_HANDS,
+    withholdNote,
     SOLO_MODES,
     build,
     hasLiveOpponent,

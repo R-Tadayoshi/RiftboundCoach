@@ -40,8 +40,11 @@ test("a face-up card in the opponent's hand is withheld AND reported", () => {
   assert.equal(out.count, 3, "all three are counted");
   assert.equal(out.visible.length, 0, "none of them is carried");
   assert.equal(out.hiddenCount, 3);
-  assert.equal(out.warnings.length, 1, "the anomaly is surfaced, not swallowed");
-  assert.match(out.warnings[0], /private zone/);
+  assert.deepEqual(
+    out.withheld,
+    { faceDown: 2, unexpectedFaceUp: 1 },
+    "the anomaly is counted separately from ordinary card backs"
+  );
 
   const serialised = JSON.stringify(out);
   assert.ok(!serialised.includes("OGN-999"), "the code does not survive");
@@ -55,7 +58,7 @@ test("card counts survive even when identities do not", () => {
   assert.equal(out.count, 4, "knowing they hold four is legitimate and useful");
   assert.equal(out.visible.length, 0);
   assert.equal(out.hiddenCount, 4);
-  assert.equal(out.warnings.length, 0, "ordinary card backs are not an anomaly");
+  assert.deepEqual(out.withheld, { faceDown: 4, unexpectedFaceUp: 0 }, "ordinary card backs are not an anomaly");
 });
 
 test("audit catches a leak injected after filtering", () => {
@@ -101,7 +104,7 @@ test("a snapshot that fails its own audit is refused, not emitted", () => {
   assert.ok(!snap.error, "withheld at the filter, so the snapshot still builds");
   assert.equal(snap.zones.opponent.hand.visible.length, 0);
   assert.equal(snap.zones.opponent.hand.count, 4);
-  assert.ok(snap.warnings.some((w) => /private zone/.test(w)));
+  assert.ok(snap.warnings.some((w) => /withheld/.test(w)));
   assert.ok(!JSON.stringify(snap).includes("OGN-999"));
 });
 
@@ -137,10 +140,11 @@ test("a fully revealed opponent hand is withheld, counted, and reported", () => 
   assert.equal(hand.hiddenCount, 4);
 
   assert.equal(
-    s.warnings.filter((w) => /private zone/.test(w)).length,
-    4,
-    "each withheld card says so rather than vanishing quietly"
+    s.warnings.filter((w) => /withheld/.test(w)).length,
+    1,
+    "one line for the zone, not one per card"
   );
+  assert.match(s.warnings.find((w) => /withheld/.test(w)), /4 face-up cards/);
 
   // The real test: nothing about those four cards survives anywhere in the
   // object that leaves the extension.
@@ -164,4 +168,71 @@ test("the opponent's public zones still come through in the same snapshot", () =
     "their board is public and stays readable"
   );
   assert.ok(s.zones.opponent.runeArea.visible.length > 0);
+});
+
+/* Warning volume. A revealed hand of six produced six identical lines on every
+ * snapshot, several times a turn — which buried the log they were meant to
+ * stand out in. Room QJJJ3 showed ~60 lines across 14 snapshots. */
+
+test("one note per zone, however many cards were withheld", () => {
+  fixture.build({
+    mode: "multiplayer",
+    opponentId: "plr_x",
+    zones: {
+      opponent: {
+        hand: Array.from({ length: 6 }, (_, i) => ({
+          id: `o${i}`, code: "OGN-138", name: "Catalyst of Aeons",
+        })),
+      },
+    },
+  });
+  const s = Snapshot.build();
+  const notes = s.warnings.filter((w) => w.startsWith("opponent.hand"));
+  assert.equal(notes.length, 1, "six cards, one line");
+  assert.match(notes[0], /6 face-up cards/);
+});
+
+test("Two-Sided Practice reveals both hands, so the note says so", () => {
+  // Keeping alarming wording for an expected condition teaches you to skim
+  // past the warnings that matter.
+  fixture.build({
+    mode: "solo_lab",
+    opponentId: "plr_x",
+    zones: { opponent: { hand: [{ id: "o1", code: "OGN-138", name: "Catalyst of Aeons" }] } },
+  });
+  const note = Snapshot.build().warnings.find((w) => w.startsWith("opponent.hand"));
+  assert.match(note, /expected in Two-Sided Practice/);
+  assert.ok(!/sending more than it should/.test(note), "not alarming in this mode");
+});
+
+test("a real match keeps the alarming wording", () => {
+  fixture.build({
+    mode: "multiplayer",
+    opponentId: "plr_x",
+    zones: { opponent: { hand: [{ id: "o1", code: "OGN-138", name: "Catalyst of Aeons" }] } },
+  });
+  const note = Snapshot.build().warnings.find((w) => w.startsWith("opponent.hand"));
+  assert.match(note, /sending more than it should/);
+});
+
+test("the cards are withheld either way — only the wording changes", () => {
+  for (const mode of ["solo_lab", "multiplayer"]) {
+    fixture.build({
+      mode,
+      opponentId: "plr_x",
+      zones: { opponent: { hand: [{ id: "o1", code: "OGN-999", name: "Their Secret" }] } },
+    });
+    const s = Snapshot.build();
+    assert.equal(s.zones.opponent.hand.visible.length, 0, mode);
+    assert.equal(s.zones.opponent.hand.count, 1, mode);
+    assert.ok(!JSON.stringify(s).includes("OGN-999"), mode);
+    assert.ok(!JSON.stringify(s).includes("Their Secret"), mode);
+  }
+});
+
+test("ordinary card backs raise no note at all", () => {
+  fixture.build(); // opponent hand is four card backs
+  const s = Snapshot.build();
+  assert.equal(s.zones.opponent.hand.hiddenCount, 4);
+  assert.equal(s.warnings.filter((w) => w.startsWith("opponent.hand")).length, 0);
 });

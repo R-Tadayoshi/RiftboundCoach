@@ -61,11 +61,16 @@
    *
    * `hiddenCount` rather than a list of blanks: the count is the public fact,
    * and a list of placeholder objects invites a consumer to start treating
-   * them as cards it knows something about. */
+   * them as cards it knows something about.
+   *
+   * Withholding is reported as COUNTS, not as a message per card. A revealed
+   * hand of six produced six identical lines every snapshot, several times a
+   * turn, which buried the log it was meant to stand out in. What the message
+   * should say also depends on the room mode, which this file has no business
+   * knowing — so it counts, and snapshot.js does the wording. */
   function filterZone(side, zone, cards) {
     const visible = [];
-    const warnings = [];
-    let hiddenCount = 0;
+    const withheld = { faceDown: 0, unexpectedFaceUp: 0 };
 
     for (const card of cards) {
       const reason = withholdReason(side, zone, card);
@@ -73,17 +78,12 @@
         visible.push(card);
         continue;
       }
-      hiddenCount += 1;
-      if (reason === "unexpected-face-up") {
-        warnings.push(
-          `${side}.${zone}: a face-up card was rendered in a private zone and ` +
-            `was withheld. Either an in-game reveal effect, or the client is ` +
-            `sending more than it should.`
-        );
-      }
+      if (reason === "unexpected-face-up") withheld.unexpectedFaceUp += 1;
+      else withheld.faceDown += 1;
     }
 
-    return { count: cards.length, visible, hiddenCount, warnings };
+    const hiddenCount = withheld.faceDown + withheld.unexpectedFaceUp;
+    return { count: cards.length, visible, hiddenCount, withheld };
   }
 
   /* A last check before a snapshot leaves the extension, run against the
