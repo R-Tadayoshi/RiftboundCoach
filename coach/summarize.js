@@ -117,6 +117,7 @@ function sideSummary(snapshot, side, attachedTo = {}) {
     name: player.name,
     score: player.score,
     legend: player.legend,
+    legendCard: player.legendCard || { name: null, code: null, exhausted: null },
     champion: player.champion,
     /* Not an identity label: a champion in its zone is a card you can still
      * play this turn (108.3.d), and the coach was treating it as scenery. */
@@ -136,10 +137,12 @@ function sideSummary(snapshot, side, attachedTo = {}) {
  * and are skipped — there is nothing to look up. */
 function codesToResolve(snapshot) {
   const codes = new Set();
-  // The champion is playable from its zone, so its cost and text are needed.
+  /* The champion is playable from its zone, and the legend sits there all
+   * game with abilities that can be activated — both need their text. */
   for (const side of ["self", "opponent"]) {
-    const code = snapshot.players?.[side]?.championZone?.code;
-    if (code) codes.add(code);
+    const player = snapshot.players?.[side] || {};
+    if (player.championZone?.code) codes.add(player.championZone.code);
+    if (player.legendCard?.code) codes.add(player.legendCard.code);
   }
   for (const sideZones of Object.values(snapshot.zones || {})) {
     for (const zone of Object.values(sideZones)) {

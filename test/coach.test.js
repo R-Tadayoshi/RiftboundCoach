@@ -778,3 +778,46 @@ test("Hidden requires a battlefield you control, and the rule says so", () => {
   assert.match(rules, /Hide needs a battlefield you already control/);
   assert.match(rules, /Champion Zone.*can be hidden from there|hidden from there/s);
 });
+
+/* The legend. It was a name in the header, so its text never reached the
+ * prompt and its abilities were invisible — including one that readies a
+ * unit, which decides whether a body played this turn can reach a
+ * battlefield at all. */
+
+test("the legend is carried with its code and state", () => {
+  fixture.build();
+  const legend = Snapshot.build().players.self.legendCard;
+  assert.equal(legend.name, "Yasuo, the Unforgiven");
+  assert.equal(legend.code, "OGN-001");
+  assert.ok("exhausted" in legend, "its state is a resource, so it is carried");
+});
+
+test("the legend's text is fetched like any other card", () => {
+  fixture.build();
+  assert.ok(codesToResolve(Snapshot.build()).includes("OGN-001"));
+});
+
+test("the prompt says whether the legend's abilities are still available", () => {
+  fixture.build();
+  const msg = buildUserMessage(summarize(Snapshot.build()), {});
+  assert.match(msg, /legend: Yasuo, the Unforgiven/);
+  assert.match(msg, /legends have abilities/);
+});
+
+test("an exhausted legend is reported as spent, not merely present", () => {
+  fixture.build();
+  const el = globalThis.document.querySelector(
+    '[data-zone-owner="self"] [data-drop-zone="legend"] [data-card-id]'
+  );
+  el.setAttribute("data-exhausted", "true");
+  const msg = buildUserMessage(summarize(Snapshot.build()), {});
+  assert.match(msg, /EXHAUSTED — its activated abilities are spent this turn/);
+});
+
+test("the rules state that legends have activated abilities", () => {
+  const { loadRules } = require("../coach/prompt.js");
+  const rules = loadRules();
+  assert.match(rules, /passive, triggered AND activated abilities/);
+  assert.match(rules, /174\.6, 174\.7, 174\.8/);
+  assert.match(rules, /not a nameplate/);
+});

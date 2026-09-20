@@ -319,6 +319,11 @@ its advice against the rules:
   for who you are. It is listed under `CARDS YOU CAN PLAY THIS TURN` alongside
   your hand, and its card text is fetched like any other — putting it beside
   the player's score and legend was not enough, and it went unconsidered.
+- **The legend has abilities** (174.6–174.8) and is a standing engine, not a
+  nameplate. Its card text is fetched and its exhausted state reported, since
+  activating an ability usually costs exhausting it. A legend that readies a
+  unit is the difference between a body played this turn sitting idle and that
+  same body reaching a battlefield.
 - **Hide needs a battlefield you already control** (811.1.b), so on an empty
   board it is not an option however cheap it looks. A card in the Champion
   Zone can be hidden from there too, not only from hand.

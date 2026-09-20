@@ -64,6 +64,21 @@ in the **Champion Zone** can be hidden from there, not only from hand.
 exhausting it (144.2) and it is already exhausted. A body played now is
 available from your next turn, not this one.
 
+## Legends have abilities
+
+- Each player's Champion Legend sits in the **Legend Zone** all game and
+  cannot normally leave it. (107.4, 133.6.b.1)
+- **Legends can have passive, triggered AND activated abilities.**
+  (174.6, 174.7, 174.8)
+- Legend abilities can carry Action and Reaction. (806.1.a, 813.1.a)
+
+**So the legend is a standing ability engine, not a nameplate**, and whether
+it is exhausted is as much a resource as an untapped rune — activating an
+ability usually costs exhausting it. Read the legend's card text before
+concluding what a turn can do. A legend that readies a unit, for instance, is
+the difference between a unit played this turn sitting idle and that same unit
+reaching a battlefield.
+
 ## The champion is a card you can play
 
 - Each player has a **Champion Zone** holding their Chosen Champion at the

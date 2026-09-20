@@ -20,10 +20,22 @@
      * there (rule 108.3.d) — it is not just a label for who you are. Once
      * deployed the zone is empty, so its presence IS the availability. */
     const champion = root.RBCBoard.cardAt(side, "champion");
+
+    /* The legend is a standing ability engine, not a nameplate. Legends can
+     * carry passive, triggered and activated abilities (174.6-174.8), and
+     * activating one usually costs exhausting it — so whether it is ready is
+     * as much a resource as an untapped rune. Carried with its code so its
+     * text can be looked up, and with its state so the coach knows whether
+     * the ability is still available this turn. */
+    const legend = root.RBCBoard.cardAt(side, "legend");
+
     return {
       name: root.RBCBoard.playerName(side),
       score: root.RBCBoard.score(board, side),
-      legend: root.RBCBoard.cardAlt(side, "legend"),
+      legend: legend?.name ?? null,
+      legendCard: legend
+        ? { name: legend.name, code: legend.code, exhausted: legend.exhausted }
+        : { name: null, code: null, exhausted: null },
       champion: champion?.name ?? null,
       championZone: champion
         ? { name: champion.name, code: champion.code, available: true }

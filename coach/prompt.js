@@ -206,6 +206,7 @@ function buildUserMessage(summary, cardText, prior) {
   }
   for (const side of [me, them]) {
     if (side.championZone.code) relevant.add(side.championZone.code);
+    if (side.legendCard?.code) relevant.add(side.legendCard.code);
   }
   for (const u of [...them.base, ...them.battlefieldA, ...them.battlefieldB]) {
     if (u.code) relevant.add(u.code);
@@ -219,6 +220,24 @@ function buildUserMessage(summary, cardText, prior) {
     .join("\n");
 
   const priorBlock = describePrior(prior);
+  /* The legend, with whether its ability is still available.
+   *
+   * It was previously just a name in the header, so its text never reached
+   * the prompt and its abilities were invisible. A legend that readies a unit
+   * is the difference between a body played this turn sitting idle and that
+   * same body reaching a battlefield. */
+  const legendLine = (side) => {
+    const l = side.legendCard;
+    if (!l?.name) return `  legend: ${side.legend ?? "?"}`;
+    const state =
+      l.exhausted === true
+        ? "EXHAUSTED — its activated abilities are spent this turn"
+        : l.exhausted === false
+        ? "ready — its abilities are available"
+        : "state unknown";
+    return `  legend: ${l.name} (${state}) — see its card text; legends have abilities`;
+  };
+
   const championLine = (side) =>
     side.championZone.available
       ? `  champion still in its zone (playable by them): ${side.championZone.name}`
@@ -259,7 +278,8 @@ function buildUserMessage(summary, cardText, prior) {
     turn.isMyTurn === true ? "my turn" : turn.isMyTurn === false ? "their turn" : "turn owner unknown"
   }
 
-ME — ${me.name ?? "?"} (legend: ${me.legend ?? "?"})
+ME — ${me.name ?? "?"}
+${legendLine(me)}
   score ${me.score ?? "?"} of 8
   floating: energy ${me.floating.energy ?? "?"}, power ${me.floating.power ?? "?"}
   runes: ${describeRunes(me.runes)}
@@ -269,7 +289,8 @@ ME — ${me.name ?? "?"} (legend: ${me.legend ?? "?"})
 CARDS YOU CAN PLAY THIS TURN — every one of them, not just your hand:
 ${playableList(me)}
 
-THEM — ${them.name ?? "?"} (legend: ${them.legend ?? "?"})
+THEM — ${them.name ?? "?"}
+${legendLine(them)}
 ${championLine(them)}
   score ${them.score ?? "?"} of 8
   floating: energy ${them.floating.energy ?? "?"}, power ${them.floating.power ?? "?"}
