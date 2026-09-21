@@ -382,6 +382,39 @@ needs its own change with its own tests, and Shadow Fiend and Serene Ascetic
 wait for it rather than shipping as cards that are quietly worth less than
 they read.
 
+## Cost shapes ActivationCost cannot express
+
+`ActivationCost` is a fixed record — exhaust, energy, power + domain,
+recycle-self, discard N, XP. Three printed cost shapes do not fit it, and
+each blocks real cards:
+
+| shape | card | what happens without it |
+|---|---|---|
+| "A **or** B" | Legion Marauder: `[1]` or `[Body]` | modelled as two abilities doing the same thing at different prices — the generator filters each by affordability, so this one is **solved** |
+| "Discard **a gear**" | Sky Cruiser | `discard` is untyped, so the engine would let any card pay — cheaper than printed, in the direction a search exploits |
+| "**Kill a friendly unit**" | Escaped Grayback | no sacrifice cost exists at all |
+
+The first has a clean workaround and is done. The other two are left
+unwritten rather than shipped as cards that cost less than they say.
+
+## "A combat that I was in"
+
+Mournful Witness ("When a combat that I was in ends, empower me") and
+Affectionate Poro ("When a combat that I was in ends, if I haven't been
+dealt damage this turn, draw 1") both need a combat-end trigger scoped to
+participants.
+
+`CombatEndedEvent` carries the battlefield and the winner, and no trigger
+type listens for it. Worse, "was in" cannot be recovered afterwards:
+`combat_designation` is cleared when combat ends, so by the time anything
+resolves, nothing on the board remembers having fought.
+
+So this needs the event to carry its participants, the same way
+`UnitDiedEvent::was_at` had to be read by the trigger manager for
+"an enemy unit **here** dies". Affectionate Poro needs one thing more — a
+per-object "dealt damage this turn" flag — which is another turn-stamped
+counter of the kind three cards have already needed.
+
 ## A card can only make one resolve-time choice
 
 `Card::pickTarget` reserves resume points 6/7/8 and `resume_data[2]`;
