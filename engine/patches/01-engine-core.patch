@@ -1,5 +1,5 @@
 diff --git a/src/cards/card.h b/src/cards/card.h
-index bd1b268..783450a 100644
+index bd1b268..c407ee8 100644
 --- a/src/cards/card.h
 +++ b/src/cards/card.h
 @@ -110,6 +110,24 @@ public:
@@ -27,7 +27,33 @@ index bd1b268..783450a 100644
      /// State-aware reduction to an activated ability's ENERGY cost (e.g.
      /// Bashful Bloom: "costs [1] less for each friendly [Temporary] unit").
      /// Consulted by the activation affordability check + payment, clamped so
-@@ -504,6 +522,31 @@ public:
+@@ -433,6 +451,25 @@ public:
+     /// `applyPassiveAura` on each on-board card.
+     virtual void applyPassiveAura(GameState& state, PlayerId controller) const {}
+ 
++    /// Same hook, per OBJECT.
++    ///
++    /// The third virtual on this class to need this treatment, after
++    /// canBeChosenByEnemy and canActivateAbility, and for the same reason
++    /// each time: a passive that depends on the state of THIS copy of the
++    /// card cannot be expressed by a hook that is handed only the controller.
++    /// "[Empowered][>] I have +3 Might" is the whole VEN unit cycle, and two
++    /// copies of one card routinely differ.
++    ///
++    /// Defaults to the controller-only form, so every existing override keeps
++    /// working. Called from recalculateAuras AFTER the aura caches are
++    /// cleared, so writing aura_might_bonus / aura_keywords here is safe and
++    /// is re-applied every pass — which is what makes it a passive rather
++    /// than a one-shot.
++    virtual void applyPassiveAura(GameState& state, PlayerId controller,
++                                  GameObjectId /*self*/) const {
++        applyPassiveAura(state, controller);
++    }
++
+     // ── Replacement effects ──
+     /// Whether this card has a replacement effect (intercepts killUnit etc.).
+     virtual bool hasReplacementEffect() const { return false; }
+@@ -504,6 +541,31 @@ public:
      };
      virtual OptionalAdditionalCost optionalAdditionalCost() const { return {}; }
  
@@ -59,7 +85,7 @@ index bd1b268..783450a 100644
      // ── Alternative play cost ──
      /// "You may play me for <alt cost> [instead of my printed cost]" when a
      /// condition holds (Jhin, Meticulous Killer: "play me for [B]" if you've
-@@ -520,6 +563,24 @@ public:
+@@ -520,6 +582,24 @@ public:
      virtual AltPlayCost alternativePlayCost(const GameState& /*state*/,
                                              PlayerId /*player*/) const { return {}; }
  
@@ -84,7 +110,7 @@ index bd1b268..783450a 100644
      /// LeBlanc, Everywhere at Once: "your [Temporary] effects at my battlefield
      /// don't trigger." When true, TriggerManager suppresses triggers fired by a
      /// friendly [Temporary] unit sharing this card's battlefield + controller.
-@@ -557,6 +618,35 @@ public:
+@@ -557,6 +637,35 @@ public:
      /// flag to filter out untargetable enemy candidates.
      virtual bool canBeChosenByEnemy() const { return true; }
  
@@ -121,15 +147,75 @@ index bd1b268..783450a 100644
      /// Whether this unit should enter the board READY (not exhausted) on
      /// play, without paying an Accelerate cost. Default false; resolves
 diff --git a/src/cards/card_helpers.h b/src/cards/card_helpers.h
-index f3f01e4..30b1a58 100644
+index f3f01e4..f6755e8 100644
 --- a/src/cards/card_helpers.h
 +++ b/src/cards/card_helpers.h
-@@ -168,10 +168,98 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
+@@ -168,10 +168,213 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
          ps.last_spell_energy_spent = 0;
  }
  
 -inline void counterChainTop(CardContext& ctx) {
 -    if (ctx.state.chain.items.empty()) return;
++/// "You may pay [N] to …" — energy paid from a card's own effect.
++///
++/// The engine pays energy in several places (play costs, activation costs,
++/// additional costs) and none of them is reachable from a CardContext, so
++/// cards that offer an optional energy payment mid-effect had nowhere to go.
++///
++/// Exhausts ready runes in the player's base, which is what paying energy
++/// IS (CR 164.2.a) — as against power, which recycles an already-exhausted
++/// one. Returns false and exhausts nothing when the player cannot cover the
++/// whole cost, so a partial payment can never happen.
++inline bool payEnergyFromRunes(CardContext& ctx, int amount) {
++    if (amount <= 0) return true;
++    const auto base = BaseLocation{ctx.controller};
++
++    std::vector<GameObjectId> ready;
++    for (auto& [id, obj] : ctx.state.objects) {
++        if (!obj.isRune() || obj.controller != ctx.controller) continue;
++        if (obj.is_exhausted) continue;
++        if (!obj.location.has_value() || *obj.location != LocationId{base}) continue;
++        ready.push_back(id);
++    }
++    if (static_cast<int>(ready.size()) < amount) return false;
++
++    for (int i = 0; i < amount; ++i) {
++        ctx.state.getObject(ready[i]).is_exhausted = true;
++    }
++    return true;
++}
++
++/// "If you control fewer runes than an opponent" — the VEN catch-up clause
++/// (Forsaken Baccai, Oasis Raider, and the [Empower] discounts that scale
++/// with rune count).
++///
++/// Runes ON THE BOARD that you control. A rune in hand is not one you
++/// control, and an exhausted rune still is — the clause counts how many you
++/// have, not how many you can spend, which is the same distinction that
++/// makes power cost recycle an exhausted rune rather than exhaust a ready
++/// one.
++///
++/// "Fewer than AN opponent" is fewer than any single one of them, so a strict
++/// comparison against each in turn rather than against their total.
++inline int runesControlled(const GameState& state, PlayerId player) {
++    int n = 0;
++    for (const auto& [id, obj] : state.objects) {
++        if (!obj.isRune() || obj.controller != player) continue;
++        if (!obj.location.has_value()) continue;
++        ++n;
++    }
++    return n;
++}
++
++inline bool behindOnRunes(const GameState& state, PlayerId player) {
++    const int mine = runesControlled(state, player);
++    for (auto p : {PlayerId::Player1, PlayerId::Player2}) {
++        if (p == player) continue;
++        if (mine < runesControlled(state, p)) return true;
++    }
++    return false;
++}
++
 +// ── [Empower] / [Empowered] / Disempower (VEN) ───────────────────────────
 +//
 +// Three printed things, one latch (GameObject::is_empowered):
@@ -162,6 +248,11 @@ index f3f01e4..30b1a58 100644
 +    obj.is_empowered = true;
 +    ctx.events.logTrace("EMPOWER: " + obj.name + " (id=" + std::to_string(id) +
 +                         ") is now Empowered");
++    // CR 441.2.a — becoming Empowered is an event. Emitted only on the
++    // transition: the early return above means empowering something already
++    // Empowered fires nothing, so "when you empower something else" cannot
++    // be farmed by re-empowering.
++    ctx.events.emit(ObjectEmpoweredEvent{id, ctx.controller});
 +}
 +
 +inline void disempowerObject(CardContext& ctx, GameObjectId id) {
@@ -195,6 +286,56 @@ index f3f01e4..30b1a58 100644
 +    return true;
 +}
 +
++/// The commonest VEN unit: `[Empower] <cost>` plus `[Empowered][>] I have
++/// <something>`.
++///
++/// Winding it up is its only activated ability, and the payoff is a passive
++/// that holds while the latch is set. Subclasses give the cost and the buff;
++/// everything else — the ability descriptor, CR 441.1.b's "an Empowered Game
++/// Object can not be Empowered", the per-object aura — is the same on every
++/// one of them and belongs here rather than in thirty files.
++///
++/// A card that ALSO has other abilities should not use this: add them in
++/// activatedAbilities and the gate stops matching. Write it out instead.
++class EmpoweredSelfBuff : public UnitCard {
++public:
++    std::vector<ActivatedAbility> activatedAbilities() const override {
++        return {empowerAbility(empowerCost())};
++    }
++
++    bool canActivateAbility(const GameState& state, PlayerId /*controller*/,
++                            GameObjectId self, int ability_index) const override {
++        return empowerGate(state, self, ability_index, /*empower_index=*/0, {});
++    }
++
++    void onActivate(CardContext& ctx, int ability_index,
++                    const std::vector<GameObjectId>&) override {
++        if (ability_index == 0) empowerObject(ctx, ctx.source);
++    }
++
++    void applyPassiveAura(GameState& state, PlayerId /*controller*/,
++                          GameObjectId self) const override {
++        if (!state.objectExists(self)) return;
++        auto& obj = state.getObject(self);
++        if (!obj.is_empowered) return;
++        // Push AuraEffects rather than writing aura_might_bonus directly.
++        // recalculateAuras aggregates aura_effects into the caches in a LATER
++        // step and recomputes Might there; writing the cache here would be
++        // overwritten by that aggregation, which looks like the buff simply
++        // not existing.
++        for (auto ae : empoweredAuras()) {
++            ae.source = self;
++            obj.aura_effects.push_back(ae);
++        }
++    }
++
++protected:
++    /// What [Empower] costs on this card.
++    virtual ActivationCost empowerCost() const = 0;
++    /// What "[Empowered][>] I have …" grants, as aura effects on itself.
++    virtual std::vector<GameObject::AuraEffect> empoweredAuras() const = 0;
++};
++
 +/// Whether this chain item may legally be countered.
 +///
 +/// Fails open on purpose. A chain item with no CardDef (a token's ability,
@@ -226,7 +367,7 @@ index f3f01e4..30b1a58 100644
      auto countered = top.source;
      revertCounteredPlay(ctx, top);  // CR 425.1.b
      ctx.state.chain.items.pop_back();
-@@ -182,6 +270,7 @@ inline void counterChainTop(CardContext& ctx) {
+@@ -182,6 +385,7 @@ inline void counterChainTop(CardContext& ctx) {
          obj.location = std::nullopt;
          ctx.state.player(obj.owner).trash.push_back(countered);
      }
@@ -235,7 +376,7 @@ index f3f01e4..30b1a58 100644
  
  // ── Gold tokens ──
 diff --git a/src/core/game_state.h b/src/core/game_state.h
-index 9c5ca4e..f0bced5 100644
+index 9c5ca4e..9c11992 100644
 --- a/src/core/game_state.h
 +++ b/src/core/game_state.h
 @@ -79,6 +79,24 @@ struct PlayerState {
@@ -271,7 +412,30 @@ index 9c5ca4e..f0bced5 100644
      bool recall_all_on_attacker_tie = false;   // Symbol of the Solari (227): attacker-side combat tie recalls ALL units
      bool effects_cant_ready_my_units = false;  // set on the RESTRICTED player — Mageseeker Warden cl2 ("spells/abilities can't ready enemy units/gear")
      int  spells_have_repeat_energy = 0;        // Syndra, Transcendent (708): granted [Repeat] tranche cost (energy)
-@@ -211,6 +230,8 @@ struct PlayerState {
+@@ -115,6 +134,22 @@ struct PlayerState {
+     int  repeat_cost_reduction = 0;            // Marai Spire (525): friendly [Repeat] costs cost N less
+     bool has_reveal_peek = false;              // Void Hatchling (341): peek/recycle top before revealing
+     bool zilean_present = false;               // Zilean, Time Mage (648): a Zilean is at one of my battlefields (aura)
++    /// Sandstone Chimera: "While I'm at a battlefield, PLAYERS only channel
++    /// 1 rune at the start of their Channel Phase."
++    ///
++    /// Set on BOTH players, not just the Chimera's controller — "players"
++    /// means everyone, and reading it as "your opponent" would turn a
++    /// symmetrical lock into a one-sided one, which is a much better card
++    /// than the one printed. Re-asserted every recalculateAuras, so it goes
++    /// away by itself when the Chimera leaves the battlefield.
++    bool channel_capped_to_one = false;
++    /// Dune Surfer: "You ignore [Tank] while assigning combat damage here."
++    ///
++    /// The battlefields at which THIS player may ignore Tank. Per-battlefield
++    /// and per-player: the Surfer's controller ignores Tank at its own
++    /// battlefield only, and the opponent still has to respect it there.
++    /// Re-asserted every recalculateAuras.
++    std::set<BattlefieldId> ignores_tank_at;
+     // Turn-scoped riders (NOT aura-derived — reset in resetTurnTracking):
+     int max_spell_spent_this_turn = 0;         // most-expensive single spell paid for this turn (Jhin, Meticulous Killer: "spent [4]+ to play a spell")
+     int next_spell_bonus_damage = 0;           // Ravenborn Tome: "the next spell you play this turn deals N Bonus Damage" (consumed when that spell deals damage)
+@@ -211,6 +246,8 @@ struct PlayerState {
  
      void resetTurnTracking() {
          cards_played_this_turn = 0;
@@ -280,7 +444,7 @@ index 9c5ca4e..f0bced5 100644
          equipment_played_this_turn = 0;
          gears_played_this_turn = 0;
          has_discarded_this_turn = false;
-@@ -585,6 +606,25 @@ struct GameState {
+@@ -585,6 +622,25 @@ struct GameState {
  
      // ── Player access ──
  
@@ -307,10 +471,22 @@ index 9c5ca4e..f0bced5 100644
          return players[playerIndex(id)];
      }
 diff --git a/src/engine/effect_executor.cpp b/src/engine/effect_executor.cpp
-index 19d2363..52ad91e 100644
+index 19d2363..c77af86 100644
 --- a/src/engine/effect_executor.cpp
 +++ b/src/engine/effect_executor.cpp
-@@ -262,6 +262,32 @@ void EffectExecutor::drawCards(PlayerId player, int count) {
+@@ -72,7 +72,11 @@ void EffectExecutor::dealDamage(GameObjectId target, int amount,
+             // card only sets it on the caster — but the spec says
+             // "prevent all", so check defender side first, fall back
+             // to caster side).
++            // Per-OBJECT spell/ability immunity (Esteemed Hierophant) as well
++            // as the two per-player "this turn" flags. Combat damage never
++            // reaches here, which is the whole point of the distinction.
+             bool prevented =
++                obj.immune_to_spell_ability_damage ||
+                 state_.player(obj.controller).prevent_spell_ability_damage_this_turn ||
+                 state_.player(src_obj.controller).prevent_spell_ability_damage_this_turn;
+             if (prevented && amount > 0) {
+@@ -262,6 +266,32 @@ void EffectExecutor::drawCards(PlayerId player, int count) {
      }
  }
  
@@ -343,7 +519,7 @@ index 19d2363..52ad91e 100644
  void EffectExecutor::bounceToHand(GameObjectId target) {
      if (!state_.objectExists(target)) return;
      auto& obj = state_.getObject(target);
-@@ -1186,6 +1212,7 @@ void EffectExecutor::playIgnoringCost(PlayerId player, GameObjectId card,
+@@ -1186,6 +1216,7 @@ void EffectExecutor::playIgnoringCost(PlayerId player, GameObjectId card,
  
      auto& ps = state_.player(player);
      ps.cards_played_this_turn++;
@@ -386,10 +562,27 @@ index 1af2ec5..d9083d2 100644
      void giveTemporaryMight(GameObjectId target, int amount, int minimum = 0);
      void giveTemporaryKeyword(GameObjectId target, Keyword kw, int value);
 diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
-index ce24a33..e75567f 100644
+index ce24a33..f144813 100644
 --- a/src/engine/game_engine.cpp
 +++ b/src/engine/game_engine.cpp
-@@ -1023,6 +1023,9 @@ void GameEngine::doExpirationBody() {
+@@ -797,6 +797,16 @@ void GameEngine::channelPhase() {
+         count = 3;
+     }
+ 
++    // Sandstone Chimera caps the Channel Phase at one rune. Applied after
++    // the second-player bonus, since it is a cap on what you end up
++    // channelling rather than an adjustment to the base number — a player
++    // who would have channelled 3 still channels 1.
++    if (state_.player(player).channel_capped_to_one && count > 1) {
++        events_.logTrace("CHANNEL_CAPPED: " + std::string(toString(player)) +
++                         " channels 1 instead of " + std::to_string(count));
++        count = 1;
++    }
++
+     channelRunes(player, count);
+ }
+ 
+@@ -1023,6 +1033,9 @@ void GameEngine::doExpirationBody() {
          // Per-unit move counter is "this turn" (Kayn, Unleashed).
          obj.moves_this_turn = 0;
  
@@ -399,7 +592,7 @@ index ce24a33..e75567f 100644
          // Temp might is a separate field from buff_count (permanent buffs);
          // just clear it. recomputeMight (below / in cleanup) drops the bonus.
          bool had_temp_might = (obj.temp_might_bonus != 0);
-@@ -1193,6 +1196,40 @@ void GameEngine::executeIntent(const Intent& intent) {
+@@ -1193,6 +1206,40 @@ void GameEngine::executeIntent(const Intent& intent) {
                      events_.emit(ObjectStateChangedEvent{id, "exhausted"});
                  }
              }
@@ -440,7 +633,7 @@ index ce24a33..e75567f 100644
              // Pay recycle-self cost [C]
              if (act_cost.recycle_self) {
                  events_.logTrace("ACTIVATE_COST: recycle self " + source.name);
-@@ -1347,6 +1384,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
+@@ -1347,6 +1394,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -448,7 +641,7 @@ index ce24a33..e75567f 100644
      // Per-turn gear/equipment counters (Emperor of the Sands gate; Ornn's
      // Forge "first gear each turn"). NOTE: this runs AFTER payCardCost, so the
      // first gear's cost reduction still sees gears_played_this_turn == 0.
-@@ -1365,7 +1403,12 @@ void GameEngine::executePlayCard(const Intent& intent) {
+@@ -1365,7 +1413,12 @@ void GameEngine::executePlayCard(const Intent& intent) {
  
      // Store the play location on the game object so resolvePermanent can use it.
      // Permanents choose location during finalization (CR 355.2.a).
@@ -462,7 +655,7 @@ index ce24a33..e75567f 100644
  
      // CR 135.2.b.3 + CR 355.1 — "As you play me" / "As I am played"
      // instructions execute during the play action itself, not as a
-@@ -1417,6 +1460,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1417,6 +1470,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
      bool paid_via_grant = false;
      if (intent.play_source == Intent::PlaySource::Trash) {
          paid_via_grant = payTrashReplayGrant(intent.player, intent.card);
@@ -470,7 +663,7 @@ index ce24a33..e75567f 100644
      }
      if (!paid_via_grant) {
          ps.current_play_source = intent.play_source;
-@@ -1512,6 +1556,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1512,6 +1566,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -478,7 +671,7 @@ index ce24a33..e75567f 100644
      int energy_spent = 0;
      if (card.card_def_id != kInvalidId) {
          energy_spent = card_db_.get(card.card_def_id).energy_cost;
-@@ -1747,6 +1792,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
+@@ -1747,6 +1802,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
          if (card.hasKeyword(Keyword::Ambush) && card.isAtBattlefield()) {
              enters_ready = true;
          }
@@ -494,7 +687,7 @@ index ce24a33..e75567f 100644
          // Cards that intrinsically enter ready (e.g. Daisy! "I enter ready").
          if (card.card_def_id != kInvalidId) {
              if (const Card* cdef = card_registry_.get(card.card_def_id)) {
-@@ -2858,9 +2912,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
+@@ -2858,9 +2922,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
      }
  }
  
@@ -591,7 +784,7 @@ index ce24a33..e75567f 100644
      auto& ps = state_.player(player);
      if (ps.trash_replay_grants.empty()) return;
      if (ps.cant_play_cards_this_turn || ps.cant_play_spells_this_turn) return;
-@@ -2972,11 +3113,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
+@@ -2972,11 +3123,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
              const auto& ab = abilities[ai];
              const auto& act_cost = ab.cost;
  
@@ -612,7 +805,49 @@ index ce24a33..e75567f 100644
              if (act_cost.discard && act_cost.discard_count > 0 &&
                  static_cast<int>(state_.player(player).hand.size())
                      < act_cost.discard_count) continue;
-@@ -3798,6 +3948,7 @@ void GameEngine::recalculateAuras() {
+@@ -3486,12 +3646,25 @@ GameEngine::CombatDamageAdvance GameEngine::advanceCombatDamage(
+     // buckets, enumerate permutations within each, concatenate, and run
+     // greedy-lethal on every ordering. Identical resulting allocations
+     // are deduped.
++    // "You ignore [Tank] while assigning combat damage here" (Dune Surfer).
++    // Checked per battlefield: the attacker ignores Tank only where the
++    // Surfer stands, and only for the player who controls it. Ignoring means
++    // the Tank bucket is not privileged — the unit is still a legal target,
++    // it simply stops having to be dealt with first.
++    bool ignore_tank = false;
++    if (!targets.empty()) {
++        const auto& first = state_.getObject(targets.front());
++        if (auto bf = first.battlefieldId()) {
++            ignore_tank = state_.player(assigner).ignores_tank_at.count(*bf) > 0;
++        }
++    }
++
+     std::vector<GameObjectId> tanks, mids, backs;
+     for (auto tid : targets) {
+         auto& obj = state_.getObject(tid);
+-        if (obj.hasKeyword(Keyword::Tank))         tanks.push_back(tid);
+-        else if (obj.hasKeyword(Keyword::Backline)) backs.push_back(tid);
+-        else                                        mids.push_back(tid);
++        if (!ignore_tank && obj.hasKeyword(Keyword::Tank)) tanks.push_back(tid);
++        else if (obj.hasKeyword(Keyword::Backline))        backs.push_back(tid);
++        else                                               mids.push_back(tid);
+     }
+ 
+     auto greedyCascade = [&](const std::vector<GameObjectId>& order)
+@@ -3780,10 +3953,12 @@ void GameEngine::recalculateAuras() {
+     // Step 1: Clear all aura effects from all objects
+     for (auto& [id, obj] : state_.objects) {
+         obj.aura_effects.clear();
++        obj.aura_untargetable_by_enemy = false;   // Alpha Wildclaw
+         obj.aura_might_bonus = 0;
+         obj.aura_keywords.reset();
+         obj.aura_bonus_damage_taken = 0;
+         obj.immune_to_damage = false;  // re-asserted below by applyPassiveAura
++        obj.immune_to_spell_ability_damage = false;  // Esteemed Hierophant
+         obj.spells_targeting_me_cost_reduction = 0;  // Irelia, Graceful
+         obj.granted_abilities.clear();               // Forge / Gardens / Heimerdinger
+     }
+@@ -3798,6 +3973,7 @@ void GameEngine::recalculateAuras() {
          ps.grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer
          ps.units_play_base_only = false;         // Mageseeker Warden
          ps.tokens_enter_ready = false;           // Renata Glasc, Industrialist
@@ -620,7 +855,16 @@ index ce24a33..e75567f 100644
          ps.recall_all_on_attacker_tie = false;   // Symbol of the Solari
          ps.effects_cant_ready_my_units = false;  // Mageseeker Warden cl2
          ps.spells_have_repeat_energy = 0;        // Syndra, Transcendent
-@@ -3820,7 +3971,10 @@ void GameEngine::recalculateAuras() {
+@@ -3805,6 +3981,8 @@ void GameEngine::recalculateAuras() {
+         ps.repeat_cost_reduction = 0;            // Marai Spire
+         ps.has_reveal_peek = false;              // Void Hatchling
+         ps.zilean_present = false;               // Zilean, Time Mage
++        ps.channel_capped_to_one = false;        // Sandstone Chimera
++        ps.ignores_tank_at.clear();              // Dune Surfer
+     }
+     // Per-BF aura-derived flags (Mageseeker Investigator / Noxus Saboteur /
+     // Altar of Blood). Reset here; re-asserted by unit/BF applyPassiveAura.
+@@ -3820,7 +3998,10 @@ void GameEngine::recalculateAuras() {
      // GameState::objects; collocated with aura recalc so all "static
      // attributes of on-board cards" get refreshed in one place.
      for (auto& [id, obj] : state_.objects) {
@@ -632,7 +876,7 @@ index ce24a33..e75567f 100644
          // On-board cards AND legends (LegendZone, no location) broadcast their
          // passive auras. Without including legends, legend-sourced passives
          // (Purifier's [Assault], Wuju Master's +1 [M], etc.) never fired.
-@@ -3829,7 +3983,7 @@ void GameEngine::recalculateAuras() {
+@@ -3829,7 +4010,7 @@ void GameEngine::recalculateAuras() {
          if (!on_board && !legend_zone) continue;
          if (obj.card_def_id == kInvalidId) continue;
          const Card* card = card_registry_.get(obj.card_def_id);
@@ -641,7 +885,47 @@ index ce24a33..e75567f 100644
              obj.untargetable_by_enemy = true;
          }
  
-@@ -4796,6 +4950,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
+@@ -3837,7 +4018,7 @@ void GameEngine::recalculateAuras() {
+         // chance to broadcast its passive effect (Karthus bumps the
+         // controller's deathknell_double_count, future cards add their own).
+         if (card) {
+-            card->applyPassiveAura(state_, obj.controller);
++            card->applyPassiveAura(state_, obj.controller, id);
+         }
+     }
+ 
+@@ -4221,14 +4402,30 @@ void GameEngine::recalculateAuras() {
+         obj.aura_keywords.reset();
+         obj.aura_no_combat_damage = false;
+         obj.aura_bonus_damage_taken = 0;
++        obj.aura_assault_value = 0;
++        obj.aura_shield_value = 0;
++        obj.aura_deflect_value = 0;
+         for (auto& ae : obj.aura_effects) {
+             obj.aura_might_bonus += ae.might_bonus;
+             if (ae.keyword != Keyword::Count) {
+                 obj.aura_keywords.set(ae.keyword);
++                // …and its magnitude. Reading only the keyword here is what
++                // made aura-granted [Assault N] worth nothing.
++                switch (ae.keyword) {
++                    case Keyword::Assault: obj.aura_assault_value += ae.keyword_value; break;
++                    case Keyword::Shield:  obj.aura_shield_value  += ae.keyword_value; break;
++                    case Keyword::Deflect: obj.aura_deflect_value += ae.keyword_value; break;
++                    default: break;
++                }
+             }
+             if (ae.suppress_combat_damage) obj.aura_no_combat_damage = true;
+             obj.aura_bonus_damage_taken += ae.bonus_damage_taken;
+         }
++        // Fold in aura-granted untargetability. Done HERE, in the last step,
++        // so it cannot be undone by the per-object assignment in Step 1b —
++        // which runs in the same loop as the hooks that set this.
++        if (obj.aura_untargetable_by_enemy) obj.untargetable_by_enemy = true;
++
+         // Recompute might with new aura values
+         if (obj.isUnit() && obj.location.has_value()) {
+             obj.recomputeMight();
+@@ -4796,6 +4993,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
  // the same primitives canAfford / payCardCost use, but for ONE extra
  // (energy, domain_power) charge — called by executePlaySpell after the
  // base cost has already been paid.
@@ -668,7 +952,7 @@ index ce24a33..e75567f 100644
  bool GameEngine::payRepeatCost(PlayerId player, const RepeatCost& cost) {
      if (!cost.valid) return true;
      auto base_loc = BaseLocation{player};
-@@ -4845,6 +5019,25 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
+@@ -4845,11 +5062,63 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
      const Card* cdef = card_registry_.get(card.card_def_id);
      if (!cdef) return;
      auto cost = cdef->optionalAdditionalCost();
@@ -692,9 +976,51 @@ index ce24a33..e75567f 100644
 +        }
 +    }
      if (!cost.valid) return;
-     // Discard-as-additional-cost-to-reduce (Brazen Buccaneer) is decided BEFORE
-     // payment in executePlayCard (the discount must precede the base cost), so
-@@ -4884,6 +5077,17 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
+-    // Discard-as-additional-cost-to-reduce (Brazen Buccaneer) is decided BEFORE
+-    // payment in executePlayCard (the discount must precede the base cost), so
+-    // it is NOT handled here.
+-    if (cost.discard_cards > 0) return;
++    // Discard-as-additional-cost-to-REDUCE (Brazen Buccaneer) is decided
++    // BEFORE payment in executePlayCard, since the discount has to precede
++    // the base cost. That case is not handled here.
++    //
++    // Discard for an EFFECT rather than a discount (Ruthless Strike: "you may
++    // discard 1 … deal 5 instead of 3"; Zed, From the Shadows) is a different
++    // shape and was handled nowhere: the prepay path requires reduce_energy,
++    // this path bailed on any discard at all, so the option was simply never
++    // offered and the card always resolved as its cheaper half.
++    const bool discard_for_effect = cost.discard_cards > 0 && cost.reduce_energy == 0;
++    if (cost.discard_cards > 0 && !discard_for_effect) return;
++    if (discard_for_effect) {
++        if (static_cast<int>(state_.player(player).hand.size()) < cost.discard_cards) return;
++        Intent decline; decline.type = IntentType::MakeChoice;
++        decline.player = player; decline.chosen_value = 0;
++        Intent accept;  accept.type  = IntentType::MakeChoice;
++        accept.player  = player; accept.chosen_value  = 1;
++        std::vector<Intent> opts = {decline, accept};
++        state_.decision_index++;
++        events_.logTrace("DECISION #" + std::to_string(state_.decision_index) + " (" +
++                         toString(player) + "): discard " +
++                         std::to_string(cost.discard_cards) + " as an additional cost for " +
++                         card.name + "? [decline|discard]");
++        auto chosen = getAgent(player).selectAction(state_, opts);
++        recordAppliedIntent(chosen);
++        if (on_decision) on_decision(state_, opts, chosen);
++        if (chosen.chosen_value.value_or(0) == 1) {
++            effect_executor_->discardCards(player, cost.discard_cards);
++            if (cost.paid_flag && cost.paid_flag[0] != '\0')
++                card.card_counters[cost.paid_flag] = 1;
++            events_.logTrace("ADDITIONAL_COST: " + card.name + " discarded " +
++                             std::to_string(cost.discard_cards));
++        } else {
++            events_.logTrace("ADDITIONAL_COST: " + card.name + " declined the discard");
++        }
++        return;
++    }
+ 
+     // Pick a payable domain for the power portion (specific, any, or none).
+     std::optional<Domain> dom;
+@@ -4884,6 +5153,17 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
          if (cost.paid_flag && cost.paid_flag[0] != '\0') {
              card.card_counters[cost.paid_flag] = 1;
          }
@@ -712,7 +1038,7 @@ index ce24a33..e75567f 100644
          events_.logTrace("ADDITIONAL_COST: " + card.name + " paid optional additional cost");
      } else {
          events_.logTrace("ADDITIONAL_COST: " + card.name + " declined additional cost");
-@@ -5371,6 +5575,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
+@@ -5371,6 +5651,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
      return true;
  }
  

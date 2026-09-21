@@ -1,3 +1,28 @@
+diff --git a/tests/cards/card_test_fixture.h b/tests/cards/card_test_fixture.h
+index 8ab24dc..071b8db 100644
+--- a/tests/cards/card_test_fixture.h
++++ b/tests/cards/card_test_fixture.h
+@@ -401,6 +401,20 @@ protected:
+         card->onResolve(ctx, targets);
+     }
+ 
++    /// Activate one of a card's abilities by index, the counterpart of
++    /// invokeOnResolve for gear and legends. `ability_index` matters: a
++    /// multi-ability card dispatches on it, and calling the wrong one is the
++    /// commonest way an Empower test passes for the wrong reason.
++    void invokeOnActivate(GameObjectId source, CardDefId def_id,
++                          PlayerId controller, int ability_index,
++                          const std::vector<GameObjectId>& targets,
++                          EffectExecutor& exec) {
++        Card* card = card_registry.get(def_id);
++        ASSERT_NE(card, nullptr) << "card_def_id " << def_id << " not registered";
++        CardContext ctx{state, events, exec, controller, source};
++        card->onActivate(ctx, ability_index, targets);
++    }
++
+     /// Drive a resumable trigger (Card::onTrigger) through the
+     /// requestChoice / takeChoice loop. Mirrors driveResumable but calls
+     /// onTrigger so optional-trigger cards (Virtuoso, Gloomist, …) can be
 diff --git a/tests/cards/test_counter_spells.cpp b/tests/cards/test_counter_spells.cpp
 index fa5b467..980bd9e 100644
 --- a/tests/cards/test_counter_spells.cpp
@@ -263,6 +288,416 @@ index fa5b467..980bd9e 100644
 +}
 +
  }  // namespace
+diff --git a/tests/cards/test_empower.cpp b/tests/cards/test_empower.cpp
+new file mode 100644
+index 0000000..b9fbd6c
+--- /dev/null
++++ b/tests/cards/test_empower.cpp
+@@ -0,0 +1,404 @@
++/// @file test_empower.cpp
++/// [Empower] / [Empowered] / Disempower — CR 441 and 442.
++///
++/// The half worth testing is the legality, not the effect. Two abilities on
++/// one card are each legal in exactly the state the other is not, and the
++/// card-wide canActivateAbility could express neither — it has no object id
++/// and no ability index. These tests are really about that overload.
++
++#include "cards/card_helpers.h"
++#include "tests/cards/card_test_fixture.h"
++
++using namespace riftbound;
++using namespace riftbound::test;
++
++namespace {
++
++constexpr CardDefId kQuestionableTome = 841;  // [Empower]-E ; Disempower,1,E: Draw 1
++constexpr CardDefId kHextechDisc      = 874;  // same shape, pays a Mech token
++constexpr CardDefId kToolsOfEmpire    = 864;  // [Empower] 2 ; E: +2[M], +4 if Empowered
++constexpr CardDefId kHextechFormula   = 849;  // E: Empower ANOTHER gear
++
++class EmpowerTest : public CardTestFixture {};
++
++// ── the state itself (CR 441.1) ──────────────────────────────────────────
++
++TEST_F(EmpowerTest, EmpoweringTwiceIsNotAnError) {
++    // CR 441.1.c: "If a Game Object is instructed to be Empowered when it is
++    // already Empowered, nothing additional happens."
++    auto gear = addUnit(P1, kInvalidId, 1);
++    state.getObject(gear).card_type = CardType::Gear;
++    auto src = state.createObject();
++    state.getObject(src).controller = P1;
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    CardContext ctx{state, events, exec, P1, src};
++
++    empowerObject(ctx, gear);
++    EXPECT_TRUE(state.getObject(gear).is_empowered);
++    EXPECT_NO_THROW(empowerObject(ctx, gear));
++    EXPECT_TRUE(state.getObject(gear).is_empowered);
++}
++
++TEST_F(EmpowerTest, DisempoweringSomethingThatIsNotEmpoweredDoesNothing) {
++    // CR 442.1.a.1.
++    auto gear = addUnit(P1, kInvalidId, 1);
++    state.getObject(gear).card_type = CardType::Gear;
++    auto src = state.createObject();
++    state.getObject(src).controller = P1;
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    CardContext ctx{state, events, exec, P1, src};
++
++    EXPECT_NO_THROW(disempowerObject(ctx, gear));
++    EXPECT_FALSE(state.getObject(gear).is_empowered);
++}
++
++// ── the gate: two abilities, opposite states ─────────────────────────────
++
++TEST_F(EmpowerTest, TomeOffersEmpowerOnlyWhileNotEmpowered) {
++    auto tome = addUnit(P1, kQuestionableTome);
++    Card* c = card_registry.get(kQuestionableTome);
++
++    EXPECT_TRUE(c->canActivateAbility(state, P1, tome, 0)) << "[Empower] while not Empowered";
++    EXPECT_FALSE(c->canActivateAbility(state, P1, tome, 1)) << "Disempower needs it Empowered";
++
++    state.getObject(tome).is_empowered = true;
++    EXPECT_FALSE(c->canActivateAbility(state, P1, tome, 0)) << "CR 441.1.b";
++    EXPECT_TRUE(c->canActivateAbility(state, P1, tome, 1));
++}
++
++TEST_F(EmpowerTest, TheGateIsPerObjectNotPerCard) {
++    // Two copies of one card in different states. A card-wide gate would give
++    // them the same answer, which is the whole reason for the overload.
++    auto a = addUnit(P1, kQuestionableTome);
++    auto b = addUnit(P1, kQuestionableTome);
++    state.getObject(a).is_empowered = true;
++
++    Card* c = card_registry.get(kQuestionableTome);
++    EXPECT_FALSE(c->canActivateAbility(state, P1, a, 0));
++    EXPECT_TRUE(c->canActivateAbility(state, P1, b, 0));
++    EXPECT_TRUE(c->canActivateAbility(state, P1, a, 1));
++    EXPECT_FALSE(c->canActivateAbility(state, P1, b, 1));
++}
++
++TEST_F(EmpowerTest, ToolsOfEmpirePayoutStaysLegalEitherWay) {
++    // Unlike the Tome, ability 1 does not disempower, so it is never gated.
++    auto tools = addUnit(P1, kToolsOfEmpire);
++    Card* c = card_registry.get(kToolsOfEmpire);
++
++    EXPECT_TRUE(c->canActivateAbility(state, P1, tools, 1));
++    state.getObject(tools).is_empowered = true;
++    EXPECT_TRUE(c->canActivateAbility(state, P1, tools, 1));
++    EXPECT_FALSE(c->canActivateAbility(state, P1, tools, 0));
++}
++
++// ── effects ──────────────────────────────────────────────────────────────
++
++TEST_F(EmpowerTest, TomeEmpowersThenDrawsAndDisempowers) {
++    auto tome = addUnit(P1, kQuestionableTome);
++    addToDeck(P1, 687);
++    EffectExecutor exec(state, events, card_db, &card_registry);
++
++    invokeOnActivate(tome, kQuestionableTome, P1, 0, {}, exec);
++    EXPECT_TRUE(state.getObject(tome).is_empowered);
++
++    invokeOnActivate(tome, kQuestionableTome, P1, 1, {}, exec);
++    EXPECT_FALSE(state.getObject(tome).is_empowered) << "Disempower is part of the cost";
++    EXPECT_EQ(state.player(P1).hand.size(), 1u);
++}
++
++TEST_F(EmpowerTest, ToolsOfEmpireGivesFourWhileEmpowered) {
++    auto tools = addUnit(P1, kToolsOfEmpire);
++    auto unit = addUnit(P1, kInvalidId, 2);
++    EffectExecutor exec(state, events, card_db, &card_registry);
++
++    invokeOnActivate(tools, kToolsOfEmpire, P1, 1, {unit}, exec);
++    EXPECT_EQ(state.getObject(unit).current_might, 4) << "+2 while not Empowered";
++
++    state.getObject(tools).is_empowered = true;
++    invokeOnActivate(tools, kToolsOfEmpire, P1, 1, {unit}, exec);
++    EXPECT_EQ(state.getObject(unit).current_might, 8) << "+4 instead, on top of the +2";
++}
++
++TEST_F(EmpowerTest, HextechFormulaWillNotEmpowerItself) {
++    auto formula = addUnit(P1, kHextechFormula);
++    state.getObject(formula).card_type = CardType::Gear;
++    Card* c = card_registry.get(kHextechFormula);
++
++    auto legal = c->enumerateLegalTargets(state, P1, 0);
++    // enumerateLegalTargets lists every un-Empowered gear including itself;
++    // "another" is enforced in onActivate, which is where the id is known.
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnActivate(formula, kHextechFormula, P1, 0, {formula}, exec);
++    EXPECT_FALSE(state.getObject(formula).is_empowered)
++        << "\"Empower ANOTHER gear\" — never itself";
++    (void)legal;
++}
++
++TEST_F(EmpowerTest, HextechFormulaSkipsAlreadyEmpoweredGear) {
++    auto formula = addUnit(P1, kHextechFormula);
++    state.getObject(formula).card_type = CardType::Gear;
++    auto other = addUnit(P1, kQuestionableTome);
++    state.getObject(other).card_type = CardType::Gear;
++    state.getObject(other).is_empowered = true;
++
++    Card* c = card_registry.get(kHextechFormula);
++    auto legal = c->enumerateLegalTargets(state, P1, 0);
++    for (auto id : legal) EXPECT_NE(id, other) << "CR 441.1.b — it cannot be Empowered again";
++}
++
++
++// ═══════════════════════════════════════════════════════════════════════════
++// "[Empowered][>] I have <buff>" — the self-buff shape
++// ═══════════════════════════════════════════════════════════════════════════
++//
++// The buff is a passive that holds while the latch is set, so it is applied
++// by the aura pass and not by the ability that set the latch. Two things had
++// to be true for that to work, and neither was:
++//
++//   applyPassiveAura was handed the controller and not the OBJECT, so a card
++//   could not tell which copy of itself was Empowered.
++//
++//   recalculateAuras aggregated aura_effects reading only ae.keyword and
++//   never ae.keyword_value, so an aura granted [Assault 3] the keyword and
++//   zero Might.
++
++constexpr CardDefId kPunchingPoro  = 794;  // [Empowered] +1[M]
++constexpr CardDefId kSteelPaws     = 830;  // [Empowered] +7[M]
++constexpr CardDefId kShadowFiend   = 801;  // [Empowered] [Assault 3]
++constexpr CardDefId kSereneAscetic = 817;  // [Empowered] [Deflect], [Shield 3]
++
++class EmpoweredSelfBuffTest : public CardTestFixture {};
++
++TEST_F(EmpoweredSelfBuffTest, NoBuffUntilEmpowered) {
++    auto poro = addUnit(P1, kPunchingPoro);
++    auto& obj = state.getObject(poro);
++    card_registry.get(kPunchingPoro)->applyPassiveAura(state, P1, poro);
++    EXPECT_TRUE(obj.aura_effects.empty());
++}
++
++TEST_F(EmpoweredSelfBuffTest, MightBuffAppliesWhileEmpowered) {
++    auto paws = addUnit(P1, kSteelPaws);
++    auto& obj = state.getObject(paws);
++    obj.is_empowered = true;
++
++    card_registry.get(kSteelPaws)->applyPassiveAura(state, P1, paws);
++    ASSERT_EQ(obj.aura_effects.size(), 1u);
++    EXPECT_EQ(obj.aura_effects[0].might_bonus, 7);
++    EXPECT_EQ(obj.aura_effects[0].source, paws) << "the aura names its own object";
++}
++
++TEST_F(EmpoweredSelfBuffTest, TheAuraIsPerObject) {
++    // The reason applyPassiveAura needed the object id at all.
++    auto a = addUnit(P1, kPunchingPoro);
++    auto b = addUnit(P1, kPunchingPoro);
++    state.getObject(a).is_empowered = true;
++
++    Card* c = card_registry.get(kPunchingPoro);
++    c->applyPassiveAura(state, P1, a);
++    c->applyPassiveAura(state, P1, b);
++
++    EXPECT_EQ(state.getObject(a).aura_effects.size(), 1u);
++    EXPECT_TRUE(state.getObject(b).aura_effects.empty());
++}
++
++TEST_F(EmpoweredSelfBuffTest, KeywordAurasCarryTheirMagnitude) {
++    auto fiend = addUnit(P1, kShadowFiend);
++    auto& obj = state.getObject(fiend);
++    obj.is_empowered = true;
++
++    card_registry.get(kShadowFiend)->applyPassiveAura(state, P1, fiend);
++    ASSERT_EQ(obj.aura_effects.size(), 1u);
++    EXPECT_EQ(obj.aura_effects[0].keyword, Keyword::Assault);
++    EXPECT_EQ(obj.aura_effects[0].keyword_value, 3)
++        << "the number, not just the keyword bit";
++}
++
++TEST_F(EmpoweredSelfBuffTest, AuraAssaultIsWorthMightWhileAttacking) {
++    // The bug this fixes: the keyword bit was set and the Might never moved.
++    auto fiend = addUnit(P1, kShadowFiend);
++    auto& obj = state.getObject(fiend);
++    const int base = obj.current_might;
++
++    obj.aura_assault_value = 3;
++    obj.combat_designation = CombatDesignation::Attacker;
++    obj.recomputeMight();
++    EXPECT_EQ(obj.current_might, base + 3);
++
++    obj.combat_designation = CombatDesignation::Defender;
++    obj.recomputeMight();
++    EXPECT_EQ(obj.current_might, base) << "Assault applies only while attacking";
++}
++
++TEST_F(EmpoweredSelfBuffTest, AuraShieldIsWorthMightWhileDefending) {
++    auto unit = addUnit(P1, kInvalidId, 3);
++    auto& obj = state.getObject(unit);
++    obj.aura_shield_value = 3;
++
++    obj.combat_designation = CombatDesignation::Defender;
++    obj.recomputeMight();
++    EXPECT_EQ(obj.current_might, 6);
++
++    obj.combat_designation = CombatDesignation::Attacker;
++    obj.recomputeMight();
++    EXPECT_EQ(obj.current_might, 3);
++}
++
++// The generator reads keywords out of printed text and cannot see that some
++// of them sit behind "[Empowered][>]". Left on the CardDef, an un-Empowered
++// body would carry them for free — strictly better than the card.
++TEST_F(EmpoweredSelfBuffTest, GatedKeywordsAreNotOnTheCardDef) {
++    const auto& fiend = card_registry.get(kShadowFiend)->def();
++    EXPECT_FALSE(fiend.keywords.has(Keyword::Assault))
++        << "Shadow Fiend's [Assault 3] is gated on [Empowered]";
++
++    const auto& ascetic = card_registry.get(kSereneAscetic)->def();
++    EXPECT_FALSE(ascetic.keywords.has(Keyword::Deflect));
++    EXPECT_FALSE(ascetic.keywords.has(Keyword::Shield))
++        << "both of Serene Ascetic's keywords are gated on [Empowered]";
++}
++
++TEST_F(EmpoweredSelfBuffTest, SereneAsceticGrantsBothKeywordsWhenEmpowered) {
++    auto asc = addUnit(P1, kSereneAscetic);
++    auto& obj = state.getObject(asc);
++    obj.is_empowered = true;
++
++    card_registry.get(kSereneAscetic)->applyPassiveAura(state, P1, asc);
++    ASSERT_EQ(obj.aura_effects.size(), 2u);
++    bool deflect = false, shield3 = false;
++    for (const auto& ae : obj.aura_effects) {
++        if (ae.keyword == Keyword::Deflect) deflect = true;
++        if (ae.keyword == Keyword::Shield && ae.keyword_value == 3) shield3 = true;
++    }
++    EXPECT_TRUE(deflect);
++    EXPECT_TRUE(shield3);
++}
++
++
++// ═══════════════════════════════════════════════════════════════════════════
++// "When you empower something else" — CR 441.2.a
++// ═══════════════════════════════════════════════════════════════════════════
++//
++// Becoming Empowered is an event. Before it existed, empowering was a silent
++// write to a flag and Matriarch of War had nothing to listen to.
++//
++// Two ways this goes wrong, both tested: firing on the object that just
++// became Empowered (a legend empowering herself then answers her own event),
++// and firing when nothing actually changed (CR 441.1.c — empowering
++// something already Empowered does nothing, so it must emit nothing, or the
++// trigger can be farmed by re-empowering).
++
++constexpr CardDefId kMatriarchOfWar  = 940;
++constexpr CardDefId kSoulsReflection = 938;
++
++class EmpowerEventTest : public CardTestFixture {};
++
++TEST_F(EmpowerEventTest, EmpoweringEmitsTheEvent) {
++    auto gear = addUnit(P1, kInvalidId, 1);
++    state.getObject(gear).card_type = CardType::Gear;
++    auto src = state.createObject();
++    state.getObject(src).controller = P1;
++
++    int fired = 0;
++    GameObjectId seen = kInvalidId;
++    auto conn = events.on_object_empowered.connect(
++        [&](const ObjectEmpoweredEvent& e) { ++fired; seen = e.object; });
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    CardContext ctx{state, events, exec, P1, src};
++    empowerObject(ctx, gear);
++
++    EXPECT_EQ(fired, 1);
++    EXPECT_EQ(seen, gear);
++    conn.disconnect();
++}
++
++TEST_F(EmpowerEventTest, ReEmpoweringEmitsNothing) {
++    auto gear = addUnit(P1, kInvalidId, 1);
++    state.getObject(gear).card_type = CardType::Gear;
++    state.getObject(gear).is_empowered = true;
++    auto src = state.createObject();
++    state.getObject(src).controller = P1;
++
++    int fired = 0;
++    auto conn = events.on_object_empowered.connect(
++        [&](const ObjectEmpoweredEvent&) { ++fired; });
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    CardContext ctx{state, events, exec, P1, src};
++    empowerObject(ctx, gear);
++
++    EXPECT_EQ(fired, 0)
++        << "CR 441.1.c: nothing happens, so nothing is an event — otherwise "
++           "\"when you empower something else\" can be farmed";
++    conn.disconnect();
++}
++
++TEST_F(EmpowerEventTest, MatriarchEmpowersHerselfOnTheTrigger) {
++    auto legend = state.createObject();
++    state.getObject(legend).owner = P1;
++    state.getObject(legend).controller = P1;
++    state.getObject(legend).card_def_id = kMatriarchOfWar;
++    state.getObject(legend).card_type = CardType::Legend;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    CardContext ctx{state, events, exec, P1, legend};
++    card_registry.get(kMatriarchOfWar)->onTrigger(ctx, {});
++
++    EXPECT_TRUE(state.getObject(legend).is_empowered);
++}
++
++TEST_F(EmpowerEventTest, MatriarchsReadyIsLegalOnlyWhileEmpowered) {
++    auto legend = state.createObject();
++    state.getObject(legend).controller = P1;
++    Card* c = card_registry.get(kMatriarchOfWar);
++
++    EXPECT_FALSE(c->canActivateAbility(state, P1, legend, 0))
++        << "Disempower is part of the cost";
++    state.getObject(legend).is_empowered = true;
++    EXPECT_TRUE(c->canActivateAbility(state, P1, legend, 0));
++}
++
++TEST_F(EmpowerEventTest, MatriarchOffersOnlyExhaustedUnits) {
++    auto legend = state.createObject();
++    state.getObject(legend).controller = P1;
++    auto ready = addUnit(P1, kInvalidId, 3);
++    auto tired = addUnit(P1, kInvalidId, 3);
++    state.getObject(tired).is_exhausted = true;
++
++    auto legal = card_registry.get(kMatriarchOfWar)
++                     ->enumerateLegalTargets(state, P1, 0);
++    ASSERT_EQ(legal.size(), 1u);
++    EXPECT_EQ(legal[0], tired);
++    (void)ready;
++    (void)legend;
++}
++
++TEST_F(EmpowerEventTest, SoulsReflectionOffersOnlyUnitsAtABattlefield) {
++    auto at_base = addUnit(P1, kInvalidId, 3);
++    auto at_bf = addUnit(P2, kInvalidId, 3, /*at_bf=*/0);
++
++    auto legal = card_registry.get(kSoulsReflection)
++                     ->enumerateLegalTargets(state, P1, 0);
++    for (auto id : legal) EXPECT_NE(id, at_base)
++        << "\"a unit at a battlefield\" — a unit in a base is not one";
++    bool found = false;
++    for (auto id : legal) if (id == at_bf) found = true;
++    EXPECT_TRUE(found) << "an enemy unit at a battlefield is a legal target";
++}
++
++TEST_F(EmpowerEventTest, SoulsReflectionShrinksAndDisempowers) {
++    auto legend = state.createObject();
++    state.getObject(legend).owner = P1;
++    state.getObject(legend).controller = P1;
++    state.getObject(legend).card_def_id = kSoulsReflection;
++    state.getObject(legend).is_empowered = true;
++    auto victim = addUnit(P2, kInvalidId, 5, /*at_bf=*/0);
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnActivate(legend, kSoulsReflection, P1, 0, {victim}, exec);
++
++    EXPECT_FALSE(state.getObject(legend).is_empowered) << "Disempower is the cost";
++    EXPECT_EQ(state.getObject(victim).current_might, 3);
++}
++
++}  // namespace
 diff --git a/tests/cards/test_flow.cpp b/tests/cards/test_flow.cpp
 new file mode 100644
 index 0000000..d4beb4c
