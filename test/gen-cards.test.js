@@ -267,3 +267,49 @@ test("a keyword printed before the gate is still the card's own", () => {
     ["Deflect"]
   );
 });
+
+/* The check that would have caught all thirteen. Scans the engine checkout
+ * rather than the generator, so a card edited by hand is covered too. */
+test("no card in the engine carries a keyword its text gates on [Empowered]", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const root =
+    process.env.ALPHARUNE_ROOT ||
+    path.join(__dirname, "..", "..", "chorlick", "alpharune");
+  const dir = path.join(root, "src", "cards");
+  if (!fs.existsSync(dir)) {
+    console.log("# SKIP no alpharune checkout — this check needs one");
+    return;
+  }
+
+  const KW = ["Assault", "Shield", "Deflect", "Tank", "Ghost", "Vision",
+              "Deathknell", "Legion", "Accelerate", "Ambush", "Ganking"];
+  const offenders = [];
+  for (const sub of fs.readdirSync(dir)) {
+    const d = path.join(dir, sub);
+    if (!fs.statSync(d).isDirectory()) continue;
+    for (const f of fs.readdirSync(d)) {
+      if (!/^\d+_.*\.cpp$/.test(f)) continue;
+      const src = fs.readFileSync(path.join(d, f), "utf8");
+      const abil = (/d\.ability_text = R"RB\(([\s\S]*?)\)RB";/.exec(src) || [])[1];
+      if (!abil) continue;
+      const bare = abil.replace(/\([^()]*\)/g, "");
+      const at = bare.search(/\[Empowered\]/);
+      if (at < 0) continue;
+      const after = bare.slice(at);
+      for (const kw of KW) {
+        if (!new RegExp("\\[" + kw).test(after)) continue;
+        if (new RegExp("\\[" + kw).test(bare.slice(0, at))) continue; // also ungated
+        if (new RegExp("d\\.keywords\\.set\\(Keyword::" + kw + "\\)").test(src)) {
+          offenders.push(`${sub}/${f} [${kw}]`);
+        }
+      }
+    }
+  }
+  assert.deepStrictEqual(
+    offenders,
+    [],
+    "these cards claim a keyword their text only grants while Empowered:\n  " +
+      offenders.join("\n  ")
+  );
+});
