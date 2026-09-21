@@ -7,3 +7,10 @@ state/
 !state/sets/*.json
 engine/probe
 engine/position
+# engine/rank was tracked and engine/position was not, which is the kind of
+# inconsistency that only shows up as a dirty tree after every build. Both are
+# 13 MB machine-local binaries relinked against the engine's static library by
+# engine/build.sh, and coach/doctor.js refuses one older than that library —
+# so a copy in git is stale for everyone who did not build it themselves, and
+# worse than absent because it looks current.
+engine/rank
