@@ -382,6 +382,34 @@ needs its own change with its own tests, and Shadow Fiend and Serene Ascetic
 wait for it rather than shipping as cards that are quietly worth less than
 they read.
 
+## A card can only make one resolve-time choice
+
+`Card::pickTarget` reserves resume points 6/7/8 and `resume_data[2]`;
+`pickTargetPair` reserves 9..14 and `resume_data[3..4]`; `pickMode` 3/4/5 and
+`pickXAmount` 0/1/2. Each is a fixed reservation, so a card gets **one** of
+each per `onResolve` and cannot, for instance, call `pickTarget` twice.
+
+That is what blocks the "choose several" cards, not anything about their
+effects:
+
+| card | what it wants |
+|---|---|
+| Shadows of the Past | "Return **up to 2** units from trashes" |
+| Decree of Discord | "Return **any number** of enemy Order units with total Might 5 or less" |
+| Cataclysmic Duel | "**Each player** chooses a unit they control" |
+| Defender of Tomorrow (Empowered) | "Ready **2** gear" |
+
+Defender of Tomorrow ships with a fixed rule — ready the two most expensive —
+because there is no choice worth publishing when two or fewer gear are
+exhausted, and because that legend is in a deck being played. The others
+wait: a made-up rule for "any number with total Might 5 or less" is a
+different card, and the search would rank it confidently.
+
+The fix is a repeatable picker: a reservation allocated per call rather than
+per method, so a card can ask N times. It is the single change that unlocks
+the most remaining cards, and it is in the resume machinery, which is the
+part of the engine where a mistake is least visible.
+
 ## Two things scoped and deliberately NOT built
 
 Both were looked at properly and left alone, which is worth recording so the
