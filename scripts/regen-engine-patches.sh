@@ -19,9 +19,22 @@ WORK="${TMPDIR:-/tmp}/regen-engine-patches.$$"
 [ -n "$ROOT" ] && [ -d "$ROOT/src" ] || {
   echo "No alpharune checkout found. Set ALPHARUNE_ROOT." >&2; exit 2; }
 
-CORE=(src/cards/card.h src/cards/card_helpers.h
-      src/engine/effect_executor.h src/engine/effect_executor.cpp
-      src/core/game_state.h src/engine/game_engine.cpp)
+# Every non-card engine file this project modifies.
+#
+# This list was hand-maintained and went stale, and the way it failed is the
+# point: eight files were missing — game_object.h with the new fields,
+# game_engine.h with the new declarations, card.cpp with pickTargets itself —
+# so the patch set APPLIED cleanly to a pristine checkout and then would not
+# compile. The apply-check below was a proxy for "this works on someone
+# else's machine" and the proxy was wrong. A fresh clone got 20+ errors of
+# the form "GameObject has no member named damage_prevention_pool".
+#
+# So it is derived now, not listed: everything modified outside src/cards/'s
+# per-card files, which patches 02 and 03 and install.sh own. Adding an
+# engine file can no longer forget to add it here.
+mapfile -t CORE < <(cd "$ROOT" && git diff --name-only -- src/ \
+  | grep -vE '^src/cards/(battlefields|legends|spells|units)/' \
+  | grep -v '^src/cards/cards_init\.cpp$')
 
 stage="$WORK/staged"
 mkdir -p "$stage"
@@ -96,6 +109,43 @@ for p in "$stage"/*.patch; do
     exit 1
   fi
 done
+
+# Applying is not compiling, and that distinction cost a fresh clone a build.
+#
+# The apply-check above only proves the hunks land. A patch set can be
+# INCOMPLETE and still apply perfectly: ship game_engine.cpp without
+# game_object.h and every hunk goes in, then the compiler asks what
+# `damage_prevention_pool` is. That is exactly what happened, and it happened
+# on somebody else's machine, which is the only place it could happen.
+#
+# So the patched tree is now compiled — not linked, not tested, just parsed
+# and type-checked, which is enough to catch a missing declaration and takes
+# seconds rather than half an hour.
+GEN="$ROOT/build/generated"
+JSON="$ROOT/build/_deps/open_spiel-src/open_spiel/json/include"
+if [ -d "$GEN" ]; then
+  echo "compile-checking the patched tree ..."
+  fail=0
+  while IFS= read -r f; do
+    case "$f" in *.cpp) ;; *) continue ;; esac
+    [ -f "$tree/$f" ] || continue
+    if ! (cd "$tree" && g++ -fsyntax-only -std=gnu++20 \
+            -I"$GEN" -Isrc -I"$JSON" "$f" 2>&1 | head -5); then :; fi
+    if ! (cd "$tree" && g++ -fsyntax-only -std=gnu++20 \
+            -I"$GEN" -Isrc -I"$JSON" "$f" >/dev/null 2>&1); then
+      echo "  FAILS TO COMPILE: $f" >&2; fail=1
+    fi
+  done < <(printf '%s\n' "${CORE[@]}")
+  if [ "$fail" -ne 0 ]; then
+    echo "REFUSING: the patch set applies but does not compile." >&2
+    echo "The patches in engine/patches/ are unchanged." >&2
+    exit 1
+  fi
+  echo "  compiles"
+else
+  # Skip loudly. Unverified is not the same as passing.
+  echo "SKIPPED the compile check — no $GEN (build the engine once first)." >&2
+fi
 
 cp "$stage"/*.patch "$HERE/engine/patches/"
 echo "regenerated and verified against a pristine $ROOT HEAD:"

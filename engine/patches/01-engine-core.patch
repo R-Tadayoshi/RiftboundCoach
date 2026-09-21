@@ -1,3 +1,171 @@
+diff --git a/src/cards/card.cpp b/src/cards/card.cpp
+index 30ed35f..53cd177 100644
+--- a/src/cards/card.cpp
++++ b/src/cards/card.cpp
+@@ -4,6 +4,8 @@
+ #include "engine/effect_executor.h"
+ #include "core/events.h"
+ 
++#include <algorithm>
++
+ namespace riftbound {
+ 
+ int Card::confirmOptional(CardContext& ctx, const std::string& label,
+@@ -344,6 +346,154 @@ GameObjectId Card::pickTarget(CardContext& ctx, const std::string& label,
+     return legal_targets.empty() ? kInvalidId : legal_targets.front();
+ }
+ 
++namespace {
++/// Where pickTargets keeps its bookkeeping in ChainItem::resume_data.
++/// 0..4 are spoken for by pickXAmount (0), pickMode (1), pickTarget (2) and
++/// pickTargetPair (3..4), so this starts clear of all of them.
++constexpr size_t kPickTargetsCount = 5;   // how many picked so far
++constexpr size_t kPickTargetsDone  = 6;   // 1 once picking has finished
++constexpr size_t kPickTargetsBase  = 7;   // picks themselves, one per slot
++constexpr int    kPickTargetsPoint = 20;  // first resume point
++}  // namespace
++
++std::optional<std::vector<GameObjectId>> Card::pickTargets(
++    CardContext& ctx, const std::string& label,
++    const std::function<std::vector<GameObjectId>(
++        const std::vector<GameObjectId>&)>& legal_fn,
++    int max_count, bool optional) {
++
++    auto& ri_opt = ctx.state.chain.resuming;
++    if (!ri_opt.has_value()) {
++        // Direct invocation (test / no chain), same escape hatch the other
++        // pickers use: take the first legal option at each step.
++        std::vector<GameObjectId> out;
++        for (int k = 0; k < max_count; ++k) {
++            auto legal = legal_fn(out);
++            if (legal.empty()) break;
++            out.push_back(legal.front());
++        }
++        return out;
++    }
++    auto& ri = *ri_opt;
++
++    while (ri.resume_data.size() <
++           kPickTargetsBase + static_cast<size_t>(std::max(0, max_count))) {
++        ri.resume_data.push_back(0);
++    }
++
++    auto picked_so_far = [&]() {
++        std::vector<GameObjectId> out;
++        const int n = ri.resume_data[kPickTargetsCount];
++        for (int i = 0; i < n; ++i) {
++            out.push_back(static_cast<GameObjectId>(
++                ri.resume_data[kPickTargetsBase + static_cast<size_t>(i)]));
++        }
++        return out;
++    };
++
++    // Already finished on an earlier pass through onResolve. Re-entry must
++    // hand back the same picks rather than prompt again — the card may have
++    // suspended on something else after this call.
++    if (ri.resume_data[kPickTargetsDone] != 0) return picked_so_far();
++
++    auto finish = [&]() {
++        ri.resume_data[kPickTargetsDone] = 1;
++        return picked_so_far();
++    };
++
++    if (ri.resume_point < kPickTargetsPoint) {
++        ri.resume_point = kPickTargetsPoint;
++        ri.resume_data[kPickTargetsCount] = 0;
++    }
++
++    for (;;) {
++        const int slot = ri.resume_data[kPickTargetsCount];
++        if (slot >= max_count) return finish();
++
++        const int publish_at = kPickTargetsPoint + 2 * slot;
++        const int consume_at = publish_at + 1;
++
++        if (ri.resume_point == publish_at) {
++            auto so_far = picked_so_far();
++            auto legal = legal_fn(so_far);
++            if (legal.empty()) {
++                ctx.events.logTrace("TGTS_DONE: " + label +
++                                     " (no further legal targets after " +
++                                     std::to_string(slot) + ")");
++                return finish();
++            }
++
++            std::vector<Intent> options;
++            options.reserve(legal.size() + 1);
++            std::string summary;
++            for (auto t : legal) {
++                Intent i;
++                i.type = IntentType::MakeChoice;
++                i.player = ctx.controller;
++                i.chosen_objects = { t };
++                i.choice_label = label + ": " +
++                    (ctx.state.objectExists(t) ? ctx.state.getObject(t).name
++                                               : std::string("?"));
++                options.push_back(std::move(i));
++                if (!summary.empty()) summary += "/";
++                summary += ctx.state.objectExists(t)
++                    ? ctx.state.getObject(t).name : std::string("?");
++            }
++            // "Up to N" — a stop option on every prompt, the first
++            // included. Without it the card would read as "exactly N", and
++            // without it at slot 0 it would read as "at least 1".
++            // Empty chosen_objects is action_vocab slot 0 ("skip"), which is
++            // distinct from every card-keyed slot, so the policy head can
++            // tell stopping apart from any particular pick. chosen_value is
++            // deliberately left unset: setting it would move this option
++            // into the int-coded range where it could alias a pickXAmount
++            // answer.
++            if (optional) {
++                Intent stop;
++                stop.type = IntentType::MakeChoice;
++                stop.player = ctx.controller;
++                stop.choice_label = label + ": stop here";
++                options.push_back(std::move(stop));
++            }
++            ctx.events.logTrace("TGTS_PROMPT: " + label + " [" + summary +
++                                 "] pick " + std::to_string(slot + 1) +
++                                 " of at most " + std::to_string(max_count));
++            ctx.executor.requestChoice(ctx.controller, std::move(options),
++                                        "targets: " + label);
++            ri.resume_point = consume_at;
++            return std::nullopt;   // suspended
++        }
++
++        if (ri.resume_point == consume_at) {
++            auto picked = ctx.executor.takeChoice();
++            if (!picked.has_value() || picked->chosen_objects.empty()) {
++                // The stop option, or nothing came back.
++                ctx.events.logTrace("TGTS_STOPPED: " + label + " after " +
++                                     std::to_string(slot) + " pick(s)");
++                return finish();
++            }
++            const auto t = picked->chosen_objects.front();
++            ctx.events.logTrace("TGTS_PICKED: " + label + " = " +
++                                 (ctx.state.objectExists(t)
++                                      ? ctx.state.getObject(t).name
++                                      : std::string("?")) +
++                                 " (id=" + std::to_string(t) + ")");
++            ri.resume_data[kPickTargetsBase + static_cast<size_t>(slot)] =
++                static_cast<int32_t>(t);
++            ri.resume_data[kPickTargetsCount] = slot + 1;
++            ri.resume_point = kPickTargetsPoint + 2 * (slot + 1);
++            continue;   // straight on to the next prompt
++        }
++
++        // The resume point and the count have diverged, which should not
++        // happen. Hand back what we have rather than spin or re-prompt.
++        ctx.events.logTrace("TGTS_DESYNC: " + label + " (point=" +
++                             std::to_string(ri.resume_point) + ", slot=" +
++                             std::to_string(slot) + ")");
++        return finish();
++    }
++}
++
+ std::pair<GameObjectId, GameObjectId> Card::pickTargetPair(
+     CardContext& ctx, const std::string& label,
+     const std::vector<GameObjectId>& legal_a,
 diff --git a/src/cards/card.h b/src/cards/card.h
 index bd1b268..3b34cd5 100644
 --- a/src/cards/card.h
@@ -549,6 +717,191 @@ index f3f01e4..dd062a3 100644
  }
  
  // ── Gold tokens ──
+diff --git a/src/core/events.h b/src/core/events.h
+index 73cbfd6..c80a2a8 100644
+--- a/src/core/events.h
++++ b/src/core/events.h
+@@ -210,6 +210,18 @@ struct CardHiddenEvent {
+     PlayerId     player;         // the player who hid the card
+ };
+ 
++/// A Game Object became Empowered. CR 441.2.a: "When a Game Object becomes
++/// Empowered as a result of the Empower game action, that is an event that
++/// can similarly be referenced by game effects and abilities."
++///
++/// Emitted only on the transition. Empowering something already Empowered
++/// does nothing (CR 441.1.c), and a card that fires "when you empower
++/// something else" must not fire on a no-op.
++struct ObjectEmpoweredEvent {
++    GameObjectId object;
++    PlayerId     player;   // whose Empower action this was
++};
++
+ /// A face-down card was played (revealed and resolved). Emitted by the
+ /// facedown reveal-play path. Drives WhenYouPlayFromFacedown (Katarina).
+ struct PlayedFromFacedownEvent {
+@@ -338,6 +350,7 @@ public:
+     boost::signals2::signal<void(const UnitStunnedEvent&)>        on_unit_stunned;
+     boost::signals2::signal<void(const UnitReadiedEvent&)>        on_unit_readied;
+     boost::signals2::signal<void(const CardHiddenEvent&)>         on_card_hidden;
++    boost::signals2::signal<void(const ObjectEmpoweredEvent&)>    on_object_empowered;
+     boost::signals2::signal<void(const PlayedFromFacedownEvent&)> on_played_from_facedown;
+     boost::signals2::signal<void(const UnitReturnedToHandEvent&)> on_unit_returned_to_hand;
+     boost::signals2::signal<void(const GameOverEvent&)>           on_game_over;
+@@ -379,6 +392,7 @@ public:
+     void emit(const UnitStunnedEvent& e)        { on_unit_stunned(e); }
+     void emit(const UnitReadiedEvent& e)        { on_unit_readied(e); }
+     void emit(const CardHiddenEvent& e)         { on_card_hidden(e); }
++    void emit(const ObjectEmpoweredEvent& e)    { on_object_empowered(e); }
+     void emit(const PlayedFromFacedownEvent& e) { on_played_from_facedown(e); }
+     void emit(const UnitReturnedToHandEvent& e) { on_unit_returned_to_hand(e); }
+     void emit(const GameOverEvent& e)           { on_game_over(e); }
+diff --git a/src/core/game_object.h b/src/core/game_object.h
+index a6fe3c4..26eff48 100644
+--- a/src/core/game_object.h
++++ b/src/core/game_object.h
+@@ -36,6 +36,29 @@ struct GameObject {
+     // ── State ──
+     bool is_exhausted = false;
+     bool is_stunned = false;
++    /// [Empowered] (VEN). A per-OBJECT latch, not a keyword on the card: two
++    /// copies of the same gear can differ, and the printed text distinguishes
++    /// "Empower this" (set it) from "[Empowered][>] …" (an ability that only
++    /// works while it holds) and "Disempower this, …" (a cost that clears it).
++    ///
++    /// Deliberately not a Keyword: keywords are card-level and are recomputed
++    /// from the CardDef plus auras every cleanup, which would wipe a latch the
++    /// player paid for.
++    bool is_empowered = false;
++    /// [Flow]: "You may play this from your trash for its Flow cost. Then
++    /// banish it."
++    ///
++    /// The banish is the whole cost of the mechanic — a Flow card is one
++    /// extra use, not a loop — so it cannot be left to the card's own effect:
++    /// a countered or fizzled Flow spell must still be banished, and only the
++    /// chain's disposal step sees every one of those paths. Set when the play
++    /// is paid for out of the trash; read by ChainManager where a resolved
++    /// spell would otherwise go to the trash it just came from.
++    bool banish_after_resolving = false;
++    /// Set when a granted play option was paid for and says where the card
++    /// lands (Dragon Roost). Consumed at the one place a play's location is
++    /// assigned, then cleared — it describes this play, not the object.
++    std::optional<LocationId> forced_play_location;
+     bool is_hidden = false;             // facedown at a battlefield
+     BattlefieldId hidden_at = kInvalidId; // which BF it's hidden at
+     int hidden_on_turn = -1;            // turn it was hidden (gains Reaction next turn)
+@@ -60,6 +83,17 @@ struct GameObject {
+     int temp_shield_value = 0;   // temporary shield applied "this turn"
+     int temp_might_bonus = 0;    // temporary +N might applied "this turn"
+     int moves_this_turn = 0;     // times this unit moved this turn (Kayn, Unleashed)
++    /// "Prevent all damage that enemy SPELLS AND ABILITIES would deal to me"
++    /// (Esteemed Hierophant, while its controller has 7+ runes).
++    ///
++    /// Deliberately not immune_to_damage, which blocks combat damage too. A
++    /// Hierophant that could not be killed in a fight is a far better card
++    /// than the printed one, and the difference never shows up as an error —
++    /// it shows up as a unit that keeps winning combats it should lose.
++    ///
++    /// Recomputed each recalculateAuras like immune_to_damage, so the
++    /// protection lifts by itself when the rune count drops.
++    bool immune_to_spell_ability_damage = false;
+     bool immune_to_damage = false; // recomputed each recalculateAuras; set by a
+                                    // card's applyPassiveAura when its condition
+                                    // holds (Kayn, Unleashed: "if I have moved twice
+@@ -108,6 +142,30 @@ struct GameObject {
+     // reads this flag to filter out untargetable enemies. Baron Nashor
+     // ([709]) is the canonical example.
+     bool untargetable_by_enemy = false;
++    /// Untargetability granted for THIS TURN by another card (Twilight
++    /// Shroud: "It can't be chosen by enemy spells and abilities this turn").
++    ///
++    /// A separate field because `untargetable_by_enemy` is derived, not
++    /// stored: aura recalc clears it every pass and rebuilds it from each
++    /// card's own canBeChosenByEnemy. Writing a granted effect into it looks
++    /// like it works and is silently gone by the next recalculateAuras —
++    /// which is the worst version of wrong here, since the player would be
++    /// told a unit is safe and then have it targeted.
++    bool untargetable_by_enemy_this_turn = false;
++    /// Untargetability granted CONTINUOUSLY by another card's passive aura
++    /// (Alpha Wildclaw: "your units here with less Might than me can't be
++    /// chosen by enemy spells and abilities").
++    ///
++    /// A third field rather than writing untargetable_by_enemy directly,
++    /// because that one is assigned per-object inside the same loop that
++    /// calls applyPassiveAura: a card protecting OTHERS would have its work
++    /// erased by whichever protected unit the loop reached afterwards, and
++    /// kept by whichever it had already passed. Order-dependent, silently,
++    /// and different every time the object map rehashes.
++    ///
++    /// Cleared in the aura pass's first step and folded into
++    /// untargetable_by_enemy in the LAST step, after every hook has run.
++    bool aura_untargetable_by_enemy = false;
+ 
+     // ── Per-card persistent counters (legend state, etc.) ──
+     // Generic int counters keyed by name so multiple card classes can have
+@@ -142,6 +200,20 @@ struct GameObject {
+     // it prevents the next instance of damage to this unit and clears the flag
+     // (one-shot). Expires unused at end of turn.
+     bool prevent_next_damage_this_turn = false;
++    /// "Prevent the next N damage that would be dealt to it this turn"
++    /// (Ki Barrier). A POOL, not a flag: it absorbs up to N across any number
++    /// of instances and lets the remainder through, so a 9-damage hit into a
++    /// 7-point pool still deals 2.
++    ///
++    /// Distinct from prevent_next_damage_this_turn, which prevents ONE
++    /// instance entirely however large. Modelling Ki Barrier with that flag
++    /// would make it stop a lethal hit of any size — strictly better than the
++    /// card, and it is the obvious thing to reach for since the field is
++    /// right there.
++    ///
++    /// The card's own reminder text says opponents can assign extra combat
++    /// damage to kill through it, which is only true of a pool.
++    int damage_prevention_pool = 0;
+ 
+     // ── Per-unit movement restriction (Determined Sentry 673) ──
+     // "I can't move to base." Set by the card on play; consulted by the
+@@ -191,6 +263,27 @@ struct GameObject {
+     KeywordSet aura_keywords;              // cached union of aura-granted keywords
+     bool aura_no_combat_damage = false;    // cached: any aura suppresses combat dmg
+     int aura_bonus_damage_taken = 0;       // cached: +N spell/ability damage taken (Void Gate)
++    /// Cached magnitudes of aura-granted [Assault N] / [Shield N] /
++    /// [Deflect N].
++    ///
++    /// AuraEffect has carried `keyword_value` all along and the aggregation
++    /// step read only `keyword`, so an aura granted the keyword BIT and never
++    /// its number: aura-granted [Assault 3] set the Assault flag and added
++    /// zero Might. Nothing errored — the unit simply fought at its printed
++    /// strength while its card said otherwise, which is the quiet kind of
++    /// wrong this project exists to refuse.
++    ///
++    /// Separate from assault_value / shield_value / deflect_value because
++    /// those are the card's own plus "this turn" grants and persist; these
++    /// are rebuilt from scratch on every recalculateAuras.
++    /// recomputeMight reads the first two. Nothing in the engine charges the
++    /// [Deflect] tax yet — it is rendered and fed to the feature extractor
++    /// and never enforced at targeting time — so the third is cached for
++    /// symmetry and is not yet load-bearing. Said here rather than left to
++    /// look finished.
++    int aura_assault_value = 0;
++    int aura_shield_value = 0;
++    int aura_deflect_value = 0;
+ 
+     /// This unit deals no combat damage (stunned, or an aura suppresses it —
+     /// Vilemaw). Consulted by the combat-damage step.
+@@ -252,11 +345,11 @@ struct GameObject {
+                         attachment_might_bonus + aura_might_bonus;
+         // Assault applies only while attacking (base + aura-granted)
+         if (combat_designation == CombatDesignation::Attacker) {
+-            current_might += assault_value;
++            current_might += assault_value + aura_assault_value;
+         }
+         // Shield applies only while defending
+         if (combat_designation == CombatDesignation::Defender) {
+-            current_might += shield_value;
++            current_might += shield_value + aura_shield_value;
+         }
+         // Apply aura minimums (e.g., Leona: -8M to minimum 1)
+         for (auto& ae : aura_effects) {
 diff --git a/src/core/game_state.h b/src/core/game_state.h
 index 9c5ca4e..9c11992 100644
 --- a/src/core/game_state.h
@@ -644,6 +997,118 @@ index 9c5ca4e..9c11992 100644
      PlayerState& player(PlayerId id) {
          return players[playerIndex(id)];
      }
+diff --git a/src/effects/effect_types.h b/src/effects/effect_types.h
+index 69a10ce..845be0e 100644
+--- a/src/effects/effect_types.h
++++ b/src/effects/effect_types.h
+@@ -76,6 +76,16 @@ enum class TriggerType : uint8_t {
+     WhenIConquerOrHold, // "When I conquer or hold,"
+ 
+     // Battlefield triggers
++    /// "When combat starts here," on the BATTLEFIELD CARD itself (Threshold
++    /// of the Gray). onCombatStarted already fires WhenIAttack / WhenIDefend
++    /// on the units present; the battlefield card is not one of them — it has
++    /// no location and the unit sweep skips it.
++    ///
++    /// The two players are captured onto the battlefield card's
++    /// card_counters, because the trigger carries only a controller and a
++    /// card that affects "the attacker AND defender" needs both. Same device
++    /// the defender path already uses to capture the attacking unit.
++    WhenCombatStartsHere,
+     WhenYouConquerHere, // "When you conquer here,"
+     WhenYouHoldHere,    // "When you hold here,"
+     WhenYouScoreHere,   // "When you score here,"
+@@ -122,6 +132,21 @@ enum class TriggerType : uint8_t {
+     WhenYouHideACard,   // "When you hide a card," — fires on the hiding
+                         // player's cards (executeHideCard -> CardHiddenEvent).
+                         // Katarina, Reckless.
++    /// "When you empower something else, empower me." (Matriarch of War,
++    /// Soul's Reflection.) "Something ELSE" is enforced by the trigger
++    /// manager, not the card: a card that empowered itself into empowering
++    /// itself would be a loop, and the rule belongs where the event and the
++    /// listener are both in hand.
++    WhenYouEmpowerSomethingElse,
++    /// "When I become [Empowered], …" (Apprentice Mage). The self-scoped
++    /// counterpart: fired to the object that just became Empowered, which
++    /// WhenYouEmpowerSomethingElse deliberately excludes.
++    ///
++    /// Needed because a card can be Empowered by something OTHER than its own
++    /// [Empower] ability (Hextech Formula, Profiteer, Tornado Warrior). Doing
++    /// the payout inline in the card's own onActivate would work for the
++    /// common case and silently miss every one of those.
++    WhenIBecomeEmpowered,
+     WhenYouPlayFromFacedown, // "When you play a card from face down," — fires
+                         // on the controller's cards (facedown reveal-play ->
+                         // PlayedFromFacedownEvent). Katarina, Reckless.
+@@ -130,6 +155,15 @@ enum class TriggerType : uint8_t {
+                         // controller (TriggerManager::onUnitDied). Pyke,
+                         // Returned (gated "while I'm at a battlefield",
+                         // once/turn in the card).
++    /// "When an enemy unit HERE dies." Fired only to listeners standing at
++    /// the battlefield the unit died at.
++    ///
++    /// Filtered by the trigger manager rather than by the card, because the
++    /// card cannot do it: by the time the trigger resolves the dead unit has
++    /// been moved to the trash and its location cleared, so asking it where
++    /// it died returns nothing. UnitDiedEvent::was_at still knows, and only
++    /// the manager holds that.
++    WhenAnEnemyUnitDiesHere,
+     WhenAUnitReturnsToHandHere, // "When a unit here is returned to hand," —
+                         // battlefield-card trigger fired when a unit at that
+                         // BF is bounced (bounceToHand -> UnitReturnedToHandEvent).
+@@ -137,6 +171,12 @@ enum class TriggerType : uint8_t {
+     WhenAShowdownBeginsHere, // "When a showdown begins here," — fires on units
+                         // at the showdown's battlefield (on_showdown_started).
+                         // Diana, Lunari.
++    /// "When an opponent plays a gear," (Ravenbloom Prefect). The gear
++    /// counterpart of WhenOpponentPlaysAUnit, and captured the same way: the
++    /// played gear's id goes into the watcher's card_counters under
++    /// "__opp_played_gear_id", because triggers receive empty targets and
++    /// there is otherwise no way to say WHICH gear.
++    WhenOpponentPlaysAGear,
+     WhenOpponentPlaysAUnit,  // "When an opponent plays a unit," — fires on the
+                         // opponent's on-board cards (TriggerManager::onCardPlayed).
+                         // Vex, Apathetic (gated "while I'm at a battlefield").
+diff --git a/src/engine/chain_manager.cpp b/src/engine/chain_manager.cpp
+index aa9baaa..cdcaf98 100644
+--- a/src/engine/chain_manager.cpp
++++ b/src/engine/chain_manager.cpp
+@@ -255,6 +255,7 @@ bool ChainManager::stepExecuteAndPass(AgentQuery query_agent,
+ 
+             // Track play
+             ps.cards_played_this_turn++;
++            if (card.card_type == CardType::Spell) state_.notePlayedSpell(current);
+             int energy_spent = (card.card_def_id != kInvalidId)
+                 ? card_db_.get(card.card_def_id).energy_cost : 0;
+             events_.emit(CardPlayedEvent{chosen.card, current,
+@@ -356,17 +357,23 @@ void ChainManager::stepResolve(
+     state_.chain.resuming.reset();
+ 
+     if (resolved.is_spell) {
+-        // Spell goes to controller's trash after resolving (CR 359.3)
++        // Spell goes to controller's trash after resolving (CR 359.3), unless
++        // it was played out of the trash for its [Flow] cost — "Then banish
++        // it." Trashing it would hand the player the same card again next
++        // turn, turning a one-shot second use into a loop.
+         if (state_.objectExists(resolved.source)) {
+             auto& spell_obj = state_.getObject(resolved.source);
+-            spell_obj.zone = ZoneType::Trash;
++            const bool banish = spell_obj.banish_after_resolving;
++            spell_obj.banish_after_resolving = false;
++            spell_obj.zone = banish ? ZoneType::Banishment : ZoneType::Trash;
+             spell_obj.location = std::nullopt;
+-            state_.player(resolved.controller).trash.push_back(resolved.source);
++            if (!banish) state_.player(resolved.controller).trash.push_back(resolved.source);
++            else events_.logTrace("FLOW: banished " + spell_obj.name + " after resolving");
+ 
+             events_.emit(SpellResolvedEvent{resolved.source, resolved.controller});
+             events_.emit(LeftBoardEvent{resolved.source, resolved.controller,
+                 CardType::Spell, BaseLocation{resolved.controller},
+-                ZoneType::Trash, false});
++                banish ? ZoneType::Banishment : ZoneType::Trash, false});
+         }
+     }
+     // Triggered/activated abilities leave their source on the board — no
 diff --git a/src/engine/effect_executor.cpp b/src/engine/effect_executor.cpp
 index 19d2363..18e2210 100644
 --- a/src/engine/effect_executor.cpp
@@ -1295,3 +1760,177 @@ index ce24a33..e2d0b7d 100644
  bool GameEngine::payTrashReplayGrant(PlayerId player, GameObjectId card_id) {
      auto& ps = state_.player(player);
      auto it = std::find_if(ps.trash_replay_grants.begin(),
+diff --git a/src/engine/game_engine.h b/src/engine/game_engine.h
+index 4685576..4ab2029 100644
+--- a/src/engine/game_engine.h
++++ b/src/engine/game_engine.h
+@@ -508,6 +508,12 @@ private:
+     /// PlayerState::TrashReplayGrant for (Death from Below). Mirrors
+     /// generateSpellActions' timing gate + target shapes, but checks the
+     /// grant's OVERRIDE cost for affordability rather than the printed cost.
++    /// Plays offered out of the player's own trash by each card's own [Flow]
++    /// cost, as opposed to a grant another card handed out.
++    void generateFlowActions(PlayerId player, bool action_ok,
++                             bool reaction_ok,
++                             std::vector<Intent>& actions) const;
++
+     void generateTrashReplayActions(PlayerId player, bool action_ok,
+                                      bool reaction_ok,
+                                      std::vector<Intent>& actions) const;
+@@ -585,6 +591,10 @@ private:
+     /// `card_id` (auto-spends via payAdditionalCost; an [A] grant picks the
+     /// first payable domain) and consumes the grant. Returns true if a grant
+     /// was found and paid, false otherwise (caller falls back to printed cost).
++    /// Pay a card's own [Flow] cost and mark it to be banished after it
++    /// resolves. Returns false when the card has no Flow cost.
++    bool payFlowCost(PlayerId player, GameObjectId card_id);
++
+     bool payTrashReplayGrant(PlayerId player, GameObjectId card_id);
+ 
+     // ── Repeat (CR 820) — optional additional cost ──
+@@ -606,6 +616,11 @@ private:
+     /// Pay an extra Repeat tranche on top of an already-paid base cost.
+     /// Returns false if the additional payment can't be satisfied (which
+     /// indicates a bug in the affordability gate in action gen).
++    /// Exhausted runes the player could recycle to pay a `domain` power cost
++    /// (Domain::Count = [A] / any). Counts only EXHAUSTED runes: power is paid
++    /// by recycling one, not by exhausting one.
++    int availableActivationPower(PlayerId player, int needed, Domain domain) const;
++
+     bool payRepeatCost(PlayerId player, const RepeatCost& cost);
+ 
+     /// "You may pay X as an additional cost to play me." Offers the agent a
+diff --git a/src/engine/trigger_manager.cpp b/src/engine/trigger_manager.cpp
+index 3e60edd..d44edd8 100644
+--- a/src/engine/trigger_manager.cpp
++++ b/src/engine/trigger_manager.cpp
+@@ -33,6 +33,8 @@ void TriggerManager::subscribe() {
+         [this](const UnitReadiedEvent& e) { onUnitReadied(e); }));
+     connections_.push_back(events_.on_card_hidden.connect(
+         [this](const CardHiddenEvent& e) { onCardHidden(e); }));
++    connections_.push_back(events_.on_object_empowered.connect(
++        [this](const ObjectEmpoweredEvent& e) { onObjectEmpowered(e); }));
+     connections_.push_back(events_.on_played_from_facedown.connect(
+         [this](const PlayedFromFacedownEvent& e) { onPlayedFromFacedown(e); }));
+     connections_.push_back(events_.on_unit_returned_to_hand.connect(
+@@ -348,6 +350,19 @@ void TriggerManager::onCardPlayed(const CardPlayedEvent& e) {
+         }
+     }
+ 
++    // Same, for gear (Ravenbloom Prefect: "you may banish me to banish it").
++    if (e.card_type == CardType::Gear) {
++        PlayerId opp = opponent(e.player);
++        for (auto& [id, other] : state_.objects) {
++            if (other.controller != opp || !other.location.has_value()) continue;
++            if (cardFiresOn(card_registry_, other.card_def_id,
++                            TriggerType::WhenOpponentPlaysAGear)) {
++                other.card_counters["__opp_played_gear_id"] = static_cast<int>(e.object);
++                fireTrigger(id, opp, 0, TriggerType::WhenOpponentPlaysAGear);
++            }
++        }
++    }
++
+     // Legend-zone sweep: legends say "When you play a spell/unit," — the
+     // legend itself has no location, so the loop above skips it. Fire any
+     // matching legend on the acting player's side.
+@@ -405,6 +420,23 @@ void TriggerManager::onEnteredBoard(const EnteredBoardEvent& e) {
+ void TriggerManager::onCombatStarted(const CombatStartedEvent& e) {
+     auto bf_loc = BattlefieldLocation{e.battlefield};
+ 
++    // The battlefield card itself. It has no location, so the unit sweep
++    // below cannot see it.
++    for (const auto& bf : state_.battlefields) {
++        if (bf.id != e.battlefield) continue;
++        if (bf.card_object_id == kInvalidId) break;
++        if (!state_.objectExists(bf.card_object_id)) break;
++        auto& card_obj = state_.getObject(bf.card_object_id);
++        if (!cardFiresOn(card_registry_, card_obj.card_def_id,
++                         TriggerType::WhenCombatStartsHere)) break;
++        card_obj.card_counters["__combat_attacker"] = static_cast<int>(e.attacker);
++        card_obj.card_counters["__combat_defender"] = static_cast<int>(e.defender);
++        fireTrigger(bf.card_object_id,
++                    bf.controller.value_or(e.attacker), 0,
++                    TriggerType::WhenCombatStartsHere);
++        break;
++    }
++
+     for (auto& [id, obj] : state_.objects) {
+         if (!obj.isUnit() || !obj.isAtBattlefield()) continue;
+         auto unit_bf = obj.battlefieldId();
+@@ -585,6 +617,21 @@ void TriggerManager::onUnitDied(const UnitDiedEvent& e) {
+                         TriggerType::WhenAnEnemyUnitDies)) {
+             fireTrigger(id, opp, 0, TriggerType::WhenAnEnemyUnitDies);
+         }
++        // …and the location-scoped form. The listener must be standing at the
++        // battlefield the unit died at — read from the event, since the dead
++        // unit's own location is already cleared by the time anything
++        // resolves.
++        if (other.controller == opp &&
++            cardFiresOn(card_registry_, other.card_def_id,
++                        TriggerType::WhenAnEnemyUnitDiesHere) &&
++            std::holds_alternative<BattlefieldLocation>(e.was_at)) {
++            const auto died_at = std::get<BattlefieldLocation>(e.was_at).id;
++            const auto listener_at = other.battlefieldId();
++            if (listener_at && *listener_at == died_at) {
++                fireTrigger(id, opp, 0, TriggerType::WhenAnEnemyUnitDiesHere,
++                            /*subject=*/e.object);
++            }
++        }
+     }
+ 
+     // "When you kill a unit with a spell" (Immortal Phoenix 037). Attributed to
+@@ -1051,6 +1098,42 @@ void TriggerManager::onCardHidden(const CardHiddenEvent& e) {
+     }
+ }
+ 
++void TriggerManager::onObjectEmpowered(const ObjectEmpoweredEvent& e) {
++    // "When you empower something ELSE" — never the object that just became
++    // Empowered, or Matriarch of War empowering herself would re-fire on her
++    // own event forever.
++    for (auto& [id, obj] : state_.objects) {
++        if (id == e.object) continue;
++        if (obj.controller != e.player || !obj.location.has_value()) continue;
++        if (cardFiresOn(card_registry_, obj.card_def_id,
++                        TriggerType::WhenYouEmpowerSomethingElse)) {
++            fireTrigger(id, e.player, 0, TriggerType::WhenYouEmpowerSomethingElse);
++        }
++    }
++    // …and the self-scoped form, to the object that just became Empowered.
++    if (state_.objectExists(e.object)) {
++        auto& self = state_.getObject(e.object);
++        if (cardFiresOn(card_registry_, self.card_def_id,
++                        TriggerType::WhenIBecomeEmpowered)) {
++            fireTrigger(e.object, self.controller, 0,
++                        TriggerType::WhenIBecomeEmpowered);
++        }
++    }
++    // Legends sit in the legend zone with no location, so the loop above
++    // cannot see them — and both cards that want this trigger ARE legends.
++    for (auto pid : {PlayerId::Player1, PlayerId::Player2}) {
++        if (pid != e.player) continue;
++        auto legend_id = state_.player(pid).legend_zone;
++        if (legend_id == kInvalidId || legend_id == e.object) continue;
++        if (!state_.objectExists(legend_id)) continue;
++        auto& legend = state_.getObject(legend_id);
++        if (cardFiresOn(card_registry_, legend.card_def_id,
++                        TriggerType::WhenYouEmpowerSomethingElse)) {
++            fireTrigger(legend_id, pid, 0, TriggerType::WhenYouEmpowerSomethingElse);
++        }
++    }
++}
++
+ void TriggerManager::onPlayedFromFacedown(const PlayedFromFacedownEvent& e) {
+     // "When you play a card from face down" — fires on the controller's
+     // on-board cards (Katarina, Reckless: "deal 2 to an enemy unit").
+diff --git a/src/engine/trigger_manager.h b/src/engine/trigger_manager.h
+index 6602bf2..ececb2e 100644
+--- a/src/engine/trigger_manager.h
++++ b/src/engine/trigger_manager.h
+@@ -98,6 +98,7 @@ private:
+     /// Phase-2 trigger events.
+     void onUnitReadied(const UnitReadiedEvent& e);          // WhenIAmReadied
+     void onCardHidden(const CardHiddenEvent& e);            // WhenYouHideACard
++    void onObjectEmpowered(const ObjectEmpoweredEvent& e);  // WhenYouEmpowerSomethingElse
+     void onPlayedFromFacedown(const PlayedFromFacedownEvent& e); // WhenYouPlayFromFacedown
+     void onUnitReturnedToHand(const UnitReturnedToHandEvent& e); // WhenAUnitReturnsToHandHere
+     void onShowdownStarted(const ShowdownStartedEvent& e);  // WhenAShowdownBeginsHere
