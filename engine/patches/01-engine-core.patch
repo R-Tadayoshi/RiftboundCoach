@@ -1,5 +1,5 @@
 diff --git a/src/cards/card.h b/src/cards/card.h
-index bd1b268..40d3eac 100644
+index bd1b268..783450a 100644
 --- a/src/cards/card.h
 +++ b/src/cards/card.h
 @@ -110,6 +110,24 @@ public:
@@ -27,7 +27,39 @@ index bd1b268..40d3eac 100644
      /// State-aware reduction to an activated ability's ENERGY cost (e.g.
      /// Bashful Bloom: "costs [1] less for each friendly [Temporary] unit").
      /// Consulted by the activation affordability check + payment, clamped so
-@@ -520,6 +538,24 @@ public:
+@@ -504,6 +522,31 @@ public:
+     };
+     virtual OptionalAdditionalCost optionalAdditionalCost() const { return {}; }
+ 
++    /// An optional additional cost this card offers on SOMEONE ELSE'S play.
++    ///
++    /// optionalAdditionalCost above is a property of the card being played —
++    /// the engine asks the card it is about to put on the chain. A
++    /// battlefield that says "Any player may pay [A][A] as an additional cost
++    /// to play a Dragon" is the other direction: a card on the board changing
++    /// what is possible for a card in someone's hand, and the engine had
++    /// nowhere to ask it.
++    ///
++    /// `self` is this card's own object, so it can find its battlefield;
++    /// `card_being_played` is the object about to be played, so the offer can
++    /// depend on its tags, type or cost. `player` is whoever is playing it,
++    /// which need not be this card's controller — "any player" is the usual
++    /// wording on a battlefield.
++    struct GrantedPlayOption {
++        OptionalAdditionalCost cost;                 // .valid when offered
++        /// "If they do, they play it to this battlefield." Overrides the play
++        /// location the player chose, and only when the cost was actually paid.
++        bool play_to_granting_battlefield = false;
++    };
++    virtual GrantedPlayOption grantedPlayOption(const GameState& /*state*/,
++                                                PlayerId /*player*/,
++                                                GameObjectId /*card_being_played*/,
++                                                GameObjectId /*self*/) const { return {}; }
++
+     // ── Alternative play cost ──
+     /// "You may play me for <alt cost> [instead of my printed cost]" when a
+     /// condition holds (Jhin, Meticulous Killer: "play me for [B]" if you've
+@@ -520,6 +563,24 @@ public:
      virtual AltPlayCost alternativePlayCost(const GameState& /*state*/,
                                              PlayerId /*player*/) const { return {}; }
  
@@ -52,7 +84,7 @@ index bd1b268..40d3eac 100644
      /// LeBlanc, Everywhere at Once: "your [Temporary] effects at my battlefield
      /// don't trigger." When true, TriggerManager suppresses triggers fired by a
      /// friendly [Temporary] unit sharing this card's battlefield + controller.
-@@ -557,6 +593,35 @@ public:
+@@ -557,6 +618,35 @@ public:
      /// flag to filter out untargetable enemy candidates.
      virtual bool canBeChosenByEnemy() const { return true; }
  
@@ -354,7 +386,7 @@ index 1af2ec5..d9083d2 100644
      void giveTemporaryMight(GameObjectId target, int amount, int minimum = 0);
      void giveTemporaryKeyword(GameObjectId target, Keyword kw, int value);
 diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
-index ce24a33..5046975 100644
+index ce24a33..e75567f 100644
 --- a/src/engine/game_engine.cpp
 +++ b/src/engine/game_engine.cpp
 @@ -1023,6 +1023,9 @@ void GameEngine::doExpirationBody() {
@@ -416,7 +448,21 @@ index ce24a33..5046975 100644
      // Per-turn gear/equipment counters (Emperor of the Sands gate; Ornn's
      // Forge "first gear each turn"). NOTE: this runs AFTER payCardCost, so the
      // first gear's cost reduction still sees gears_played_this_turn == 0.
-@@ -1417,6 +1455,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1365,7 +1403,12 @@ void GameEngine::executePlayCard(const Intent& intent) {
+ 
+     // Store the play location on the game object so resolvePermanent can use it.
+     // Permanents choose location during finalization (CR 355.2.a).
+-    card.location = intent.play_location.value_or(BaseLocation{intent.player});
++    if (card.forced_play_location.has_value()) {
++        card.location = *card.forced_play_location;
++        card.forced_play_location.reset();
++    } else {
++        card.location = intent.play_location.value_or(BaseLocation{intent.player});
++    }
+ 
+     // CR 135.2.b.3 + CR 355.1 — "As you play me" / "As I am played"
+     // instructions execute during the play action itself, not as a
+@@ -1417,6 +1460,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
      bool paid_via_grant = false;
      if (intent.play_source == Intent::PlaySource::Trash) {
          paid_via_grant = payTrashReplayGrant(intent.player, intent.card);
@@ -424,7 +470,7 @@ index ce24a33..5046975 100644
      }
      if (!paid_via_grant) {
          ps.current_play_source = intent.play_source;
-@@ -1512,6 +1551,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1512,6 +1556,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -432,7 +478,7 @@ index ce24a33..5046975 100644
      int energy_spent = 0;
      if (card.card_def_id != kInvalidId) {
          energy_spent = card_db_.get(card.card_def_id).energy_cost;
-@@ -1747,6 +1787,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
+@@ -1747,6 +1792,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
          if (card.hasKeyword(Keyword::Ambush) && card.isAtBattlefield()) {
              enters_ready = true;
          }
@@ -448,7 +494,7 @@ index ce24a33..5046975 100644
          // Cards that intrinsically enter ready (e.g. Daisy! "I enter ready").
          if (card.card_def_id != kInvalidId) {
              if (const Card* cdef = card_registry_.get(card.card_def_id)) {
-@@ -2858,9 +2907,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
+@@ -2858,9 +2912,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
      }
  }
  
@@ -545,7 +591,7 @@ index ce24a33..5046975 100644
      auto& ps = state_.player(player);
      if (ps.trash_replay_grants.empty()) return;
      if (ps.cant_play_cards_this_turn || ps.cant_play_spells_this_turn) return;
-@@ -2972,11 +3108,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
+@@ -2972,11 +3113,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
              const auto& ab = abilities[ai];
              const auto& act_cost = ab.cost;
  
@@ -566,7 +612,7 @@ index ce24a33..5046975 100644
              if (act_cost.discard && act_cost.discard_count > 0 &&
                  static_cast<int>(state_.player(player).hand.size())
                      < act_cost.discard_count) continue;
-@@ -3798,6 +3943,7 @@ void GameEngine::recalculateAuras() {
+@@ -3798,6 +3948,7 @@ void GameEngine::recalculateAuras() {
          ps.grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer
          ps.units_play_base_only = false;         // Mageseeker Warden
          ps.tokens_enter_ready = false;           // Renata Glasc, Industrialist
@@ -574,7 +620,7 @@ index ce24a33..5046975 100644
          ps.recall_all_on_attacker_tie = false;   // Symbol of the Solari
          ps.effects_cant_ready_my_units = false;  // Mageseeker Warden cl2
          ps.spells_have_repeat_energy = 0;        // Syndra, Transcendent
-@@ -3820,7 +3966,10 @@ void GameEngine::recalculateAuras() {
+@@ -3820,7 +3971,10 @@ void GameEngine::recalculateAuras() {
      // GameState::objects; collocated with aura recalc so all "static
      // attributes of on-board cards" get refreshed in one place.
      for (auto& [id, obj] : state_.objects) {
@@ -586,7 +632,7 @@ index ce24a33..5046975 100644
          // On-board cards AND legends (LegendZone, no location) broadcast their
          // passive auras. Without including legends, legend-sourced passives
          // (Purifier's [Assault], Wuju Master's +1 [M], etc.) never fired.
-@@ -3829,7 +3978,7 @@ void GameEngine::recalculateAuras() {
+@@ -3829,7 +3983,7 @@ void GameEngine::recalculateAuras() {
          if (!on_board && !legend_zone) continue;
          if (obj.card_def_id == kInvalidId) continue;
          const Card* card = card_registry_.get(obj.card_def_id);
@@ -595,7 +641,7 @@ index ce24a33..5046975 100644
              obj.untargetable_by_enemy = true;
          }
  
-@@ -4796,6 +4945,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
+@@ -4796,6 +4950,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
  // the same primitives canAfford / payCardCost use, but for ONE extra
  // (energy, domain_power) charge — called by executePlaySpell after the
  // base cost has already been paid.
@@ -622,7 +668,51 @@ index ce24a33..5046975 100644
  bool GameEngine::payRepeatCost(PlayerId player, const RepeatCost& cost) {
      if (!cost.valid) return true;
      auto base_loc = BaseLocation{player};
-@@ -5371,6 +5540,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
+@@ -4845,6 +5019,25 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
+     const Card* cdef = card_registry_.get(card.card_def_id);
+     if (!cdef) return;
+     auto cost = cdef->optionalAdditionalCost();
++
++    // Nothing of the card's own? Ask the board. A battlefield (Dragon Roost)
++    // may offer one on this play, and may say where the card then lands.
++    bool granted_to_bf = false;
++    GameObjectId granting = kInvalidId;
++    if (!cost.valid) {
++        for (const auto& [oid, obj] : state_.objects) {
++            if (obj.card_def_id == kInvalidId) continue;
++            if (!obj.location.has_value() && obj.zone != ZoneType::BattlefieldZone) continue;
++            const Card* other = card_registry_.get(obj.card_def_id);
++            if (!other) continue;
++            auto g = other->grantedPlayOption(state_, player, card_id, oid);
++            if (!g.cost.valid) continue;
++            cost = g.cost;
++            granted_to_bf = g.play_to_granting_battlefield;
++            granting = oid;
++            break;   // first offer wins; two identical offers are one choice
++        }
++    }
+     if (!cost.valid) return;
+     // Discard-as-additional-cost-to-reduce (Brazen Buccaneer) is decided BEFORE
+     // payment in executePlayCard (the discount must precede the base cost), so
+@@ -4884,6 +5077,17 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
+         if (cost.paid_flag && cost.paid_flag[0] != '\0') {
+             card.card_counters[cost.paid_flag] = 1;
+         }
++        // "If they do, they play it to this battlefield." Only on payment —
++        // declining leaves the player's own choice of location alone.
++        if (granted_to_bf && state_.objectExists(granting)) {
++            for (const auto& bf : state_.battlefields) {
++                if (bf.card_object_id != granting) continue;
++                card.forced_play_location = LocationId{BattlefieldLocation{bf.id}};
++                events_.logTrace("ADDITIONAL_COST: " + card.name +
++                                 " will be played to the granting battlefield");
++                break;
++            }
++        }
+         events_.logTrace("ADDITIONAL_COST: " + card.name + " paid optional additional cost");
+     } else {
+         events_.logTrace("ADDITIONAL_COST: " + card.name + " declined additional cost");
+@@ -5371,6 +5575,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
      return true;
  }
  

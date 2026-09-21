@@ -353,3 +353,74 @@ index 0000000..d4beb4c
 +}
 +
 +}  // namespace
+diff --git a/tests/cards/test_granted_play_option.cpp b/tests/cards/test_granted_play_option.cpp
+new file mode 100644
+index 0000000..e84756b
+--- /dev/null
++++ b/tests/cards/test_granted_play_option.cpp
+@@ -0,0 +1,65 @@
++/// @file test_granted_play_option.cpp
++/// Card::grantedPlayOption — a card on the board offering an optional
++/// additional cost on SOMEONE ELSE'S play.
++///
++/// Every other additional cost in the engine belongs to the card being
++/// played. Dragon Roost's belongs to a battlefield and applies to a card in
++/// someone's hand, an opponent's included.
++
++#include "tests/cards/card_test_fixture.h"
++
++using namespace riftbound;
++using namespace riftbound::test;
++
++namespace {
++
++constexpr CardDefId kDragonRoost = 944;
++constexpr CardDefId kElderDragon = 680;  // tags {Dragon, Demacia}
++constexpr CardDefId kLunarBoon   = 687;  // not a Dragon, not even a unit
++
++class GrantedPlayOptionTest : public CardTestFixture {};
++
++TEST_F(GrantedPlayOptionTest, RoostOffersOnADragon) {
++    auto dragon = addToHand(P1, kElderDragon);
++    Card* roost = card_registry.get(kDragonRoost);
++    auto g = roost->grantedPlayOption(state, P1, dragon, kInvalidId);
++
++    EXPECT_TRUE(g.cost.valid);
++    EXPECT_EQ(g.cost.power, 2);
++    EXPECT_TRUE(g.cost.any_domain) << "[A][A] is any single domain, not a fixed one";
++    EXPECT_TRUE(g.play_to_granting_battlefield);
++}
++
++TEST_F(GrantedPlayOptionTest, RoostOffersNothingOnANonDragon) {
++    auto other = addToHand(P1, kLunarBoon);
++    Card* roost = card_registry.get(kDragonRoost);
++    EXPECT_FALSE(roost->grantedPlayOption(state, P1, other, kInvalidId).cost.valid);
++}
++
++TEST_F(GrantedPlayOptionTest, RoostOffersToEitherPlayer) {
++    // "Any player may pay" — a battlefield is not friendly to anybody, and
++    // reading it as controller-only would quietly remove the opponent's
++    // option from every search over this board.
++    auto dragon = addToHand(P2, kElderDragon);
++    Card* roost = card_registry.get(kDragonRoost);
++    EXPECT_TRUE(roost->grantedPlayOption(state, P2, dragon, kInvalidId).cost.valid);
++    EXPECT_TRUE(roost->grantedPlayOption(state, P1, dragon, kInvalidId).cost.valid);
++}
++
++TEST_F(GrantedPlayOptionTest, AnOrdinaryCardOffersNothing) {
++    auto dragon = addToHand(P1, kElderDragon);
++    // Whatever else is in the registry must not start granting play options
++    // just because the hook now exists.
++    EXPECT_FALSE(card_registry.get(kLunarBoon)
++                     ->grantedPlayOption(state, P1, dragon, kInvalidId).cost.valid);
++}
++
++TEST_F(GrantedPlayOptionTest, ForcedLocationIsNotSetByMerelyBeingOffered) {
++    // The location override rides on PAYMENT. An object that was only ever
++    // offered the choice must carry no forced location, or declining would
++    // still drag the Dragon to the Roost.
++    auto dragon = addToHand(P1, kElderDragon);
++    EXPECT_FALSE(state.getObject(dragon).forced_play_location.has_value());
++}
++
++}  // namespace
