@@ -69,7 +69,7 @@ const BEHAVIOUR_HOOKS = [
   "needsPlayTimeTargetPair", "needsEquipTimeTarget", "isActionAbility",
   "isReactionAbility", "hasLegalTargets",
   // Added after each was found missing by a card it wrongly called a stub.
-  "canBeChosenByEnemy", "canBeCountered", "flowCost",
+  "canBeChosenByEnemy", "canBeCountered", "flowCost", "grantedPlayOption",
   "selfCostReduction", "entersReadyOnPlay",
   "levelThreshold", "minTurnToScore", "playableAsReactionToAttack",
   "requiresLegion", "requiresLevel", "suppressesTemporaryTriggersHere",
