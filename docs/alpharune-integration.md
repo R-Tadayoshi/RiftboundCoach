@@ -382,6 +382,39 @@ needs its own change with its own tests, and Shadow Fiend and Serene Ascetic
 wait for it rather than shipping as cards that are quietly worth less than
 they read.
 
+## selfCostReduction is energy-only
+
+`Card::selfCostReduction(state, player)` returns an `int` — energy. Several
+VEN cards reduce a POWER cost as well:
+
+- Keeper of Law: "I cost [2][Order] less if you control a battlefield with
+  exactly two units there."
+
+Returning 2 covers the energy and silently drops the `[Order]`, which makes
+the card cost one power more than printed — the safe direction for a search,
+but still wrong, and invisible. Left unwritten rather than shipped at the
+wrong price.
+
+## The generator's keyword artifacts, five shapes
+
+Every one comes from the same root: `coach/gen-cards.js` reads keywords out
+of the printed text and cannot see what the sentence around them does.
+
+| shape | card | what the stub claimed |
+|---|---|---|
+| behind an `[Empowered]` gate | 19 cards | keyword it only has while Empowered — **fixed in the generator** |
+| behind another condition | Oasis Raider | `[Ganking]` it only has while behind on runes |
+| the card IGNORES it | Dune Surfer | `[Tank]`, where the card lets you ignore Tank |
+| the card IGNORES it | Decree of Insight | `[Deflect]`, same inversion |
+| the card GRANTS it | Gust Monk | `[Assault 2]`, which it gives to another unit |
+
+Only the first is fixed in the generator, and only the first is covered by
+the scan in `test/gen-cards.test.js`. The other four are hand-written
+correctly in `engine/cards/`, which survives regeneration — but a newly
+generated card of those shapes would arrive wrong and nothing would catch
+it. Widening the generator needs it to understand "ignore", "give" and
+arbitrary conditions, which is a parser, not a regex.
+
 ## Cost shapes ActivationCost cannot express
 
 `ActivationCost` is a fixed record — exhaust, energy, power + domain,
