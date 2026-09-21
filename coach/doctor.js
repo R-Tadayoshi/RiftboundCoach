@@ -129,13 +129,16 @@ function checkHandWrittenCards() {
   const sh = path.join(ROOT, "engine", "cards", "install.sh");
   if (!fs.existsSync(sh)) return;
   try {
-    const out = execFileSync(sh, [], { encoding: "utf8", env: process.env });
+    // --check, never a bare run. The doctor is a question, and npm test asks
+    // it; a question that writes into the engine checkout installed three
+    // cards mid-build that did not compile yet, and the build died on them.
+    const out = execFileSync(sh, ["--check"], { encoding: "utf8", env: process.env });
     const m = /(\d+) copied, (\d+) already identical, (\d+) left alone/.exec(out);
     if (!m) return warn("hand-written cards", "install.sh said something unexpected", out.trim());
     const [, copied, same, left] = m;
     if (Number(copied) > 0) {
-      warn("hand-written cards", `installed ${copied} that were missing (${same} already in)`,
-        `rebuild: (cd ${ALPHARUNE} && cmake --build build) && ./engine/build.sh`);
+      warn("hand-written cards", `${copied} not installed (${same} already in)`,
+        `./engine/cards/install.sh && (cd ${ALPHARUNE} && cmake --build build) && ./engine/build.sh`);
     } else {
       ok("hand-written cards", `${same} in place`);
     }

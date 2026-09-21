@@ -9,7 +9,18 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="${ALPHARUNE_ROOT:-$(cd "$HERE/../../../chorlick/alpharune" 2>/dev/null && pwd || true)}"
-FORCE="${1:-}"
+MODE="${1:-}"
+FORCE=""
+CHECK=""
+case "$MODE" in
+  --force) FORCE="--force" ;;
+  # --check reports what WOULD be installed and copies nothing. Anything that
+  # runs as part of a test or a diagnostic uses this: writing into the engine
+  # checkout as a side effect of asking it a question once dropped three cards
+  # that did not compile yet into a build that was running, and the failure
+  # surfaced 90 minutes later as someone else's compile error.
+  --check) CHECK="1" ;;
+esac
 
 [ -n "$ROOT" ] && [ -d "$ROOT/src/cards" ] || {
   echo "No alpharune checkout found. Set ALPHARUNE_ROOT." >&2; exit 2; }
@@ -39,6 +50,10 @@ for src in "$HERE"/*.cpp; do
 
   if [ -f "$dst" ] && cmp -s "$src" "$dst"; then same=$((same+1)); continue; fi
 
+  if [ -n "$CHECK" ]; then
+    echo "  would install: $sub/$name"; copied=$((copied+1)); continue
+  fi
+
   # A file the checkout has NOT touched is upstream's pristine copy, and
   # overwriting it loses nothing — that is the whole point of the cards here
   # that modify an existing upstream card (the counterspells carrying the
@@ -57,7 +72,12 @@ for src in "$HERE"/*.cpp; do
   cp "$src" "$dst"; echo "  installed: $sub/$name"; copied=$((copied+1))
 done
 
-echo "$copied copied, $same already identical, $differs left alone."
+if [ -n "$CHECK" ]; then
+  echo "$copied copied, $same already identical, $differs left alone.  (--check: nothing was written)"
+else
+  echo "$copied copied, $same already identical, $differs left alone."
+fi
+[ -n "$CHECK" ] && exit 0
 [ "$differs" -gt 0 ] && exit 1
 [ "$copied" -gt 0 ] && echo "Rebuild: (cd $ROOT && cmake --build build) && ./engine/build.sh"
 exit 0
