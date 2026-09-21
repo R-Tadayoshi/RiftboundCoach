@@ -293,6 +293,48 @@ upstream's pristine copy, and refusing there just meant the counterspells
 carrying the `canBeCountered` guard silently did not install. It now asks git
 whether the checkout actually changed the file, and only refuses when it did.
 
+## What two real decklists changed about the plan
+
+Zarkhil's two decks (`decks/`) are an Irelia, Blade Dancer list and a Jayce,
+Defender of Tomorrow list. Every card name in both resolves against the
+index. Eight cards blocked ranking:
+
+| deck | blockers | why |
+|---|---|---|
+| Irelia | Up from the Deep, Twilight Shroud | Flow — both sideboard |
+| Jayce | Jayce, Defender of Tomorrow (the legend), Platewyrm Egg | Empower |
+| Jayce | Dredge Up (3 of them, main deck) | Flow |
+| Jayce | Jayce, Brilliant Inventor; Decree of Strength; Dragon Roost | no shared mechanic |
+
+So both mechanics recorded above as "scoped and deliberately not built" are
+required by a deck actually being played — Empower by its **legend**, which
+is on the board every game. That settles an open question: they are not
+optional polish for set completeness, they are the difference between this
+deck ranking and not.
+
+It also shows what a decklist is for here. Nothing in the coach is
+deck-specific and nothing was narrowed to these two; what the decklists did
+was replace a guess about which of 162 stubs matter with a list of eight.
+
+### A gap found on the way: activation power costs were never charged
+
+`ActivationCost::power` has existed all along and nothing read it — not the
+affordability check in `generateActivateAbilityActions`, not the payment
+block in the ActivateAbility handler. Treasure Trove, Assembly Rig, Temporal
+Portal and Azir, Ascendant all declare one, so their abilities were offered
+and resolved **for free**.
+
+That is the failure mode this project is most wary of, in its quietest form:
+nothing errors, the ability simply costs less than the card says, and a
+search ranks every line through it too highly. Found only because Defender of
+Tomorrow's [Empower] costs [2][A][A] and the [A][A] would have silently
+evaporated.
+
+Now paid the way `payRepeatCost` pays: recycle an exhausted rune of a
+matching domain (`Domain::Count` = rainbow), with an affordability check that
+counts **exhausted** runes — power is paid by recycling one, not exhausting
+one, which is the same asymmetry `coach/legality.js` got wrong once.
+
 ## Two things scoped and deliberately NOT built
 
 Both were looked at properly and left alone, which is worth recording so the
