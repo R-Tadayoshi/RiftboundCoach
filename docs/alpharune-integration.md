@@ -335,6 +335,53 @@ matching domain (`Domain::Count` = rainbow), with an affordability check that
 counts **exhausted** runes — power is paid by recycling one, not exhausting
 one, which is the same asymmetry `coach/legality.js` got wrong once.
 
+## One gap, found three times
+
+Three virtuals on `Card` could not express a per-object condition, and each
+was found the same way — by a card that could not be written:
+
+| virtual | the card that found it | what it could not say |
+|---|---|---|
+| `canBeChosenByEnemy` | Akali, Silent | "unless I'm in combat" |
+| `canActivateAbility` | Questionable Tome | "use only if not Empowered" |
+| `applyPassiveAura` | Steel Paws | "[Empowered][>] I have +7 Might" |
+
+The shape is identical every time. The hook is handed the card and the
+controller but not the OBJECT, so a card whose behaviour depends on the state
+of *this* copy of itself has nowhere to look — and two copies of one card
+routinely differ. Each is fixed by an overload taking the object id and
+defaulting to the old answer, so every existing override keeps working and
+only the cards that need the distinction override the new form.
+
+Worth stating as a pattern rather than three fixes, because the next one will
+look the same: if a card's printed text contains "I" or "this" and a
+condition, the hook it needs probably does not know which "I" is asking.
+
+### Aura-granted keyword MAGNITUDES are dropped
+
+Found while writing Shadow Fiend ("[Empowered][>] I have [Assault 3]"), and
+not yet fixed.
+
+`GameObject::AuraEffect` carries `keyword_value`, and several places in
+`recalculateAuras` set it — `ae.keyword_value = 1`, `= aura.keyword_value`.
+But Step 4, which aggregates `aura_effects` into the cached values, reads
+only `ae.keyword`:
+
+```cpp
+if (ae.keyword != Keyword::Count) obj.aura_keywords.set(ae.keyword);
+```
+
+So an aura grants the keyword BIT and never its number. `recomputeMight`
+adds `assault_value`, which an aura cannot raise, so aura-granted [Assault N]
+is worth zero Might and aura-granted [Shield N] / [Deflect N] the same.
+
+Not fixed in the same commit as the cards that found it: every existing aura
+that sets `keyword_value` is currently a no-op in that respect, so making it
+work changes live behaviour across cards nobody is looking at right now. It
+needs its own change with its own tests, and Shadow Fiend and Serene Ascetic
+wait for it rather than shipping as cards that are quietly worth less than
+they read.
+
 ## Two things scoped and deliberately NOT built
 
 Both were looked at properly and left alone, which is worth recording so the
