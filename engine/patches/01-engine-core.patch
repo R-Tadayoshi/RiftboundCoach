@@ -1,8 +1,58 @@
 diff --git a/src/cards/card.h b/src/cards/card.h
-index bd1b268..3502b9f 100644
+index bd1b268..40d3eac 100644
 --- a/src/cards/card.h
 +++ b/src/cards/card.h
-@@ -557,6 +557,35 @@ public:
+@@ -110,6 +110,24 @@ public:
+     virtual bool canActivateAbility(const GameState& /*state*/,
+                                     PlayerId /*controller*/) const { return true; }
+ 
++    /// Same question, per OBJECT and per ABILITY.
++    ///
++    /// The card-wide form above cannot express "use only if not Empowered":
++    /// it has no object id, so it cannot tell which copy of the card is being
++    /// asked about, and no ability index, so it would gate every ability on
++    /// the card at once — on an Empower card that is exactly backwards, since
++    /// [Empower] is legal only while NOT empowered and the "Disempower this,
++    /// …" ability only while it IS.
++    ///
++    /// Defaults to the card-wide answer, so every existing override keeps
++    /// working untouched and only cards that need the distinction override
++    /// this one. The action generator consults both.
++    virtual bool canActivateAbility(const GameState& state, PlayerId controller,
++                                    GameObjectId /*self*/,
++                                    int /*ability_index*/) const {
++        return canActivateAbility(state, controller);
++    }
++
+     /// State-aware reduction to an activated ability's ENERGY cost (e.g.
+     /// Bashful Bloom: "costs [1] less for each friendly [Temporary] unit").
+     /// Consulted by the activation affordability check + payment, clamped so
+@@ -520,6 +538,24 @@ public:
+     virtual AltPlayCost alternativePlayCost(const GameState& /*state*/,
+                                             PlayerId /*player*/) const { return {}; }
+ 
++    // ── [Flow] ──
++    /// "[Flow] <cost> — You may play this from your trash for its Flow cost.
++    /// Then banish it."
++    ///
++    /// Unlike a trash-replay GRANT (Death from Below), which another card
++    /// hands out for one specific object and which is cleared each turn, Flow
++    /// is a standing property of the card: it is playable from its owner's
++    /// trash whenever they can pay, every turn, until it is banished. So it
++    /// belongs on the Card, not in PlayerState.
++    struct FlowCost {
++        bool valid = false;
++        int energy = 0;
++        int power = 0;
++        Domain power_domain = Domain::Fury;
++        bool any_domain = false;   // [A] — power may be any single domain
++    };
++    virtual FlowCost flowCost() const { return {}; }
++
+     /// LeBlanc, Everywhere at Once: "your [Temporary] effects at my battlefield
+     /// don't trigger." When true, TriggerManager suppresses triggers fired by a
+     /// friendly [Temporary] unit sharing this card's battlefield + controller.
+@@ -557,6 +593,35 @@ public:
      /// flag to filter out untargetable enemy candidates.
      virtual bool canBeChosenByEnemy() const { return true; }
  
@@ -39,15 +89,80 @@ index bd1b268..3502b9f 100644
      /// Whether this unit should enter the board READY (not exhausted) on
      /// play, without paying an Accelerate cost. Default false; resolves
 diff --git a/src/cards/card_helpers.h b/src/cards/card_helpers.h
-index f3f01e4..be793ea 100644
+index f3f01e4..30b1a58 100644
 --- a/src/cards/card_helpers.h
 +++ b/src/cards/card_helpers.h
-@@ -168,10 +168,33 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
+@@ -168,10 +168,98 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
          ps.last_spell_energy_spent = 0;
  }
  
 -inline void counterChainTop(CardContext& ctx) {
 -    if (ctx.state.chain.items.empty()) return;
++// ── [Empower] / [Empowered] / Disempower (VEN) ───────────────────────────
++//
++// Three printed things, one latch (GameObject::is_empowered):
++//
++//   [Empower] <cost>       an activated ability: pay it, become Empowered.
++//                          "Use only if not Empowered."
++//   [Empowered][>] <text>  an ability that only works while the latch is set,
++//                          or a clause that reads differently while it is.
++//   Disempower this, <cost>: <effect>
++//                          an activated ability whose cost includes clearing
++//                          the latch — so it is legal only while set.
++//
++// The legality halves are why Card::canActivateAbility grew a per-object,
++// per-ability overload: "use only if not Empowered" is about THIS copy of the
++// card and THIS one of its abilities, and the card-wide form could express
++// neither. Cards using these helpers override that overload and answer from
++// empowerGate().
++
++inline bool isEmpowered(const GameState& state, GameObjectId id) {
++    return state.objectExists(id) && state.getObject(id).is_empowered;
++}
++
++/// Set the latch. Idempotent by the rules' own wording — "It becomes
++/// Empowered if it's not already" — so empowering twice is not an error and
++/// must not be logged as one.
++inline void empowerObject(CardContext& ctx, GameObjectId id) {
++    if (!ctx.state.objectExists(id)) return;
++    auto& obj = ctx.state.getObject(id);
++    if (obj.is_empowered) return;
++    obj.is_empowered = true;
++    ctx.events.logTrace("EMPOWER: " + obj.name + " (id=" + std::to_string(id) +
++                         ") is now Empowered");
++}
++
++inline void disempowerObject(CardContext& ctx, GameObjectId id) {
++    if (!ctx.state.objectExists(id)) return;
++    auto& obj = ctx.state.getObject(id);
++    if (!obj.is_empowered) return;
++    obj.is_empowered = false;
++    ctx.events.logTrace("DISEMPOWER: " + obj.name + " (id=" + std::to_string(id) + ")");
++}
++
++/// The [Empower] ability's descriptor: pay the cost, become Empowered.
++inline ActivatedAbility empowerAbility(ActivationCost cost) {
++    ActivatedAbility ab;
++    ab.cost = cost;
++    return ab;
++}
++
++/// The shared answer to "may this ability be activated on this object?" for a
++/// card laid out as { [Empower], then the rest }.
++///
++/// `empower_index` is which ability is the [Empower] one; `requires_empowered`
++/// lists the ability indices that only exist while the latch is set — both the
++/// "[Empowered][>] …" kind, which leaves it set, and the "Disempower this, …"
++/// kind, which clears it in onActivate. Everything else is unconditional.
++inline bool empowerGate(const GameState& state, GameObjectId self,
++                        int ability_index, int empower_index,
++                        std::initializer_list<int> requires_empowered) {
++    const bool on = isEmpowered(state, self);
++    if (ability_index == empower_index) return !on;   // 441.1.b
++    for (int i : requires_empowered) if (ability_index == i) return on;
++    return true;
++}
++
 +/// Whether this chain item may legally be countered.
 +///
 +/// Fails open on purpose. A chain item with no CardDef (a token's ability,
@@ -79,7 +194,7 @@ index f3f01e4..be793ea 100644
      auto countered = top.source;
      revertCounteredPlay(ctx, top);  // CR 425.1.b
      ctx.state.chain.items.pop_back();
-@@ -182,6 +205,7 @@ inline void counterChainTop(CardContext& ctx) {
+@@ -182,6 +270,7 @@ inline void counterChainTop(CardContext& ctx) {
          obj.location = std::nullopt;
          ctx.state.player(obj.owner).trash.push_back(countered);
      }
@@ -239,10 +354,61 @@ index 1af2ec5..d9083d2 100644
      void giveTemporaryMight(GameObjectId target, int amount, int minimum = 0);
      void giveTemporaryKeyword(GameObjectId target, Keyword kw, int value);
 diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
-index ce24a33..d804291 100644
+index ce24a33..5046975 100644
 --- a/src/engine/game_engine.cpp
 +++ b/src/engine/game_engine.cpp
-@@ -1347,6 +1347,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
+@@ -1023,6 +1023,9 @@ void GameEngine::doExpirationBody() {
+         // Per-unit move counter is "this turn" (Kayn, Unleashed).
+         obj.moves_this_turn = 0;
+ 
++        // Granted untargetability is "this turn" (Twilight Shroud).
++        obj.untargetable_by_enemy_this_turn = false;
++
+         // Temp might is a separate field from buff_count (permanent buffs);
+         // just clear it. recomputeMight (below / in cleanup) drops the bonus.
+         bool had_temp_might = (obj.temp_might_bonus != 0);
+@@ -1193,6 +1196,40 @@ void GameEngine::executeIntent(const Intent& intent) {
+                     events_.emit(ObjectStateChangedEvent{id, "exhausted"});
+                 }
+             }
++            // Pay power cost: recycle a matching EXHAUSTED rune to the deck.
++            //
++            // ActivationCost::power has existed all along and was never read:
++            // neither the affordability check in generateActivateAbilityActions
++            // nor this payment block touched it. Treasure Trove, Assembly Rig,
++            // Temporal Portal and Azir, Ascendant all declare one, so their
++            // abilities were being offered and resolved for free — which makes
++            // a search overvalue every line that uses them.
++            //
++            // Domain::Count means [A] / rainbow, matching payRepeatCost.
++            if (act_cost.power > 0) {
++                int need = act_cost.power;
++                auto base_loc = BaseLocation{intent.player};
++                auto& ps = state_.player(intent.player);
++                const bool universal = (act_cost.power_domain == Domain::Count);
++                for (auto& [id, obj] : state_.objects) {
++                    if (need == 0) break;
++                    if (!obj.isRune() || obj.controller != intent.player) continue;
++                    if (!obj.location.has_value() || *obj.location != LocationId{base_loc}) continue;
++                    if (!obj.is_exhausted) continue;
++                    bool match = universal;
++                    if (!match)
++                        for (auto d : obj.domains) if (d == act_cost.power_domain) { match = true; break; }
++                    if (!match) continue;
++                    obj.zone = ZoneType::MainDeck;
++                    obj.location = std::nullopt;
++                    ps.main_deck.insert(ps.main_deck.begin(), id);
++                    --need;
++                }
++                if (need > 0) {
++                    events_.logTrace("ACTIVATE_COST: could not pay " +
++                                     std::to_string(need) + " power — ability fizzles");
++                }
++            }
+             // Pay recycle-self cost [C]
+             if (act_cost.recycle_self) {
+                 events_.logTrace("ACTIVATE_COST: recycle self " + source.name);
+@@ -1347,6 +1384,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -250,7 +416,15 @@ index ce24a33..d804291 100644
      // Per-turn gear/equipment counters (Emperor of the Sands gate; Ornn's
      // Forge "first gear each turn"). NOTE: this runs AFTER payCardCost, so the
      // first gear's cost reduction still sees gears_played_this_turn == 0.
-@@ -1512,6 +1513,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1417,6 +1455,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+     bool paid_via_grant = false;
+     if (intent.play_source == Intent::PlaySource::Trash) {
+         paid_via_grant = payTrashReplayGrant(intent.player, intent.card);
++        if (!paid_via_grant) paid_via_grant = payFlowCost(intent.player, intent.card);
+     }
+     if (!paid_via_grant) {
+         ps.current_play_source = intent.play_source;
+@@ -1512,6 +1551,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -258,7 +432,7 @@ index ce24a33..d804291 100644
      int energy_spent = 0;
      if (card.card_def_id != kInvalidId) {
          energy_spent = card_db_.get(card.card_def_id).energy_cost;
-@@ -1747,6 +1749,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
+@@ -1747,6 +1787,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
          if (card.hasKeyword(Keyword::Ambush) && card.isAtBattlefield()) {
              enters_ready = true;
          }
@@ -274,7 +448,125 @@ index ce24a33..d804291 100644
          // Cards that intrinsically enter ready (e.g. Daisy! "I enter ready").
          if (card.card_def_id != kInvalidId) {
              if (const Card* cdef = card_registry_.get(card.card_def_id)) {
-@@ -3798,6 +3809,7 @@ void GameEngine::recalculateAuras() {
+@@ -2858,9 +2907,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
+     }
+ }
+ 
++void GameEngine::generateFlowActions(PlayerId player, bool action_ok,
++                                      bool reaction_ok,
++                                      std::vector<Intent>& actions) const {
++    auto& ps = state_.player(player);
++    if (ps.cant_play_cards_this_turn || ps.cant_play_spells_this_turn) return;
++
++    for (auto card_id : ps.trash) {
++        if (!state_.objectExists(card_id)) continue;
++        const auto& card = state_.getObject(card_id);
++        if (card.zone != ZoneType::Trash) continue;
++        if (!card.isSpell()) continue;
++        if (card.card_def_id == kInvalidId) continue;
++
++        // A card under a trash-replay grant is already offered by
++        // generateTrashReplayActions, at the grant's cost. Offering it again
++        // at its Flow cost would put two Plays of one object in the action
++        // list, which the policy head reads as one slot.
++        bool granted = false;
++        for (const auto& g : ps.trash_replay_grants)
++            if (g.card == card_id) { granted = true; break; }
++        if (granted) continue;
++
++        Card* cdef = card_registry_.get(card.card_def_id);
++        if (!cdef) continue;
++        const auto flow = cdef->flowCost();
++        if (!flow.valid) continue;
++
++        // Timing gate — identical to generateSpellActions (CR 309/806/813).
++        bool has_action = card.keywords.has(Keyword::Action);
++        bool has_reaction = card.keywords.has(Keyword::Reaction);
++        if (has_reaction) has_action = true;
++        bool allowed = false;
++        if (state_.turn.isNeutralOpen()) {
++            allowed = true;
++        } else if (state_.turn.isShowdownOpen()) {
++            allowed = has_action || has_reaction;
++        } else if (state_.turn.isClosedState()) {
++            allowed = has_reaction && reaction_ok;
++        } else {
++            if (action_ok && has_action) allowed = true;
++            if (reaction_ok && has_reaction) allowed = true;
++        }
++        if (!allowed) continue;
++
++        bool affordable = false;
++        if (flow.any_domain) {
++            for (int di = 0; di < static_cast<int>(Domain::Count); ++di) {
++                if (canPayAdditionalCost(player, flow.energy, flow.power,
++                                          static_cast<Domain>(di))) { affordable = true; break; }
++            }
++        } else {
++            affordable = canPayAdditionalCost(player, flow.energy, flow.power,
++                                               flow.power_domain);
++        }
++        if (!affordable) continue;
++
++        if (!cdef->hasLegalTargets(state_, player)) continue;
++        auto legal_targets = cdef->enumerateLegalTargets(state_, player);
++        auto req = cdef->getTargetRequirements();
++
++        IntentType intent_type = IntentType::PlayCard;
++        if (state_.turn.isShowdownOpen()) intent_type = IntentType::PlayActionCard;
++        else if (state_.turn.isClosedState()) intent_type = IntentType::PlayReaction;
++
++        auto make = [&](std::vector<GameObjectId> tgts) {
++            Intent play;
++            play.type = intent_type;
++            play.player = player;
++            play.card = card_id;
++            play.play_source = Intent::PlaySource::Trash;
++            play.targets = std::move(tgts);
++            actions.push_back(play);
++        };
++
++        if (req.count > 0 &&
++            (cdef->needsPlayTimeTarget() || cdef->needsPlayTimeTargetPair())) {
++            make({});                                  // agent picks at resolve
++        } else if (req.count == 0 || (req.optional && legal_targets.empty())) {
++            make({});
++        } else {
++            for (auto t : legal_targets) make({t});
++        }
++    }
++}
++
+ void GameEngine::generateTrashReplayActions(PlayerId player, bool action_ok,
+                                              bool reaction_ok,
+                                              std::vector<Intent>& actions) const {
++    generateFlowActions(player, action_ok, reaction_ok, actions);
++
+     auto& ps = state_.player(player);
+     if (ps.trash_replay_grants.empty()) return;
+     if (ps.cant_play_cards_this_turn || ps.cant_play_spells_this_turn) return;
+@@ -2972,11 +3108,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
+             const auto& ab = abilities[ai];
+             const auto& act_cost = ab.cost;
+ 
++            // Per-object, per-ability gate ("use only if not Empowered").
++            // The card-wide check above cannot answer this: it knows neither
++            // which copy of the card is being asked about nor which of its
++            // abilities.
++            if (!card->canActivateAbility(state_, player, id, (int)ai)) continue;
++
+             // Check activation cost: must be ready if exhaust required
+             if (act_cost.exhaust && obj.is_exhausted) continue;
+             int net_energy = std::max(0, act_cost.energy -
+                 card->activationCostReduction(state_, player, (int)ai));
+             if (net_energy > 0 && availableEnergy(player) < net_energy) continue;
++            if (act_cost.power > 0 &&
++                availableActivationPower(player, act_cost.power,
++                                          act_cost.power_domain) < act_cost.power) continue;
+             if (act_cost.discard && act_cost.discard_count > 0 &&
+                 static_cast<int>(state_.player(player).hand.size())
+                     < act_cost.discard_count) continue;
+@@ -3798,6 +3943,7 @@ void GameEngine::recalculateAuras() {
          ps.grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer
          ps.units_play_base_only = false;         // Mageseeker Warden
          ps.tokens_enter_ready = false;           // Renata Glasc, Industrialist
@@ -282,7 +574,19 @@ index ce24a33..d804291 100644
          ps.recall_all_on_attacker_tie = false;   // Symbol of the Solari
          ps.effects_cant_ready_my_units = false;  // Mageseeker Warden cl2
          ps.spells_have_repeat_energy = 0;        // Syndra, Transcendent
-@@ -3829,7 +3841,7 @@ void GameEngine::recalculateAuras() {
+@@ -3820,7 +3966,10 @@ void GameEngine::recalculateAuras() {
+     // GameState::objects; collocated with aura recalc so all "static
+     // attributes of on-board cards" get refreshed in one place.
+     for (auto& [id, obj] : state_.objects) {
+-        obj.untargetable_by_enemy = false;
++        // Start from any this-turn grant rather than from false: the rest of
++        // this pass ORs in what each card claims for itself, and a granted
++        // effect must survive it.
++        obj.untargetable_by_enemy = obj.untargetable_by_enemy_this_turn;
+         // On-board cards AND legends (LegendZone, no location) broadcast their
+         // passive auras. Without including legends, legend-sourced passives
+         // (Purifier's [Assault], Wuju Master's +1 [M], etc.) never fired.
+@@ -3829,7 +3978,7 @@ void GameEngine::recalculateAuras() {
          if (!on_board && !legend_zone) continue;
          if (obj.card_def_id == kInvalidId) continue;
          const Card* card = card_registry_.get(obj.card_def_id);
@@ -291,3 +595,69 @@ index ce24a33..d804291 100644
              obj.untargetable_by_enemy = true;
          }
  
+@@ -4796,6 +4945,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
+ // the same primitives canAfford / payCardCost use, but for ONE extra
+ // (energy, domain_power) charge — called by executePlaySpell after the
+ // base cost has already been paid.
++int GameEngine::availableActivationPower(PlayerId player, int /*needed*/,
++                                          Domain domain) const {
++    // Power is paid by recycling an ALREADY-EXHAUSTED rune (CR 164.2.b), so a
++    // ready rune does not count here — it counts for energy. That asymmetry is
++    // the one this project got wrong once already, in coach/legality.js.
++    const auto base_loc = BaseLocation{player};
++    const bool universal = (domain == Domain::Count);
++    int have = 0;
++    for (const auto& [id, obj] : state_.objects) {
++        if (!obj.isRune() || obj.controller != player) continue;
++        if (!obj.location.has_value() || *obj.location != LocationId{base_loc}) continue;
++        if (!obj.is_exhausted) continue;
++        bool match = universal;
++        if (!match)
++            for (auto d : obj.domains) if (d == domain) { match = true; break; }
++        if (match) ++have;
++    }
++    return have;
++}
++
+ bool GameEngine::payRepeatCost(PlayerId player, const RepeatCost& cost) {
+     if (!cost.valid) return true;
+     auto base_loc = BaseLocation{player};
+@@ -5371,6 +5540,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
+     return true;
+ }
+ 
++bool GameEngine::payFlowCost(PlayerId player, GameObjectId card_id) {
++    if (!state_.objectExists(card_id)) return false;
++    auto& card = state_.getObject(card_id);
++    if (card.card_def_id == kInvalidId) return false;
++    const Card* cdef = card_registry_.get(card.card_def_id);
++    if (!cdef) return false;
++    const auto flow = cdef->flowCost();
++    if (!flow.valid) return false;
++
++    Domain domain = flow.power_domain;
++    if (flow.any_domain) {
++        bool found = false;
++        for (int di = 0; di < static_cast<int>(Domain::Count); ++di) {
++            if (canPayAdditionalCost(player, flow.energy, flow.power,
++                                      static_cast<Domain>(di))) {
++                domain = static_cast<Domain>(di); found = true; break;
++            }
++        }
++        if (!found) return false;  // action gen should have filtered this out
++    }
++    const bool ok = payAdditionalCost(player, flow.energy, flow.power, domain);
++
++    // Marked here, not after resolving. "Then banish it" is part of the Flow
++    // play itself, so it must hold even if the spell is countered or fizzles
++    // — otherwise a countered Flow spell returns to the trash and can be
++    // played again, which is the opposite of what the mechanic costs.
++    card.banish_after_resolving = true;
++    events_.logTrace(std::string("FLOW: played ") + card.name +
++                     " from trash" + (ok ? "" : " (cost underpaid)"));
++    return true;
++}
++
+ bool GameEngine::payTrashReplayGrant(PlayerId player, GameObjectId card_id) {
+     auto& ps = state_.player(player);
+     auto it = std::find_if(ps.trash_replay_grants.begin(),

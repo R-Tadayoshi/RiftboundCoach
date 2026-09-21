@@ -25,8 +25,14 @@ CORE=(src/cards/card.h src/cards/card_helpers.h
 
 stage="$WORK/staged"
 mkdir -p "$stage"
+# `git diff` does not see an untracked file, and a NEW test file is exactly
+# what a new mechanic adds — tests/cards/test_flow.cpp was silently left out
+# of the patch the first time this ran. `add -N` records intent-to-add so the
+# diff includes it; the index is put back afterwards either way.
+git -C "$ROOT" add -N -- "${CORE[@]}" tests/ >/dev/null 2>&1 || true
 (cd "$ROOT" && git diff -- "${CORE[@]}") > "$stage/01-engine-core.patch"
 (cd "$ROOT" && git diff -- tests/)      > "$stage/02-engine-tests.patch"
+git -C "$ROOT" reset -q -- "${CORE[@]}" tests/ >/dev/null 2>&1 || true
 
 for p in "$stage"/*.patch; do
   [ -s "$p" ] || { echo "empty: $(basename "$p") — nothing to patch?" >&2; }

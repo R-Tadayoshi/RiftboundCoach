@@ -263,3 +263,93 @@ index fa5b467..980bd9e 100644
 +}
 +
  }  // namespace
+diff --git a/tests/cards/test_flow.cpp b/tests/cards/test_flow.cpp
+new file mode 100644
+index 0000000..d4beb4c
+--- /dev/null
++++ b/tests/cards/test_flow.cpp
+@@ -0,0 +1,84 @@
++/// @file test_flow.cpp
++/// [Flow] — "You may play this from your trash for its Flow cost. Then
++/// banish it."
++///
++/// The banish is the mechanic's entire cost. A Flow card is one extra use,
++/// not a loop, and every way the test file below can think of to get the card
++/// back into the trash is a way to turn it into one.
++
++#include "tests/cards/card_test_fixture.h"
++
++using namespace riftbound;
++using namespace riftbound::test;
++
++namespace {
++
++constexpr CardDefId kDredgeUp       = 836;  // Draw 1.        [Flow] [2]
++constexpr CardDefId kTwilightShroud = 818;  // +1[M], untgt.  [Flow] [2]
++constexpr CardDefId kUpFromTheDeep  = 887;  // two Tentacles. [Flow] [3]
++
++class FlowTest : public CardTestFixture {};
++
++TEST_F(FlowTest, CardsDeclareTheirFlowCost) {
++    EXPECT_TRUE(card_registry.get(kDredgeUp)->flowCost().valid);
++    EXPECT_EQ(card_registry.get(kDredgeUp)->flowCost().energy, 2);
++    EXPECT_EQ(card_registry.get(kUpFromTheDeep)->flowCost().energy, 3);
++}
++
++TEST_F(FlowTest, AnOrdinarySpellDoesNot) {
++    // 687 Lunar Boon — no Flow. The default must stay invalid, or every spell
++    // in the game becomes playable from the trash.
++    EXPECT_FALSE(card_registry.get(687)->flowCost().valid);
++}
++
++TEST_F(FlowTest, DredgeUpDrawsOnResolve) {
++    auto deck_a = addToDeck(P1, kDredgeUp);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kDredgeUp, P1, {}, exec);
++
++    EXPECT_EQ(state.player(P1).hand.size(), 1u);
++    (void)deck_a;
++}
++
++TEST_F(FlowTest, UpFromTheDeepMakesTwoExhaustedTentacles) {
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kUpFromTheDeep, P1, {}, exec);
++
++    int tentacles = 0, ready = 0;
++    for (auto& [id, obj] : state.objects) {
++        if (obj.name != "Tentacle") continue;
++        ++tentacles;
++        if (!obj.is_exhausted) ++ready;
++        EXPECT_EQ(obj.current_might, 1);
++        EXPECT_EQ(obj.controller, P1);
++    }
++    EXPECT_EQ(tentacles, 2);
++    EXPECT_EQ(ready, 0) << "units enter exhausted (CR 143.4); the card grants no exception";
++}
++
++// The one that matters: a granted this-turn untargetability must survive the
++// aura pass that rebuilds untargetable_by_enemy from scratch.
++TEST_F(FlowTest, TwilightShroudUsesTheThisTurnFieldNotTheDerivedOne) {
++    auto unit = addUnit(P1, kInvalidId, 3);
++    auto src = state.createObject();
++    state.getObject(src).owner = P1;
++    state.getObject(src).controller = P1;
++
++    EffectExecutor exec(state, events, card_db, &card_registry);
++    invokeOnResolve(src, kTwilightShroud, P1, {unit}, exec);
++
++    EXPECT_TRUE(state.getObject(unit).untargetable_by_enemy_this_turn)
++        << "writing the derived flag instead would be silently undone by the "
++           "next recalculateAuras, inside the same turn it was paid for";
++    EXPECT_EQ(state.getObject(unit).current_might, 4);
++}
++
++}  // namespace
