@@ -116,6 +116,49 @@ function checkAgainstDecks(script, deck1, deck2, index) {
  * is a fast answer that says TOO CLOSE TO CALL. */
 const DEFAULT_ROLLOUTS = Number(process.env.RBC_ROLLOUTS || 1200);
 
+/* Rewrite a decklist into the names the ENGINE knows, and refuse rather than
+ * guess.
+ *
+ * Card naming has bitten this project three times, and this is the fourth
+ * shape of it. A legend is PRINTED with its champion tag and NAMED without
+ * one — the card reads "Jayce, Defender of Tomorrow" and the registry holds
+ * "Defender of Tomorrow" — so a decklist written the way the cards read is a
+ * decklist the engine cannot load. It does not fail quietly: the probe throws
+ * a C++ runtime_error, which arrives here as "the ranker failed: terminate
+ * called..." with the real cause on a line nobody reads.
+ *
+ * coach/alpharune.js already resolves both spellings, so the translation is
+ * free. What it must not do is pass an unresolved name through: that is the
+ * throw again, one step later. A name this cannot place is a decklist the
+ * ranking cannot be trusted over, and it says so.
+ *
+ * Section headers are kept as-is — the engine's loader reads them. */
+function toEngineNames(deckPath, index) {
+  const text = fs.readFileSync(deckPath, "utf8");
+  const misses = [];
+  const lines = text.split("\n").map((line) => {
+    const m = /^(\s*)(\d+)\s+(.+?)\s*$/.exec(line);
+    if (!m) return line;
+    const r = resolve(index, { name: m[3] });
+    if (r.miss) { misses.push(m[3]); return line; }
+    return `${m[1]}${m[2]} ${r.card.name}`;
+  });
+  if (misses.length) {
+    throw new Error(
+      `${misses.length} card(s) in ${path.basename(deckPath)} are not in the ` +
+        `engine's card database: ${misses.slice(0, 6).join(", ")}` +
+        (misses.length > 6 ? `, +${misses.length - 6} more` : "") +
+        ". The engine cannot build a deck it cannot name."
+    );
+  }
+  const out = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "rbc-deck-")),
+    path.basename(deckPath)
+  );
+  fs.writeFileSync(out, lines.join("\n"));
+  return out;
+}
+
 function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeoutMs = 900000 } = {}) {
   const why = unavailable();
   if (why) return { ok: false, why };
@@ -159,6 +202,19 @@ function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeout
     };
   }
 
+  // The engine's deck loader matches on ITS name for a card, and a legend is
+  // printed with its champion tag and named without it — "Jayce, Defender of
+  // Tomorrow" on the card, "Defender of Tomorrow" in the registry. A decklist
+  // written the way the cards read throws inside the probe, as a C++
+  // runtime_error surfacing here as "the ranker failed". Translate first.
+  let engineDecks;
+  try {
+    const idx = loadIndex();
+    engineDecks = [deck1, deck2].map((d) => toEngineNames(d, idx));
+  } catch (err) {
+    return { ok: false, why: err.message };
+  }
+
   const file = path.join(
     fs.mkdtempSync(path.join(os.tmpdir(), "rbc-pos-")),
     "position.txt"
@@ -169,7 +225,7 @@ function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeout
   try {
     stdout = execFileSync(
       path.join(ENGINE_DIR, "rank"),
-      [deck1, deck2, file, String(rollouts)],
+      [engineDecks[0], engineDecks[1], file, String(rollouts)],
       { cwd: ALPHARUNE, env: { ...process.env, RIFTBOUND_ROOT: "." }, timeout: timeoutMs, encoding: "utf8" }
     );
   } catch (err) {
@@ -217,4 +273,4 @@ function rankingBlock(ranking, caveats = []) {
   return lines.join("\n");
 }
 
-module.exports = { rankBoard, parseRanking, rankingBlock, unavailable, checkAgainstDecks, DEFAULT_ROLLOUTS };
+module.exports = { rankBoard, toEngineNames, parseRanking, rankingBlock, unavailable, checkAgainstDecks, DEFAULT_ROLLOUTS };

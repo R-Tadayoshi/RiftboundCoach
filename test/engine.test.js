@@ -147,3 +147,52 @@ test("an unreadable decklist is reported rather than thrown", () => {
   assert.equal(m.length, 1);
   assert.match(m[0].why, /could not read a decklist/);
 });
+
+/* Legend names. The card is PRINTED with its champion tag and NAMED without
+ * one — "Jayce, Defender of Tomorrow" on the card, "Defender of Tomorrow" in
+ * the engine's registry — so a decklist written the way the cards read is a
+ * decklist the engine cannot load.
+ *
+ * It did not fail quietly. The probe threw a C++ runtime_error and it arrived
+ * as `the ranker failed: terminate called after throwing an instance of
+ * 'std::runtime_error'`, with the actual cause on a line that never reached
+ * the user. Both decklists at the table were unloadable and the symptom named
+ * neither the deck nor the card. */
+test("a decklist is translated into the names the engine knows", () => {
+  const fs2 = require("fs");
+  const os2 = require("os");
+  const path2 = require("path");
+  const { toEngineNames } = require("../coach/engine.js");
+  let index;
+  try { index = require("../coach/alpharune.js").loadIndex(); } catch (_) { return; }
+  if (!index || !index.rows || !index.rows.length) return;
+
+  const dir = fs2.mkdtempSync(path2.join(os2.tmpdir(), "rbc-decktest-"));
+  const src = path2.join(dir, "deck.txt");
+  fs2.writeFileSync(src,
+    "Legend:\n1 Jayce, Defender of Tomorrow\n\nChampion:\n1 Jayce, Brilliant Inventor\n");
+
+  const out = fs2.readFileSync(toEngineNames(src, index), "utf8");
+  assert.match(out, /^1 Defender of Tomorrow$/m,
+    "the legend's champion tag must be dropped for the engine");
+  assert.match(out, /^Legend:$/m, "section headers are the engine's, keep them");
+  assert.match(out, /^1 Jayce, Brilliant Inventor$/m,
+    "a champion keeps its tag — only the legend loses one");
+});
+
+test("a name the engine cannot place is refused, not passed through", () => {
+  const fs2 = require("fs");
+  const os2 = require("os");
+  const path2 = require("path");
+  const { toEngineNames } = require("../coach/engine.js");
+  let index;
+  try { index = require("../coach/alpharune.js").loadIndex(); } catch (_) { return; }
+  if (!index || !index.rows || !index.rows.length) return;
+
+  const dir = fs2.mkdtempSync(path2.join(os2.tmpdir(), "rbc-decktest-"));
+  const src = path2.join(dir, "deck.txt");
+  fs2.writeFileSync(src, "Champion:\n1 Not A Real Riftbound Card\n");
+
+  // Passing it through would be the same throw one step later, phrased worse.
+  assert.throws(() => toEngineNames(src, index), /not in the engine's card database/);
+});
