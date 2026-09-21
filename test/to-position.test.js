@@ -108,7 +108,10 @@ test(
   "a card the engine implements does not block",
   withEngine(() => {
     const s = board();
-    s.me.hand = [{ name: "Draven, Audacious", code: "SFD-148", exhausted: null }];
+    // Not a [Deflect] card: the gate now blocks those, since the engine
+    // stores deflect_value and never charges it. Draven, Audacious stood
+    // here before that was noticed.
+    s.me.hand = [{ name: "En Garde", code: "OGN-046", exhausted: null }];
     const { blocked } = toPosition(s);
     assert.deepEqual(blocked, []);
   })

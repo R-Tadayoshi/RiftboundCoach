@@ -1,0 +1,768 @@
+diff --git a/src/cards/battlefields/0274_fortified_position.cpp b/src/cards/battlefields/0274_fortified_position.cpp
+index 7b64a09..4f6daa3 100644
+--- a/src/cards/battlefields/0274_fortified_position.cpp
++++ b/src/cards/battlefields/0274_fortified_position.cpp
+@@ -48,8 +48,6 @@ private:
+         d.artist = R"RB(Six More Vodka)RB";
+         d.card_type = CardType::Battlefield;
+         d.rarity = Rarity::Uncommon;
+-        d.shield_value = 2;
+-        d.keywords.set(Keyword::Shield);
+         d.ability_text = R"RB(When you defend here, choose a unit. It gains [Shield 2] this combat. (+2 [M] while it's a defender.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/45363bbd907f4f3717868cb04b3cfed814b3bb32-1038x744.png)RB";
+         return d;
+diff --git a/src/cards/card.cpp b/src/cards/card.cpp
+index 30ed35f..53cd177 100644
+--- a/src/cards/card.cpp
++++ b/src/cards/card.cpp
+@@ -4,6 +4,8 @@
+ #include "engine/effect_executor.h"
+ #include "core/events.h"
+ 
++#include <algorithm>
++
+ namespace riftbound {
+ 
+ int Card::confirmOptional(CardContext& ctx, const std::string& label,
+@@ -344,6 +346,154 @@ GameObjectId Card::pickTarget(CardContext& ctx, const std::string& label,
+     return legal_targets.empty() ? kInvalidId : legal_targets.front();
+ }
+ 
++namespace {
++/// Where pickTargets keeps its bookkeeping in ChainItem::resume_data.
++/// 0..4 are spoken for by pickXAmount (0), pickMode (1), pickTarget (2) and
++/// pickTargetPair (3..4), so this starts clear of all of them.
++constexpr size_t kPickTargetsCount = 5;   // how many picked so far
++constexpr size_t kPickTargetsDone  = 6;   // 1 once picking has finished
++constexpr size_t kPickTargetsBase  = 7;   // picks themselves, one per slot
++constexpr int    kPickTargetsPoint = 20;  // first resume point
++}  // namespace
++
++std::optional<std::vector<GameObjectId>> Card::pickTargets(
++    CardContext& ctx, const std::string& label,
++    const std::function<std::vector<GameObjectId>(
++        const std::vector<GameObjectId>&)>& legal_fn,
++    int max_count, bool optional) {
++
++    auto& ri_opt = ctx.state.chain.resuming;
++    if (!ri_opt.has_value()) {
++        // Direct invocation (test / no chain), same escape hatch the other
++        // pickers use: take the first legal option at each step.
++        std::vector<GameObjectId> out;
++        for (int k = 0; k < max_count; ++k) {
++            auto legal = legal_fn(out);
++            if (legal.empty()) break;
++            out.push_back(legal.front());
++        }
++        return out;
++    }
++    auto& ri = *ri_opt;
++
++    while (ri.resume_data.size() <
++           kPickTargetsBase + static_cast<size_t>(std::max(0, max_count))) {
++        ri.resume_data.push_back(0);
++    }
++
++    auto picked_so_far = [&]() {
++        std::vector<GameObjectId> out;
++        const int n = ri.resume_data[kPickTargetsCount];
++        for (int i = 0; i < n; ++i) {
++            out.push_back(static_cast<GameObjectId>(
++                ri.resume_data[kPickTargetsBase + static_cast<size_t>(i)]));
++        }
++        return out;
++    };
++
++    // Already finished on an earlier pass through onResolve. Re-entry must
++    // hand back the same picks rather than prompt again — the card may have
++    // suspended on something else after this call.
++    if (ri.resume_data[kPickTargetsDone] != 0) return picked_so_far();
++
++    auto finish = [&]() {
++        ri.resume_data[kPickTargetsDone] = 1;
++        return picked_so_far();
++    };
++
++    if (ri.resume_point < kPickTargetsPoint) {
++        ri.resume_point = kPickTargetsPoint;
++        ri.resume_data[kPickTargetsCount] = 0;
++    }
++
++    for (;;) {
++        const int slot = ri.resume_data[kPickTargetsCount];
++        if (slot >= max_count) return finish();
++
++        const int publish_at = kPickTargetsPoint + 2 * slot;
++        const int consume_at = publish_at + 1;
++
++        if (ri.resume_point == publish_at) {
++            auto so_far = picked_so_far();
++            auto legal = legal_fn(so_far);
++            if (legal.empty()) {
++                ctx.events.logTrace("TGTS_DONE: " + label +
++                                     " (no further legal targets after " +
++                                     std::to_string(slot) + ")");
++                return finish();
++            }
++
++            std::vector<Intent> options;
++            options.reserve(legal.size() + 1);
++            std::string summary;
++            for (auto t : legal) {
++                Intent i;
++                i.type = IntentType::MakeChoice;
++                i.player = ctx.controller;
++                i.chosen_objects = { t };
++                i.choice_label = label + ": " +
++                    (ctx.state.objectExists(t) ? ctx.state.getObject(t).name
++                                               : std::string("?"));
++                options.push_back(std::move(i));
++                if (!summary.empty()) summary += "/";
++                summary += ctx.state.objectExists(t)
++                    ? ctx.state.getObject(t).name : std::string("?");
++            }
++            // "Up to N" — a stop option on every prompt, the first
++            // included. Without it the card would read as "exactly N", and
++            // without it at slot 0 it would read as "at least 1".
++            // Empty chosen_objects is action_vocab slot 0 ("skip"), which is
++            // distinct from every card-keyed slot, so the policy head can
++            // tell stopping apart from any particular pick. chosen_value is
++            // deliberately left unset: setting it would move this option
++            // into the int-coded range where it could alias a pickXAmount
++            // answer.
++            if (optional) {
++                Intent stop;
++                stop.type = IntentType::MakeChoice;
++                stop.player = ctx.controller;
++                stop.choice_label = label + ": stop here";
++                options.push_back(std::move(stop));
++            }
++            ctx.events.logTrace("TGTS_PROMPT: " + label + " [" + summary +
++                                 "] pick " + std::to_string(slot + 1) +
++                                 " of at most " + std::to_string(max_count));
++            ctx.executor.requestChoice(ctx.controller, std::move(options),
++                                        "targets: " + label);
++            ri.resume_point = consume_at;
++            return std::nullopt;   // suspended
++        }
++
++        if (ri.resume_point == consume_at) {
++            auto picked = ctx.executor.takeChoice();
++            if (!picked.has_value() || picked->chosen_objects.empty()) {
++                // The stop option, or nothing came back.
++                ctx.events.logTrace("TGTS_STOPPED: " + label + " after " +
++                                     std::to_string(slot) + " pick(s)");
++                return finish();
++            }
++            const auto t = picked->chosen_objects.front();
++            ctx.events.logTrace("TGTS_PICKED: " + label + " = " +
++                                 (ctx.state.objectExists(t)
++                                      ? ctx.state.getObject(t).name
++                                      : std::string("?")) +
++                                 " (id=" + std::to_string(t) + ")");
++            ri.resume_data[kPickTargetsBase + static_cast<size_t>(slot)] =
++                static_cast<int32_t>(t);
++            ri.resume_data[kPickTargetsCount] = slot + 1;
++            ri.resume_point = kPickTargetsPoint + 2 * (slot + 1);
++            continue;   // straight on to the next prompt
++        }
++
++        // The resume point and the count have diverged, which should not
++        // happen. Hand back what we have rather than spin or re-prompt.
++        ctx.events.logTrace("TGTS_DESYNC: " + label + " (point=" +
++                             std::to_string(ri.resume_point) + ", slot=" +
++                             std::to_string(slot) + ")");
++        return finish();
++    }
++}
++
+ std::pair<GameObjectId, GameObjectId> Card::pickTargetPair(
+     CardContext& ctx, const std::string& label,
+     const std::vector<GameObjectId>& legal_a,
+diff --git a/src/cards/cards_init.cpp b/src/cards/cards_init.cpp
+index c4330e0..696ebee 100644
+--- a/src/cards/cards_init.cpp
++++ b/src/cards/cards_init.cpp
+@@ -791,6 +791,204 @@ void register_card_785(CardRegistry&);
+ void register_card_786(CardRegistry&);
+ void register_card_787(CardRegistry&);
+ 
++void register_card_788(CardRegistry&);
++void register_card_789(CardRegistry&);
++void register_card_790(CardRegistry&);
++void register_card_791(CardRegistry&);
++void register_card_792(CardRegistry&);
++void register_card_793(CardRegistry&);
++void register_card_794(CardRegistry&);
++void register_card_795(CardRegistry&);
++void register_card_796(CardRegistry&);
++void register_card_797(CardRegistry&);
++void register_card_798(CardRegistry&);
++void register_card_799(CardRegistry&);
++void register_card_800(CardRegistry&);
++void register_card_801(CardRegistry&);
++void register_card_802(CardRegistry&);
++void register_card_803(CardRegistry&);
++void register_card_804(CardRegistry&);
++void register_card_805(CardRegistry&);
++void register_card_806(CardRegistry&);
++void register_card_807(CardRegistry&);
++void register_card_808(CardRegistry&);
++void register_card_809(CardRegistry&);
++void register_card_810(CardRegistry&);
++void register_card_811(CardRegistry&);
++void register_card_812(CardRegistry&);
++void register_card_813(CardRegistry&);
++void register_card_814(CardRegistry&);
++void register_card_815(CardRegistry&);
++void register_card_816(CardRegistry&);
++void register_card_817(CardRegistry&);
++void register_card_818(CardRegistry&);
++void register_card_819(CardRegistry&);
++void register_card_820(CardRegistry&);
++void register_card_821(CardRegistry&);
++void register_card_822(CardRegistry&);
++void register_card_823(CardRegistry&);
++void register_card_824(CardRegistry&);
++void register_card_825(CardRegistry&);
++void register_card_826(CardRegistry&);
++void register_card_827(CardRegistry&);
++void register_card_828(CardRegistry&);
++void register_card_829(CardRegistry&);
++void register_card_830(CardRegistry&);
++void register_card_831(CardRegistry&);
++void register_card_832(CardRegistry&);
++void register_card_833(CardRegistry&);
++void register_card_834(CardRegistry&);
++void register_card_835(CardRegistry&);
++void register_card_836(CardRegistry&);
++void register_card_837(CardRegistry&);
++void register_card_838(CardRegistry&);
++void register_card_839(CardRegistry&);
++void register_card_840(CardRegistry&);
++void register_card_841(CardRegistry&);
++void register_card_842(CardRegistry&);
++void register_card_843(CardRegistry&);
++void register_card_844(CardRegistry&);
++void register_card_845(CardRegistry&);
++void register_card_846(CardRegistry&);
++void register_card_847(CardRegistry&);
++void register_card_848(CardRegistry&);
++void register_card_849(CardRegistry&);
++void register_card_850(CardRegistry&);
++void register_card_851(CardRegistry&);
++void register_card_852(CardRegistry&);
++void register_card_853(CardRegistry&);
++void register_card_854(CardRegistry&);
++void register_card_855(CardRegistry&);
++void register_card_856(CardRegistry&);
++void register_card_857(CardRegistry&);
++void register_card_858(CardRegistry&);
++void register_card_859(CardRegistry&);
++void register_card_860(CardRegistry&);
++void register_card_861(CardRegistry&);
++void register_card_862(CardRegistry&);
++void register_card_863(CardRegistry&);
++void register_card_864(CardRegistry&);
++void register_card_865(CardRegistry&);
++void register_card_866(CardRegistry&);
++void register_card_867(CardRegistry&);
++void register_card_868(CardRegistry&);
++void register_card_869(CardRegistry&);
++void register_card_870(CardRegistry&);
++void register_card_871(CardRegistry&);
++void register_card_872(CardRegistry&);
++void register_card_873(CardRegistry&);
++void register_card_874(CardRegistry&);
++void register_card_875(CardRegistry&);
++void register_card_876(CardRegistry&);
++void register_card_877(CardRegistry&);
++void register_card_878(CardRegistry&);
++void register_card_879(CardRegistry&);
++void register_card_880(CardRegistry&);
++void register_card_881(CardRegistry&);
++void register_card_882(CardRegistry&);
++void register_card_883(CardRegistry&);
++void register_card_884(CardRegistry&);
++void register_card_885(CardRegistry&);
++void register_card_886(CardRegistry&);
++void register_card_887(CardRegistry&);
++void register_card_888(CardRegistry&);
++void register_card_889(CardRegistry&);
++void register_card_890(CardRegistry&);
++void register_card_891(CardRegistry&);
++void register_card_892(CardRegistry&);
++void register_card_893(CardRegistry&);
++void register_card_894(CardRegistry&);
++void register_card_895(CardRegistry&);
++void register_card_896(CardRegistry&);
++void register_card_897(CardRegistry&);
++void register_card_898(CardRegistry&);
++void register_card_899(CardRegistry&);
++void register_card_900(CardRegistry&);
++void register_card_901(CardRegistry&);
++void register_card_902(CardRegistry&);
++void register_card_903(CardRegistry&);
++void register_card_904(CardRegistry&);
++void register_card_905(CardRegistry&);
++void register_card_906(CardRegistry&);
++void register_card_907(CardRegistry&);
++void register_card_908(CardRegistry&);
++void register_card_909(CardRegistry&);
++void register_card_910(CardRegistry&);
++void register_card_911(CardRegistry&);
++void register_card_912(CardRegistry&);
++void register_card_913(CardRegistry&);
++void register_card_914(CardRegistry&);
++void register_card_915(CardRegistry&);
++void register_card_916(CardRegistry&);
++void register_card_917(CardRegistry&);
++void register_card_918(CardRegistry&);
++void register_card_919(CardRegistry&);
++void register_card_920(CardRegistry&);
++void register_card_921(CardRegistry&);
++void register_card_922(CardRegistry&);
++void register_card_923(CardRegistry&);
++void register_card_924(CardRegistry&);
++void register_card_925(CardRegistry&);
++void register_card_926(CardRegistry&);
++void register_card_927(CardRegistry&);
++void register_card_928(CardRegistry&);
++void register_card_929(CardRegistry&);
++void register_card_930(CardRegistry&);
++void register_card_931(CardRegistry&);
++void register_card_932(CardRegistry&);
++void register_card_933(CardRegistry&);
++void register_card_934(CardRegistry&);
++void register_card_935(CardRegistry&);
++void register_card_936(CardRegistry&);
++void register_card_937(CardRegistry&);
++void register_card_938(CardRegistry&);
++void register_card_939(CardRegistry&);
++void register_card_940(CardRegistry&);
++void register_card_941(CardRegistry&);
++void register_card_942(CardRegistry&);
++void register_card_943(CardRegistry&);
++void register_card_944(CardRegistry&);
++void register_card_945(CardRegistry&);
++void register_card_946(CardRegistry&);
++void register_card_947(CardRegistry&);
++void register_card_948(CardRegistry&);
++void register_card_949(CardRegistry&);
++void register_card_950(CardRegistry&);
++void register_card_951(CardRegistry&);
++void register_card_952(CardRegistry&);
++void register_card_953(CardRegistry&);
++void register_card_954(CardRegistry&);
++void register_card_955(CardRegistry&);
++void register_card_956(CardRegistry&);
++void register_card_957(CardRegistry&);
++void register_card_958(CardRegistry&);
++void register_card_959(CardRegistry&);
++void register_card_960(CardRegistry&);
++void register_card_961(CardRegistry&);
++void register_card_962(CardRegistry&);
++void register_card_963(CardRegistry&);
++void register_card_964(CardRegistry&);
++void register_card_965(CardRegistry&);
++void register_card_966(CardRegistry&);
++void register_card_967(CardRegistry&);
++void register_card_968(CardRegistry&);
++void register_card_969(CardRegistry&);
++void register_card_970(CardRegistry&);
++void register_card_971(CardRegistry&);
++void register_card_972(CardRegistry&);
++void register_card_973(CardRegistry&);
++void register_card_974(CardRegistry&);
++void register_card_975(CardRegistry&);
++void register_card_976(CardRegistry&);
++void register_card_977(CardRegistry&);
++void register_card_978(CardRegistry&);
++void register_card_979(CardRegistry&);
++void register_card_980(CardRegistry&);
++void register_card_981(CardRegistry&);
++void register_card_982(CardRegistry&);
++void register_card_983(CardRegistry&);
++void register_card_984(CardRegistry&);
++
+ void registerAllCards(CardRegistry& registry) {
+     register_card_1(registry);
+     register_card_2(registry);
+@@ -1579,6 +1777,203 @@ void registerAllCards(CardRegistry& registry) {
+     register_card_785(registry);
+     register_card_786(registry);
+     register_card_787(registry);
++    register_card_788(registry);
++    register_card_789(registry);
++    register_card_790(registry);
++    register_card_791(registry);
++    register_card_792(registry);
++    register_card_793(registry);
++    register_card_794(registry);
++    register_card_795(registry);
++    register_card_796(registry);
++    register_card_797(registry);
++    register_card_798(registry);
++    register_card_799(registry);
++    register_card_800(registry);
++    register_card_801(registry);
++    register_card_802(registry);
++    register_card_803(registry);
++    register_card_804(registry);
++    register_card_805(registry);
++    register_card_806(registry);
++    register_card_807(registry);
++    register_card_808(registry);
++    register_card_809(registry);
++    register_card_810(registry);
++    register_card_811(registry);
++    register_card_812(registry);
++    register_card_813(registry);
++    register_card_814(registry);
++    register_card_815(registry);
++    register_card_816(registry);
++    register_card_817(registry);
++    register_card_818(registry);
++    register_card_819(registry);
++    register_card_820(registry);
++    register_card_821(registry);
++    register_card_822(registry);
++    register_card_823(registry);
++    register_card_824(registry);
++    register_card_825(registry);
++    register_card_826(registry);
++    register_card_827(registry);
++    register_card_828(registry);
++    register_card_829(registry);
++    register_card_830(registry);
++    register_card_831(registry);
++    register_card_832(registry);
++    register_card_833(registry);
++    register_card_834(registry);
++    register_card_835(registry);
++    register_card_836(registry);
++    register_card_837(registry);
++    register_card_838(registry);
++    register_card_839(registry);
++    register_card_840(registry);
++    register_card_841(registry);
++    register_card_842(registry);
++    register_card_843(registry);
++    register_card_844(registry);
++    register_card_845(registry);
++    register_card_846(registry);
++    register_card_847(registry);
++    register_card_848(registry);
++    register_card_849(registry);
++    register_card_850(registry);
++    register_card_851(registry);
++    register_card_852(registry);
++    register_card_853(registry);
++    register_card_854(registry);
++    register_card_855(registry);
++    register_card_856(registry);
++    register_card_857(registry);
++    register_card_858(registry);
++    register_card_859(registry);
++    register_card_860(registry);
++    register_card_861(registry);
++    register_card_862(registry);
++    register_card_863(registry);
++    register_card_864(registry);
++    register_card_865(registry);
++    register_card_866(registry);
++    register_card_867(registry);
++    register_card_868(registry);
++    register_card_869(registry);
++    register_card_870(registry);
++    register_card_871(registry);
++    register_card_872(registry);
++    register_card_873(registry);
++    register_card_874(registry);
++    register_card_875(registry);
++    register_card_876(registry);
++    register_card_877(registry);
++    register_card_878(registry);
++    register_card_879(registry);
++    register_card_880(registry);
++    register_card_881(registry);
++    register_card_882(registry);
++    register_card_883(registry);
++    register_card_884(registry);
++    register_card_885(registry);
++    register_card_886(registry);
++    register_card_887(registry);
++    register_card_888(registry);
++    register_card_889(registry);
++    register_card_890(registry);
++    register_card_891(registry);
++    register_card_892(registry);
++    register_card_893(registry);
++    register_card_894(registry);
++    register_card_895(registry);
++    register_card_896(registry);
++    register_card_897(registry);
++    register_card_898(registry);
++    register_card_899(registry);
++    register_card_900(registry);
++    register_card_901(registry);
++    register_card_902(registry);
++    register_card_903(registry);
++    register_card_904(registry);
++    register_card_905(registry);
++    register_card_906(registry);
++    register_card_907(registry);
++    register_card_908(registry);
++    register_card_909(registry);
++    register_card_910(registry);
++    register_card_911(registry);
++    register_card_912(registry);
++    register_card_913(registry);
++    register_card_914(registry);
++    register_card_915(registry);
++    register_card_916(registry);
++    register_card_917(registry);
++    register_card_918(registry);
++    register_card_919(registry);
++    register_card_920(registry);
++    register_card_921(registry);
++    register_card_922(registry);
++    register_card_923(registry);
++    register_card_924(registry);
++    register_card_925(registry);
++    register_card_926(registry);
++    register_card_927(registry);
++    register_card_928(registry);
++    register_card_929(registry);
++    register_card_930(registry);
++    register_card_931(registry);
++    register_card_932(registry);
++    register_card_933(registry);
++    register_card_934(registry);
++    register_card_935(registry);
++    register_card_936(registry);
++    register_card_937(registry);
++    register_card_938(registry);
++    register_card_939(registry);
++    register_card_940(registry);
++    register_card_941(registry);
++    register_card_942(registry);
++    register_card_943(registry);
++    register_card_944(registry);
++    register_card_945(registry);
++    register_card_946(registry);
++    register_card_947(registry);
++    register_card_948(registry);
++    register_card_949(registry);
++    register_card_950(registry);
++    register_card_951(registry);
++    register_card_952(registry);
++    register_card_953(registry);
++    register_card_954(registry);
++    register_card_955(registry);
++    register_card_956(registry);
++    register_card_957(registry);
++    register_card_958(registry);
++    register_card_959(registry);
++    register_card_960(registry);
++    register_card_961(registry);
++    register_card_962(registry);
++    register_card_963(registry);
++    register_card_964(registry);
++    register_card_965(registry);
++    register_card_966(registry);
++    register_card_967(registry);
++    register_card_968(registry);
++    register_card_969(registry);
++    register_card_970(registry);
++    register_card_971(registry);
++    register_card_972(registry);
++    register_card_973(registry);
++    register_card_974(registry);
++    register_card_975(registry);
++    register_card_976(registry);
++    register_card_977(registry);
++    register_card_978(registry);
++    register_card_979(registry);
++    register_card_980(registry);
++    register_card_981(registry);
++    register_card_982(registry);
++    register_card_983(registry);
++    register_card_984(registry);
+ }
+ 
+ } // namespace riftbound
+diff --git a/src/cards/legends/0262_bounty_hunter.cpp b/src/cards/legends/0262_bounty_hunter.cpp
+index 8af8e68..97e6cc8 100644
+--- a/src/cards/legends/0262_bounty_hunter.cpp
++++ b/src/cards/legends/0262_bounty_hunter.cpp
+@@ -75,7 +75,6 @@ private:
+         d.domains = {Domain::Body, Domain::Chaos};
+         d.tags = {R"RB(Miss Fortune)RB"};
+         d.rarity = Rarity::Rare;
+-        d.keywords.set(Keyword::Ganking);
+         d.ability_text = R"RB([E]: Give a unit [Ganking] this turn. (It can move from battlefield to battlefield.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/cc11261fcdbf0851525030bd9e835b718efad3bc-744x1040.png?accountingTag=RB)RB";
+         return d;
+diff --git a/src/cards/legends/0502_purifier.cpp b/src/cards/legends/0502_purifier.cpp
+index 288cf0c..ff3bba4 100644
+--- a/src/cards/legends/0502_purifier.cpp
++++ b/src/cards/legends/0502_purifier.cpp
+@@ -57,8 +57,6 @@ private:
+         d.domains = {Domain::Fury, Domain::Body};
+         d.tags = {R"RB(Lucian)RB"};
+         d.rarity = Rarity::Rare;
+-        d.assault_value = 1;
+-        d.keywords.set(Keyword::Assault);
+         d.ability_text = R"RB(Your Equipment each give [Assault]. (+1 [M] while equipped unit is an attacker.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/450cfb71b8890904d48b37a24bbdc78f8d849614-744x1039.png)RB";
+         return d;
+diff --git a/src/cards/spells/0004_cleave.cpp b/src/cards/spells/0004_cleave.cpp
+index 2d8b5f2..7a326c6 100644
+--- a/src/cards/spells/0004_cleave.cpp
++++ b/src/cards/spells/0004_cleave.cpp
+@@ -35,9 +35,7 @@ private:
+         d.card_type = CardType::Spell;
+         d.domains = {Domain::Fury};
+         d.energy_cost = 1;
+-        d.assault_value = 3;
+         d.keywords.set(Keyword::Action);
+-        d.keywords.set(Keyword::Assault);
+         d.ability_text = R"RB([Action] (Play on your turn or in showdowns.)
+ Give a unit [Assault 3] this turn. (+3 [M] while it's an attacker.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/95d476a1e88ff547fb846149619177bc7e3cea9f-744x1039.png?accountingTag=RB)RB";
+diff --git a/src/cards/spells/0057_block.cpp b/src/cards/spells/0057_block.cpp
+index 0bd8fb7..0286f0a 100644
+--- a/src/cards/spells/0057_block.cpp
++++ b/src/cards/spells/0057_block.cpp
+@@ -38,11 +38,8 @@ private:
+         d.domains = {Domain::Calm};
+         d.energy_cost = 2;
+         d.rarity = Rarity::Uncommon;
+-        d.shield_value = 3;
+         d.keywords.set(Keyword::Action);
+         d.keywords.set(Keyword::Hidden);
+-        d.keywords.set(Keyword::Shield);
+-        d.keywords.set(Keyword::Tank);
+         d.ability_text = R"RB([Hidden] (Hide now for [A] to react with later for .)
+ [Action] (Play on your turn or in showdowns.)
+ Give a unit [Shield 3] and [Tank] this turn. (+3 [M] while it's a defender. It must be assigned combat damage first.))RB";
+diff --git a/src/cards/spells/0325_blood_rush.cpp b/src/cards/spells/0325_blood_rush.cpp
+index 42c7c9a..6d02a01 100644
+--- a/src/cards/spells/0325_blood_rush.cpp
++++ b/src/cards/spells/0325_blood_rush.cpp
+@@ -35,9 +35,7 @@ private:
+         d.card_type = CardType::Spell;
+         d.domains = {Domain::Fury};
+         d.energy_cost = 1;
+-        d.assault_value = 2;
+         d.keywords.set(Keyword::Action);
+-        d.keywords.set(Keyword::Assault);
+         d.keywords.set(Keyword::Repeat);
+         d.ability_text = R"RB([Action] (Play on your turn or in showdowns.)
+ [Repeat] [1] (You may pay the additional cost to repeat this spell's effect.)
+diff --git a/src/cards/spells/0572_vault_breaker.cpp b/src/cards/spells/0572_vault_breaker.cpp
+index 5917ba2..d7d38c3 100644
+--- a/src/cards/spells/0572_vault_breaker.cpp
++++ b/src/cards/spells/0572_vault_breaker.cpp
+@@ -39,10 +39,7 @@ private:
+         d.domains = {Domain::Fury};
+         d.energy_cost = 1;
+         d.power_cost = 1;
+-        d.assault_value = 2;
+         d.keywords.set(Keyword::Action);
+-        d.keywords.set(Keyword::Assault);
+-        d.keywords.set(Keyword::Ganking);
+         d.ability_text = R"RB([Action] (Play on your turn or in showdowns.)
+ Give a unit [Assault 2] and [Ganking] this turn. (+2 [M] while it's an attacker. It can move from battlefield to battlefield.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/8046c9f133be83268d7dc9788abea58f461914d8-744x1039.png)RB";
+diff --git a/src/cards/spells/0579_square_up.cpp b/src/cards/spells/0579_square_up.cpp
+index d78f269..cac9759 100644
+--- a/src/cards/spells/0579_square_up.cpp
++++ b/src/cards/spells/0579_square_up.cpp
+@@ -41,8 +41,6 @@ private:
+         d.domains = {Domain::Fury};
+         d.energy_cost = 4;
+         d.rarity = Rarity::Uncommon;
+-        d.assault_value = 4;
+-        d.keywords.set(Keyword::Assault);
+         d.keywords.set(Keyword::Repeat);
+         d.ability_text = R"RB([Repeat] — Discard 1 (You may pay the additional cost to repeat this spell's effect.)
+ Give a unit [Assault 4] this turn. (+4 [M] while it's an attacker.))RB";
+diff --git a/src/cards/units/0157_udyr_wildman.cpp b/src/cards/units/0157_udyr_wildman.cpp
+index d55f1b5..fc6dca0 100644
+--- a/src/cards/units/0157_udyr_wildman.cpp
++++ b/src/cards/units/0157_udyr_wildman.cpp
+@@ -107,7 +107,6 @@ private:
+         d.power_cost = 1;
+         d.might = 6;
+         d.rarity = Rarity::Rare;
+-        d.keywords.set(Keyword::Ganking);
+         d.ability_text = R"RB(Spend my buff: Choose one you've not chosen this turn —
+ Deal 2 to a unit at a battlefield.Stun a unit at a battlefield.Ready me.Give me [Ganking] this turn.)RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/2e461e5d05b5ee86e47a425c42c6f3b3c12bc4cf-744x1039.png)RB";
+diff --git a/src/cards/units/0330_gem_jammer.cpp b/src/cards/units/0330_gem_jammer.cpp
+index fc17c9a..3fbbe13 100644
+--- a/src/cards/units/0330_gem_jammer.cpp
++++ b/src/cards/units/0330_gem_jammer.cpp
+@@ -38,7 +38,6 @@ private:
+         d.tags = {R"RB(Mech)RB", R"RB(Bandle City)RB"};
+         d.energy_cost = 2;
+         d.might = 2;
+-        d.keywords.set(Keyword::Ganking);
+         d.ability_text = R"RB(When you play me, give a unit [Ganking] this turn. (It can move from battlefield to battlefield.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/9f487e8a76e6e6b9f2e32de0c9c147be42f49e59-744x1039.png)RB";
+         return d;
+diff --git a/src/cards/units/0574_lord_broadmane.cpp b/src/cards/units/0574_lord_broadmane.cpp
+index 9d0092b..bf5c853 100644
+--- a/src/cards/units/0574_lord_broadmane.cpp
++++ b/src/cards/units/0574_lord_broadmane.cpp
+@@ -48,9 +48,7 @@ private:
+         d.power_cost = 1;
+         d.might = 5;
+         d.rarity = Rarity::Uncommon;
+-        d.assault_value = 1;
+         d.keywords.set(Keyword::Ambush);
+-        d.keywords.set(Keyword::Assault);
+         d.keywords.set(Keyword::Reaction);
+         d.ability_text = R"RB([Ambush] (You may play me as a [Reaction] to a battlefield where you have units.)
+ When you play me, give your other units here [Assault] this turn. (+1 [M] while they're attackers.))RB";
+diff --git a/src/cards/units/0618_yuumi_magical_cat.cpp b/src/cards/units/0618_yuumi_magical_cat.cpp
+index fa529ac..5757441 100644
+--- a/src/cards/units/0618_yuumi_magical_cat.cpp
++++ b/src/cards/units/0618_yuumi_magical_cat.cpp
+@@ -41,7 +41,6 @@ private:
+         d.power_cost = 1;
+         d.might = 1;
+         d.rarity = Rarity::Rare;
+-        d.keywords.set(Keyword::Tank);
+         d.ability_text = R"RB(When I attack or defend, give one of your other units here +3 [M] and [Tank] this turn. (It must be assigned combat damage first.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/588ddfeb01ab7b37110d8a7e656cf9f35530ce4e-744x1039.png)RB";
+         return d;
+diff --git a/src/cards/units/0633_chakram_dancer.cpp b/src/cards/units/0633_chakram_dancer.cpp
+index aedaaa8..b9f6034 100644
+--- a/src/cards/units/0633_chakram_dancer.cpp
++++ b/src/cards/units/0633_chakram_dancer.cpp
+@@ -50,10 +50,8 @@ private:
+         d.energy_cost = 3;
+         d.might = 3;
+         d.rarity = Rarity::Uncommon;
+-        d.shield_value = 1;
+         d.keywords.set(Keyword::Ambush);
+         d.keywords.set(Keyword::Reaction);
+-        d.keywords.set(Keyword::Shield);
+         d.ability_text = R"RB([Ambush] (You may play me as a [Reaction] to a battlefield where you have units.)
+ When you play me, give your other units here [Shield] this turn. (+1 [M] while they're defenders.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/29abe06f1c16a9eed622a5060330116268b73b8c-744x1039.png?accountingTag=RB)RB";
+diff --git a/src/cards/units/0688_megatusk.cpp b/src/cards/units/0688_megatusk.cpp
+index baca71c..7e20fc2 100644
+--- a/src/cards/units/0688_megatusk.cpp
++++ b/src/cards/units/0688_megatusk.cpp
+@@ -47,7 +47,6 @@ private:
+         d.tags = {R"RB(Bilgewater)RB"};
+         d.energy_cost = 6;
+         d.might = 6;
+-        d.keywords.set(Keyword::Ganking);
+         d.ability_text = R"RB(Spend 3 XP: Give your units here [Ganking] this turn. (We can move from battlefield to battlefield.))RB";
+         d.image_url = R"RB(https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/d073247bc2437443d8a9901f089632a15d11e7a0-744x1039.png)RB";
+         return d;

@@ -49,7 +49,6 @@ private:
         d.domains = {Domain::Calm, Domain::Order};
         d.rarity = Rarity::Rare;
         d.keywords.set(Keyword::Action);
-        d.keywords.set(Keyword::Tank);
         d.ability_text = R"RB([Action][>] :rb_exhaust:: Give a friendly unit [Tank] this turn. (It must be assigned combat damage first.))RB";
         d.image_url = R"RB(https://cdn.riftscribe.gg/cards/originals/ven-147-166-83dd1d46dfa9f456.png)RB";
         return d;

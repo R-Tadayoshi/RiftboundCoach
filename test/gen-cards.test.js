@@ -313,3 +313,207 @@ test("no card in the engine carries a keyword its text gates on [Empowered]", ()
       offenders.join("\n  ")
   );
 });
+
+/* A keyword the card GIVES is not one the card HAS.
+ *
+ * The [Empowered] gate was one way a keyword reached a CardDef that had no
+ * claim to it; the grant clause is the other. "When I attack, you may pay
+ * [Fury] to give me [Assault 2] this turn" starts without Assault and may
+ * buy it. Read unconditionally, Baccai Reaper becomes a 3-cost 4-Might that
+ * attacks as a 6 for free — the same silent overperformance as the gate, in
+ * the same direction a search finds first. */
+test("keywords a card only grants do not reach the CardDef", () => {
+  const { keywordsOf } = require("../coach/gen-cards.js");
+
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "When I attack, you may pay :rb_rune_fury: to give me [Assault 2] " +
+        "this turn. (+2 :rb_might: while I'm an attacker.)",
+    }),
+    [],
+    "Baccai Reaper has no Assault until it pays for it"
+  );
+
+  // One "give" governing three keywords with no punctuation between them —
+  // which is why the window runs back to the start of the sentence rather
+  // than looking only at the words next to the keyword.
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "When I become ready, choose one to give me this turn —[Assault 2] " +
+        "(+2 :rb_might: while I'm an attacker.)[Deflect 2] (reminder)" +
+        "[Ganking] (I can move from battlefield to battlefield.)",
+    }),
+    [],
+    "Jayce, Hammer in Hand chooses one of the three, and starts with none"
+  );
+
+  // A spell or gear cannot have a unit keyword at all, yet Perfect Execution
+  // and Eye of Twilight were both generated with one.
+  assert.deepStrictEqual(
+    keywordsOf({ description: "Ready a unit and give it [Assault 3] this turn." }),
+    []
+  );
+});
+
+test("a keyword the card prints for itself survives a grant elsewhere", () => {
+  const { keywordsOf } = require("../coach/gen-cards.js");
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "[Tank] (I must be assigned combat damage first.) " +
+        "When I attack, give a friendly unit [Assault 2] this turn.",
+    }),
+    ["Tank"],
+    "the grant clause must not take the printed keyword with it"
+  );
+
+  // Poppy, Paragon's shape: stripping the parenthesised reminder leaves the
+  // printed keyword and a later grant in the SAME sentence, so a rule that
+  // dropped whole sentences would lose the half of the card you play.
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "[Deflect] (Opponents must pay [A] to choose me with a spell or " +
+        "ability.)When I attack, give a unit [Assault 2] this turn.",
+    }),
+    ["Deflect"]
+  );
+});
+
+/* The numeric rider travelled separately from the keyword, so a card could
+ * be denied [Assault] and still be handed assault_value = 1 from the clause
+ * that grants it to somebody else. Lord Broadmane and Chakram Dancer both
+ * carried one. */
+test("a keyword's value is only written for a keyword the card has", () => {
+  const { generate } = require("../coach/gen-cards.js");
+  const src = generate(
+    {
+      ...AKALI,
+      name: "Grantor",
+      description: "[Ambush] (reminder)When you play me, give your other " +
+                   "units here [Assault 3] this turn.",
+    },
+    903
+  );
+  assert.doesNotMatch(src, /d\.keywords\.set\(Keyword::Assault\)/);
+  assert.doesNotMatch(src, /d\.assault_value/,
+    "no Assault means no assault_value, whatever the text says");
+  assert.match(src, /d\.keywords\.set\(Keyword::Ambush\)/);
+});
+
+/* The engine-wide version, so a card edited by hand is covered too. */
+test("no card in the engine carries a keyword its text only grants", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const root =
+    process.env.ALPHARUNE_ROOT ||
+    path.join(__dirname, "..", "..", "chorlick", "alpharune");
+  const dir = path.join(root, "src", "cards");
+  if (!fs.existsSync(dir)) {
+    console.log("# SKIP no alpharune checkout — this check needs one");
+    return;
+  }
+
+  const KW = ["Assault", "Shield", "Deflect", "Tank", "Ghost", "Vision",
+              "Deathknell", "Legion", "Accelerate", "Ambush", "Ganking"];
+  const GRANT = /\b(gives?|gains?|grants?|granted)\b/i;
+  const offenders = [];
+  for (const sub of fs.readdirSync(dir)) {
+    const d = path.join(dir, sub);
+    if (!fs.statSync(d).isDirectory()) continue;
+    for (const f of fs.readdirSync(d)) {
+      if (!/^\d+_.*\.cpp$/.test(f)) continue;
+      const src = fs.readFileSync(path.join(d, f), "utf8");
+      const abil = (/d\.ability_text = R"RB\(([\s\S]*?)\)RB";/.exec(src) || [])[1];
+      if (!abil) continue;
+      const bare = abil.replace(/\([^()]*\)/g, "");
+      for (const kw of KW) {
+        const re = new RegExp("\\[" + kw, "g");
+        let m;
+        let found = false;
+        let printed = false;
+        while ((m = re.exec(bare))) {
+          found = true;
+          const before = bare.slice(0, m.index);
+          const cut = Math.max(before.lastIndexOf("."), before.lastIndexOf("!"),
+                               before.lastIndexOf("?"));
+          if (!GRANT.test(before.slice(cut + 1))) printed = true;
+        }
+        // One mention with no grant verb ahead of it in its sentence is
+        // enough: the card prints the keyword somewhere.
+        if (!found || printed) continue;
+        if (new RegExp("d\\.keywords\\.set\\(Keyword::" + kw + "\\)").test(src)) {
+          offenders.push(`${sub}/${f} [${kw}]`);
+        }
+      }
+    }
+  }
+  assert.deepStrictEqual(
+    offenders,
+    [],
+    "these cards claim a keyword their text only grants to something:\n  " +
+      offenders.join("\n  ")
+  );
+});
+
+/* A hand-written card's CardDef must match the set data it came from.
+ *
+ * The behaviour is hand-written; the DATA never is — it is copied out of the
+ * generated stub the card replaces. Copying it by hand went wrong twice in
+ * one sitting: Baccai Reaper was written with a guessed id, cost and Might,
+ * and Covert Informant with an invented image URL. Neither breaks the build
+ * and neither shows up in a game — a wrong cost is a card the search prices
+ * wrong, and a wrong URL is a card the coach cannot show.
+ *
+ * Compared against the SET FILE rather than against the engine's copy,
+ * because install.sh overwrites the engine's copy with this one: comparing
+ * the two would compare a file with itself.
+ *
+ * Keywords are deliberately not compared. A keyword the card only GRANTS is
+ * stripped from the hand-written copy on purpose, and the generator now does
+ * the same — but a card written before that fix still carries the
+ * correction, and re-adding it is not the answer. */
+test("a hand-written card's data matches the set it came from", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const { generate } = require("../coach/gen-cards.js");
+
+  const dir = path.join(__dirname, "..", "engine", "cards");
+  const setsDir = path.join(__dirname, "..", "state", "sets");
+  if (!fs.existsSync(dir) || !fs.existsSync(setsDir)) return;
+
+  const byDefId = new Map();
+  for (const f of fs.readdirSync(setsDir).filter((x) => x.endsWith(".json"))) {
+    const set = JSON.parse(fs.readFileSync(path.join(setsDir, f), "utf8"));
+    for (const [defId, card] of Object.entries(set)) byDefId.set(defId, card);
+  }
+
+  // Data only. Behaviour, keywords and their values are not compared.
+  const FIELDS = ["name", "set_code", "public_code", "collector_number",
+                  "card_type", "energy_cost", "power_cost", "might", "rarity",
+                  "ability_text", "image_url"];
+  const read = (src, field) =>
+    (new RegExp("d\\." + field + " = (.*?);", "s").exec(src) || [])[1];
+
+  const problems = [];
+  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".cpp"))) {
+    const mine = fs.readFileSync(path.join(dir, f), "utf8");
+    const defId = (/d\.def_id = R"RB\((.*?)\)RB";/.exec(mine) || [])[1];
+    if (!defId) { problems.push(`${f}: no d.def_id`); continue; }
+    const card = byDefId.get(defId);
+    if (!card) continue;   // a set this repo does not cache (OGN lives upstream)
+
+    const id = read(mine, "id");
+    const expected = generate(card, Number(id));
+    for (const field of FIELDS) {
+      const a = read(mine, field);
+      const b = read(expected, field);
+      if ((a ?? null) !== (b ?? null)) {
+        problems.push(`${f}: d.${field} is ${a} here, ${b} in ${defId}`);
+      }
+    }
+  }
+  assert.deepStrictEqual(problems, [], "\n  " + problems.join("\n  "));
+});

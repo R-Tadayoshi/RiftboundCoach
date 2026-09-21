@@ -1,8 +1,16 @@
 diff --git a/src/cards/card.h b/src/cards/card.h
-index bd1b268..c407ee8 100644
+index bd1b268..3b34cd5 100644
 --- a/src/cards/card.h
 +++ b/src/cards/card.h
-@@ -110,6 +110,24 @@ public:
+@@ -16,6 +16,7 @@
+ 
+ #include <functional>
+ #include <memory>
++#include <optional>
+ #include <utility>
+ #include <vector>
+ 
+@@ -110,6 +111,24 @@ public:
      virtual bool canActivateAbility(const GameState& /*state*/,
                                      PlayerId /*controller*/) const { return true; }
  
@@ -27,7 +35,59 @@ index bd1b268..c407ee8 100644
      /// State-aware reduction to an activated ability's ENERGY cost (e.g.
      /// Bashful Bloom: "costs [1] less for each friendly [Temporary] unit").
      /// Consulted by the activation affordability check + payment, clamped so
-@@ -433,6 +451,25 @@ public:
+@@ -328,6 +347,51 @@ public:
+         const std::vector<GameObjectId>& legal_a,
+         const std::function<std::vector<GameObjectId>(GameObjectId picked_a)>& legal_b_fn);
+ 
++    /// Pick up to `max_count` targets, one prompt at a time.
++    ///
++    /// The other pickers reserve a FIXED set of resume points — pickTarget
++    /// 6/7/8, pickTargetPair 9..13 — so a card gets one of each and cannot
++    /// call pickTarget twice. That is what blocked every "choose several"
++    /// card: "return up to 2 units", "any number of enemy units with total
++    /// Might 5 or less", "each player chooses a unit", "ready 2 gear".
++    ///
++    /// This one allocates per SLOT instead: slot k uses resume points
++    /// 20 + 2k (publish) and 21 + 2k (consume), stashing its pick in
++    /// resume_data[7 + k], the running count in resume_data[5] and a
++    /// finished flag in resume_data[6]. So a card can ask N times and the
++    /// reservation grows with N rather than with the number of distinct
++    /// picker methods.
++    ///
++    /// ORDERING: because it takes every point from 20 up, pickTargets must
++    /// be the LAST picker a card calls. pickTarget/pickTargetPair after it
++    /// would read their own points as already past and return stale data —
++    /// the same constraint that already holds between pickTargetPair and
++    /// pickTarget.
++    ///
++    /// `legal_fn` is called before every prompt with what has been picked so
++    /// far, so the card can exclude earlier picks, narrow by a running total
++    /// ("total Might 5 or less"), or stop early by returning an empty list.
++    ///
++    /// `optional` adds a "stop here" option to EVERY prompt, the first
++    /// included — which is what "UP TO 2" means, as against "2": zero is a
++    /// legal answer. ("Return up to 2 units from trashes to their owners'
++    /// hands" can hand the opponent a unit, so declining is a real choice,
++    /// not a no-op the agent never wants.)
++    ///
++    /// ONE CALL PER RESOLUTION: the count and the finished flag are single
++    /// slots, so a second call in the same resolution hands back the first
++    /// call's picks rather than starting over. A card needing two
++    /// independent multi-picks is not expressible today.
++    ///
++    /// Returns nullopt while waiting on the agent: the caller MUST return
++    /// immediately, exactly as with pickTarget's kInvalidId-on-suspend. A
++    /// value means picking is finished, and it may legitimately be empty.
++    std::optional<std::vector<GameObjectId>> pickTargets(
++        CardContext& ctx, const std::string& label,
++        const std::function<std::vector<GameObjectId>(
++            const std::vector<GameObjectId>& picked_so_far)>& legal_fn,
++        int max_count, bool optional);
++
+     // ── Targeting ──
+     /// Target requirements for legal action generation.
+     virtual TargetRequirements getTargetRequirements() const { return {}; }
+@@ -433,6 +497,25 @@ public:
      /// `applyPassiveAura` on each on-board card.
      virtual void applyPassiveAura(GameState& state, PlayerId controller) const {}
  
@@ -53,7 +113,7 @@ index bd1b268..c407ee8 100644
      // ── Replacement effects ──
      /// Whether this card has a replacement effect (intercepts killUnit etc.).
      virtual bool hasReplacementEffect() const { return false; }
-@@ -504,6 +541,31 @@ public:
+@@ -504,6 +587,31 @@ public:
      };
      virtual OptionalAdditionalCost optionalAdditionalCost() const { return {}; }
  
@@ -85,7 +145,7 @@ index bd1b268..c407ee8 100644
      // ── Alternative play cost ──
      /// "You may play me for <alt cost> [instead of my printed cost]" when a
      /// condition holds (Jhin, Meticulous Killer: "play me for [B]" if you've
-@@ -520,6 +582,24 @@ public:
+@@ -520,6 +628,24 @@ public:
      virtual AltPlayCost alternativePlayCost(const GameState& /*state*/,
                                              PlayerId /*player*/) const { return {}; }
  
@@ -110,7 +170,28 @@ index bd1b268..c407ee8 100644
      /// LeBlanc, Everywhere at Once: "your [Temporary] effects at my battlefield
      /// don't trigger." When true, TriggerManager suppresses triggers fired by a
      /// friendly [Temporary] unit sharing this card's battlefield + controller.
-@@ -557,6 +637,35 @@ public:
+@@ -543,6 +669,20 @@ public:
+     virtual int selfCostReduction(const GameState& /*state*/,
+                                   PlayerId /*player*/) const { return 0; }
+ 
++    /// The same for this card's own POWER cost — the rune symbols, not the
++    /// energy. Returns how many symbols to waive; the engine clamps the net
++    /// cost at 0.
++    ///
++    /// Split from selfCostReduction rather than folded into it because the
++    /// two are paid differently (CR 164.2: energy exhausts a ready rune,
++    /// power recycles an exhausted one), so a single number could not say
++    /// which half it meant. Keeper of Law ("I cost [2][Order] less if you
++    /// control a battlefield with exactly two units there") needs both
++    /// halves; with only the energy hook it would read as discounted on the
++    /// card and still demand the rune at the table.
++    virtual int selfPowerCostReduction(const GameState& /*state*/,
++                                       PlayerId /*player*/) const { return 0; }
++
+     // ── Reaction-to-attack play (e.g., Rengar, Pouncing) ──
+     /// Whether this card can be played as a [Reaction] to a battlefield
+     /// where the controller is currently attacking. Action generator
+@@ -557,6 +697,35 @@ public:
      /// flag to filter out untargetable enemy candidates.
      virtual bool canBeChosenByEnemy() const { return true; }
  
@@ -147,10 +228,10 @@ index bd1b268..c407ee8 100644
      /// Whether this unit should enter the board READY (not exhausted) on
      /// play, without paying an Accelerate cost. Default false; resolves
 diff --git a/src/cards/card_helpers.h b/src/cards/card_helpers.h
-index f3f01e4..f6755e8 100644
+index f3f01e4..dd062a3 100644
 --- a/src/cards/card_helpers.h
 +++ b/src/cards/card_helpers.h
-@@ -168,10 +168,213 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
+@@ -168,10 +168,306 @@ inline void revertCounteredPlay(CardContext& ctx, const ChainItem& top) {
          ps.last_spell_energy_spent = 0;
  }
  
@@ -183,6 +264,99 @@ index f3f01e4..f6755e8 100644
 +        ctx.state.getObject(ready[i]).is_exhausted = true;
 +    }
 +    return true;
++}
++
++/// "You may pay [rune] to …" — POWER paid from a card's own effect.
++///
++/// Power is not energy, and this is not payEnergyFromRunes with a different
++/// number. CR 164.2 pays energy by EXHAUSTING a ready rune and power by
++/// RECYCLING one — sending it back to the rune deck — so the two helpers
++/// leave the board in different states, and a card that paid power by
++/// exhausting would keep a rune it should have spent.
++///
++/// Mirrors the engine's own power step (GameEngine::resolveCostPaymentDecision,
++/// Phase::PayingPower): recycle to the TOP of the rune deck, clear exhaustion
++/// on the way out, emit LeftBoardEvent, and count it towards
++/// power_spent_this_turn — Sivir, Mercenary reads that counter, and a power
++/// payment this helper made must be as visible to her as one the engine made.
++///
++/// Already-exhausted runes are spent first, deliberately: a ready rune is
++/// worth more (it can still pay energy), and the engine's own ordering lets
++/// one rune pay energy and then power in the same cost. Taking the ready
++/// ones first would quietly cost the player a point of energy.
++///
++/// `domains` filters to runes of those domains, which is what a coloured
++/// symbol means. Pass an empty list for a rainbow symbol — any rune.
++///
++/// Returns false and recycles nothing when the player cannot cover the whole
++/// cost, so a partial payment can never happen.
++inline bool payPowerFromRunes(CardContext& ctx, int count,
++                              const std::vector<Domain>& domains) {
++    if (count <= 0) return true;
++    const auto base = BaseLocation{ctx.controller};
++
++    std::vector<GameObjectId> exhausted, ready;
++    for (auto& [id, obj] : ctx.state.objects) {
++        if (!obj.isRune() || obj.controller != ctx.controller) continue;
++        if (!obj.location.has_value() || *obj.location != LocationId{base}) continue;
++        if (!domains.empty()) {
++            bool match = false;
++            for (auto d : domains) {
++                for (auto rd : obj.domains) {
++                    if (d == rd) { match = true; break; }
++                }
++                if (match) break;
++            }
++            if (!match) continue;
++        }
++        (obj.is_exhausted ? exhausted : ready).push_back(id);
++    }
++    if (static_cast<int>(exhausted.size() + ready.size()) < count) return false;
++
++    auto& ps = ctx.state.player(ctx.controller);
++    auto recycle = [&](GameObjectId id) {
++        auto& rune = ctx.state.getObject(id);
++        ctx.events.logTrace("  RECYCLE_RUNE: " + rune.name + " (id=" +
++                             std::to_string(id) + ") for power [card effect]");
++        rune.location = std::nullopt;
++        rune.zone = ZoneType::RuneDeck;
++        rune.is_exhausted = false;
++        ps.rune_deck.insert(ps.rune_deck.begin(), id);
++        ctx.events.emit(LeftBoardEvent{id, ctx.controller, CardType::Rune,
++                                        base, ZoneType::RuneDeck, false});
++        ps.power_spent_this_turn++;
++    };
++
++    int left = count;
++    for (auto id : exhausted) { if (left == 0) break; recycle(id); --left; }
++    for (auto id : ready)     { if (left == 0) break; recycle(id); --left; }
++    return true;
++}
++
++/// Whether payPowerFromRunes would succeed, without spending anything.
++/// Cards ask this before offering an optional payment, so the agent is
++/// never shown a "you may pay [rune]" it cannot pay.
++inline bool canPayPowerFromRunes(const GameState& state, PlayerId controller,
++                                  int count, const std::vector<Domain>& domains) {
++    if (count <= 0) return true;
++    const auto base = BaseLocation{controller};
++    int n = 0;
++    for (const auto& [id, obj] : state.objects) {
++        if (!obj.isRune() || obj.controller != controller) continue;
++        if (!obj.location.has_value() || *obj.location != LocationId{base}) continue;
++        if (!domains.empty()) {
++            bool match = false;
++            for (auto d : domains) {
++                for (auto rd : obj.domains) {
++                    if (d == rd) { match = true; break; }
++                }
++                if (match) break;
++            }
++            if (!match) continue;
++        }
++        ++n;
++    }
++    return n >= count;
 +}
 +
 +/// "If you control fewer runes than an opponent" — the VEN catch-up clause
@@ -367,7 +541,7 @@ index f3f01e4..f6755e8 100644
      auto countered = top.source;
      revertCounteredPlay(ctx, top);  // CR 425.1.b
      ctx.state.chain.items.pop_back();
-@@ -182,6 +385,7 @@ inline void counterChainTop(CardContext& ctx) {
+@@ -182,6 +478,7 @@ inline void counterChainTop(CardContext& ctx) {
          obj.location = std::nullopt;
          ctx.state.player(obj.owner).trash.push_back(countered);
      }
@@ -471,10 +645,29 @@ index 9c5ca4e..9c11992 100644
          return players[playerIndex(id)];
      }
 diff --git a/src/engine/effect_executor.cpp b/src/engine/effect_executor.cpp
-index 19d2363..c77af86 100644
+index 19d2363..18e2210 100644
 --- a/src/engine/effect_executor.cpp
 +++ b/src/engine/effect_executor.cpp
-@@ -72,7 +72,11 @@ void EffectExecutor::dealDamage(GameObjectId target, int amount,
+@@ -42,6 +42,18 @@ void EffectExecutor::dealDamage(GameObjectId target, int amount,
+         return;
+     }
+ 
++    // Damage-prevention POOL (Ki Barrier): absorbs up to N and lets the rest
++    // through, as against the all-or-nothing flag above.
++    if (amount > 0 && obj.damage_prevention_pool > 0) {
++        const int absorbed = std::min(amount, obj.damage_prevention_pool);
++        obj.damage_prevention_pool -= absorbed;
++        amount -= absorbed;
++        events_.logTrace("PREVENT: absorbed " + std::to_string(absorbed) +
++                         " to " + obj.name + " (" +
++                         std::to_string(obj.damage_prevention_pool) + " left)");
++        if (amount == 0) return;
++    }
++
+     // Unyielding Spirit [145] — "Prevent all spell and ability damage
+     // this turn." Set by the spell's onResolve on the controller side
+     // (typically the player who cast it, but the text is global —
+@@ -72,7 +84,11 @@ void EffectExecutor::dealDamage(GameObjectId target, int amount,
              // card only sets it on the caster — but the spec says
              // "prevent all", so check defender side first, fall back
              // to caster side).
@@ -486,7 +679,7 @@ index 19d2363..c77af86 100644
                  state_.player(obj.controller).prevent_spell_ability_damage_this_turn ||
                  state_.player(src_obj.controller).prevent_spell_ability_damage_this_turn;
              if (prevented && amount > 0) {
-@@ -262,6 +266,32 @@ void EffectExecutor::drawCards(PlayerId player, int count) {
+@@ -262,6 +278,32 @@ void EffectExecutor::drawCards(PlayerId player, int count) {
      }
  }
  
@@ -519,7 +712,7 @@ index 19d2363..c77af86 100644
  void EffectExecutor::bounceToHand(GameObjectId target) {
      if (!state_.objectExists(target)) return;
      auto& obj = state_.getObject(target);
-@@ -1186,6 +1216,7 @@ void EffectExecutor::playIgnoringCost(PlayerId player, GameObjectId card,
+@@ -1186,6 +1228,7 @@ void EffectExecutor::playIgnoringCost(PlayerId player, GameObjectId card,
  
      auto& ps = state_.player(player);
      ps.cards_played_this_turn++;
@@ -562,7 +755,7 @@ index 1af2ec5..d9083d2 100644
      void giveTemporaryMight(GameObjectId target, int amount, int minimum = 0);
      void giveTemporaryKeyword(GameObjectId target, Keyword kw, int value);
 diff --git a/src/engine/game_engine.cpp b/src/engine/game_engine.cpp
-index ce24a33..f144813 100644
+index ce24a33..e2d0b7d 100644
 --- a/src/engine/game_engine.cpp
 +++ b/src/engine/game_engine.cpp
 @@ -797,6 +797,16 @@ void GameEngine::channelPhase() {
@@ -582,7 +775,12 @@ index ce24a33..f144813 100644
      channelRunes(player, count);
  }
  
-@@ -1023,6 +1033,9 @@ void GameEngine::doExpirationBody() {
+@@ -1019,10 +1029,14 @@ void GameEngine::doExpirationBody() {
+ 
+         // Counter Strike's one-shot damage prevention is "this turn".
+         obj.prevent_next_damage_this_turn = false;
++        obj.damage_prevention_pool = 0;   // Ki Barrier, also "this turn"
+ 
          // Per-unit move counter is "this turn" (Kayn, Unleashed).
          obj.moves_this_turn = 0;
  
@@ -592,7 +790,7 @@ index ce24a33..f144813 100644
          // Temp might is a separate field from buff_count (permanent buffs);
          // just clear it. recomputeMight (below / in cleanup) drops the bonus.
          bool had_temp_might = (obj.temp_might_bonus != 0);
-@@ -1193,6 +1206,40 @@ void GameEngine::executeIntent(const Intent& intent) {
+@@ -1193,6 +1207,40 @@ void GameEngine::executeIntent(const Intent& intent) {
                      events_.emit(ObjectStateChangedEvent{id, "exhausted"});
                  }
              }
@@ -633,7 +831,7 @@ index ce24a33..f144813 100644
              // Pay recycle-self cost [C]
              if (act_cost.recycle_self) {
                  events_.logTrace("ACTIVATE_COST: recycle self " + source.name);
-@@ -1347,6 +1394,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
+@@ -1347,6 +1395,7 @@ void GameEngine::executePlayCard(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -641,7 +839,7 @@ index ce24a33..f144813 100644
      // Per-turn gear/equipment counters (Emperor of the Sands gate; Ornn's
      // Forge "first gear each turn"). NOTE: this runs AFTER payCardCost, so the
      // first gear's cost reduction still sees gears_played_this_turn == 0.
-@@ -1365,7 +1413,12 @@ void GameEngine::executePlayCard(const Intent& intent) {
+@@ -1365,7 +1414,12 @@ void GameEngine::executePlayCard(const Intent& intent) {
  
      // Store the play location on the game object so resolvePermanent can use it.
      // Permanents choose location during finalization (CR 355.2.a).
@@ -655,7 +853,7 @@ index ce24a33..f144813 100644
  
      // CR 135.2.b.3 + CR 355.1 — "As you play me" / "As I am played"
      // instructions execute during the play action itself, not as a
-@@ -1417,6 +1470,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1417,6 +1471,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
      bool paid_via_grant = false;
      if (intent.play_source == Intent::PlaySource::Trash) {
          paid_via_grant = payTrashReplayGrant(intent.player, intent.card);
@@ -663,7 +861,7 @@ index ce24a33..f144813 100644
      }
      if (!paid_via_grant) {
          ps.current_play_source = intent.play_source;
-@@ -1512,6 +1566,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
+@@ -1512,6 +1567,7 @@ void GameEngine::executePlaySpell(const Intent& intent) {
  
      // Track play count
      ps.cards_played_this_turn++;
@@ -671,7 +869,7 @@ index ce24a33..f144813 100644
      int energy_spent = 0;
      if (card.card_def_id != kInvalidId) {
          energy_spent = card_db_.get(card.card_def_id).energy_cost;
-@@ -1747,6 +1802,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
+@@ -1747,6 +1803,15 @@ void GameEngine::resolvePermanent(const ChainItem& item) {
          if (card.hasKeyword(Keyword::Ambush) && card.isAtBattlefield()) {
              enters_ready = true;
          }
@@ -687,7 +885,7 @@ index ce24a33..f144813 100644
          // Cards that intrinsically enter ready (e.g. Daisy! "I enter ready").
          if (card.card_def_id != kInvalidId) {
              if (const Card* cdef = card_registry_.get(card.card_def_id)) {
-@@ -2858,9 +2922,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
+@@ -2858,9 +2923,96 @@ void GameEngine::generateSpellActions(PlayerId player, bool action_ok,
      }
  }
  
@@ -784,7 +982,7 @@ index ce24a33..f144813 100644
      auto& ps = state_.player(player);
      if (ps.trash_replay_grants.empty()) return;
      if (ps.cant_play_cards_this_turn || ps.cant_play_spells_this_turn) return;
-@@ -2972,11 +3123,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
+@@ -2972,11 +3124,20 @@ void GameEngine::generateActivateAbilityActions(PlayerId player,
              const auto& ab = abilities[ai];
              const auto& act_cost = ab.cost;
  
@@ -805,7 +1003,7 @@ index ce24a33..f144813 100644
              if (act_cost.discard && act_cost.discard_count > 0 &&
                  static_cast<int>(state_.player(player).hand.size())
                      < act_cost.discard_count) continue;
-@@ -3486,12 +3646,25 @@ GameEngine::CombatDamageAdvance GameEngine::advanceCombatDamage(
+@@ -3486,12 +3647,25 @@ GameEngine::CombatDamageAdvance GameEngine::advanceCombatDamage(
      // buckets, enumerate permutations within each, concatenate, and run
      // greedy-lethal on every ordering. Identical resulting allocations
      // are deduped.
@@ -834,7 +1032,7 @@ index ce24a33..f144813 100644
      }
  
      auto greedyCascade = [&](const std::vector<GameObjectId>& order)
-@@ -3780,10 +3953,12 @@ void GameEngine::recalculateAuras() {
+@@ -3780,10 +3954,12 @@ void GameEngine::recalculateAuras() {
      // Step 1: Clear all aura effects from all objects
      for (auto& [id, obj] : state_.objects) {
          obj.aura_effects.clear();
@@ -847,7 +1045,7 @@ index ce24a33..f144813 100644
          obj.spells_targeting_me_cost_reduction = 0;  // Irelia, Graceful
          obj.granted_abilities.clear();               // Forge / Gardens / Heimerdinger
      }
-@@ -3798,6 +3973,7 @@ void GameEngine::recalculateAuras() {
+@@ -3798,6 +3974,7 @@ void GameEngine::recalculateAuras() {
          ps.grant_friendly_units_open_bf = false; // Miss Fortune, Buccaneer
          ps.units_play_base_only = false;         // Mageseeker Warden
          ps.tokens_enter_ready = false;           // Renata Glasc, Industrialist
@@ -855,7 +1053,7 @@ index ce24a33..f144813 100644
          ps.recall_all_on_attacker_tie = false;   // Symbol of the Solari
          ps.effects_cant_ready_my_units = false;  // Mageseeker Warden cl2
          ps.spells_have_repeat_energy = 0;        // Syndra, Transcendent
-@@ -3805,6 +3981,8 @@ void GameEngine::recalculateAuras() {
+@@ -3805,6 +3982,8 @@ void GameEngine::recalculateAuras() {
          ps.repeat_cost_reduction = 0;            // Marai Spire
          ps.has_reveal_peek = false;              // Void Hatchling
          ps.zilean_present = false;               // Zilean, Time Mage
@@ -864,7 +1062,7 @@ index ce24a33..f144813 100644
      }
      // Per-BF aura-derived flags (Mageseeker Investigator / Noxus Saboteur /
      // Altar of Blood). Reset here; re-asserted by unit/BF applyPassiveAura.
-@@ -3820,7 +3998,10 @@ void GameEngine::recalculateAuras() {
+@@ -3820,7 +3999,10 @@ void GameEngine::recalculateAuras() {
      // GameState::objects; collocated with aura recalc so all "static
      // attributes of on-board cards" get refreshed in one place.
      for (auto& [id, obj] : state_.objects) {
@@ -876,7 +1074,7 @@ index ce24a33..f144813 100644
          // On-board cards AND legends (LegendZone, no location) broadcast their
          // passive auras. Without including legends, legend-sourced passives
          // (Purifier's [Assault], Wuju Master's +1 [M], etc.) never fired.
-@@ -3829,7 +4010,7 @@ void GameEngine::recalculateAuras() {
+@@ -3829,7 +4011,7 @@ void GameEngine::recalculateAuras() {
          if (!on_board && !legend_zone) continue;
          if (obj.card_def_id == kInvalidId) continue;
          const Card* card = card_registry_.get(obj.card_def_id);
@@ -885,7 +1083,7 @@ index ce24a33..f144813 100644
              obj.untargetable_by_enemy = true;
          }
  
-@@ -3837,7 +4018,7 @@ void GameEngine::recalculateAuras() {
+@@ -3837,7 +4019,7 @@ void GameEngine::recalculateAuras() {
          // chance to broadcast its passive effect (Karthus bumps the
          // controller's deathknell_double_count, future cards add their own).
          if (card) {
@@ -894,7 +1092,7 @@ index ce24a33..f144813 100644
          }
      }
  
-@@ -4221,14 +4402,30 @@ void GameEngine::recalculateAuras() {
+@@ -4221,14 +4403,30 @@ void GameEngine::recalculateAuras() {
          obj.aura_keywords.reset();
          obj.aura_no_combat_damage = false;
          obj.aura_bonus_damage_taken = 0;
@@ -925,7 +1123,7 @@ index ce24a33..f144813 100644
          // Recompute might with new aura values
          if (obj.isUnit() && obj.location.has_value()) {
              obj.recomputeMight();
-@@ -4796,6 +4993,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
+@@ -4796,6 +4994,26 @@ GameEngine::RepeatCost GameEngine::parseRepeatCost(const std::string& text) {
  // the same primitives canAfford / payCardCost use, but for ONE extra
  // (energy, domain_power) charge — called by executePlaySpell after the
  // base cost has already been paid.
@@ -952,7 +1150,7 @@ index ce24a33..f144813 100644
  bool GameEngine::payRepeatCost(PlayerId player, const RepeatCost& cost) {
      if (!cost.valid) return true;
      auto base_loc = BaseLocation{player};
-@@ -4845,11 +5062,63 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
+@@ -4845,11 +5063,63 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
      const Card* cdef = card_registry_.get(card.card_def_id);
      if (!cdef) return;
      auto cost = cdef->optionalAdditionalCost();
@@ -1020,7 +1218,7 @@ index ce24a33..f144813 100644
  
      // Pick a payable domain for the power portion (specific, any, or none).
      std::optional<Domain> dom;
-@@ -4884,6 +5153,17 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
+@@ -4884,6 +5154,17 @@ void GameEngine::maybePayOptionalAdditionalCost(PlayerId player, GameObjectId ca
          if (cost.paid_flag && cost.paid_flag[0] != '\0') {
              card.card_counters[cost.paid_flag] = 1;
          }
@@ -1038,7 +1236,27 @@ index ce24a33..f144813 100644
          events_.logTrace("ADDITIONAL_COST: " + card.name + " paid optional additional cost");
      } else {
          events_.logTrace("ADDITIONAL_COST: " + card.name + " declined additional cost");
-@@ -5371,6 +5651,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
+@@ -4941,7 +5222,9 @@ bool GameEngine::canAfford(PlayerId player, GameObjectId card_obj) const {
+     // Self-cost reduction hook (e.g., Noxus Hopeful "[Legion] I cost [2] less").
+     if (auto* self_card = card_registry_.get(card.card_def_id)) {
+         energy_needed -= self_card->selfCostReduction(state_, player);
++        power_needed -= self_card->selfPowerCostReduction(state_, player);
+     }
++    power_needed = std::max(0, power_needed);
+     // Irelia, Graceful (462): per-target discount staged in executePlaySpell when
+     // this spell chose her ("your spells that choose me cost [1]/[A] less").
+     energy_needed -= ps_const.transient_play_discount;
+@@ -5095,7 +5378,9 @@ GameEngine::CostPaymentAdvance GameEngine::beginCostPayment(
+     // Self-cost reduction hook (e.g., Noxus Hopeful Legion discount).
+     if (auto* self_card = card_registry_.get(card.card_def_id)) {
+         energy_needed -= self_card->selfCostReduction(state_, player);
++        power_needed -= self_card->selfPowerCostReduction(state_, player);
+     }
++    power_needed = std::max(0, power_needed);
+     // Rek'Sai, Breacher: "Friendly units played from anywhere other than
+     // a player's hand have Accelerate." Implemented as a self-discount
+     // when (a) play_source != Hand and (b) a friendly Rek'Sai is on board.
+@@ -5371,6 +5656,38 @@ bool GameEngine::payAdditionalCost(PlayerId player, int energy, int power,
      return true;
  }
  

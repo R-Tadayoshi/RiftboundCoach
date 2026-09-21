@@ -85,8 +85,13 @@ test(
 test(
   "a card not in the supplied decklist stops the run with that diagnosis",
   live(() => {
+    // A card the engine models fine and the decklists do not contain, so
+    // the refusal is about the DECKLIST and not about a keyword gap. Draven,
+    // Audacious stood here until [Deflect] turned out to be uncharged, which
+    // made the same board refuse for a different and equally true reason —
+    // and this test is about the first one.
     const s = summary();
-    s.me.hand = [{ name: "Draven, Audacious", code: "SFD-148", exhausted: null }];
+    s.me.hand = [{ name: "En Garde", code: "OGN-046", exhausted: null }];
     const r = E.rankBoard(s, { deck1: D1, deck2: D2, rollouts: 5 });
     assert.equal(r.ok, false);
     assert.match(r.why, /not in the decklist/);

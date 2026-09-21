@@ -70,8 +70,6 @@ private:
         d.energy_cost = 3;
         d.power_cost = 1;
         d.rarity = Rarity::Uncommon;
-        d.keywords.set(Keyword::Assault);
-        d.assault_value = 3;
         d.ability_text = R"RB(Ready a unit and give it [Assault 3] this turn. (+3 :rb_might: while it's an attacker.)[Flow] :rb_energy_3::rb_rune_fury: (You may play this from your trash for its Flow cost. Then banish it.))RB";
         d.image_url = R"RB(https://cdn.riftscribe.gg/cards/originals/ven-012-166-ce2d5033cbb2b3a1.png)RB";
         return d;

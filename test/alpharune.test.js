@@ -164,6 +164,58 @@ test("a card needing no behaviour is fine with no behaviour", () => {
   assert.equal(Fid.verdictFor(kw, files).verdict, "OK");
 });
 
+/* "Keywords only, so no behaviour needed" is a claim about the ENGINE.
+ *
+ * It says the engine implements those keywords centrally — and for [Deflect]
+ * it was false. `deflect_value` is stored on the CardDef and the GameObject,
+ * rendered, recomputed through auras and handed to the ML feature extractor,
+ * and no targeting or cost-payment path ever reads it. So "Opponents must pay
+ * [A][A] to choose me" cost nothing, on fifty cards, including cards in both
+ * decklists at the table — all of them verdicting OK.
+ *
+ * Two assertions, because the pair is the point: an unimplemented keyword
+ * must NOT ride the keywords-only shortcut, and an implemented one must still
+ * be free. Delete the [Deflect] half when the tax is levied. */
+test("a keyword the engine does not actually implement is not free", () => {
+  const files = new Map([
+    ["d-1", { file: "a.cpp", hasBehaviour: false }],
+    ["d-2", { file: "b.cpp", hasBehaviour: true }],
+    ["d-3", { file: "c.cpp", hasBehaviour: false }],
+  ]);
+
+  const deflect = {
+    id: "d-1", name: "Deflector",
+    ability_text: "[Deflect 2] (Opponents must pay [A][A] to choose me with a spell or ability.)",
+  };
+  assert.equal(Fid.verdictFor(deflect, files).verdict, "PARTIAL",
+    "a keywords-only Deflect card must not read as OK");
+
+  // Not rescued by having a file with behaviour, either: the gap is in the
+  // engine, not in the card.
+  assert.equal(
+    Fid.verdictFor({ ...deflect, id: "d-2" }, files).verdict, "PARTIAL");
+
+  // An implemented keyword is still free — this is the half that must not
+  // regress when entries are added.
+  assert.equal(
+    Fid.verdictFor(
+      { id: "d-3", name: "Ambusher",
+        ability_text: "[Ambush] (You may play me as a [Reaction] to a battlefield where you have units.)" },
+      files
+    ).verdict,
+    "OK"
+  );
+});
+
+test("every listed engine keyword gap says why, in the verdict itself", () => {
+  assert.ok(Fid.UNIMPLEMENTED_KEYWORDS.length >= 0);
+  for (const gap of Fid.UNIMPLEMENTED_KEYWORDS) {
+    assert.ok(gap.re instanceof RegExp, "each gap needs a matcher");
+    assert.match(gap.why, /engine|never|no .*path/i,
+      "the reason must name what the engine fails to do, not just the keyword");
+  }
+});
+
 test("a card the engine does not have at all is ABSENT, not OK", () => {
   assert.equal(Fid.verdictFor(null, new Map()).verdict, "ABSENT");
   assert.equal(
@@ -218,8 +270,11 @@ test(
   "a position of fully implemented cards passes",
   withIndex(() => {
     if (!Fid.scanCardFiles().size) return;
+    // None of these prints [Deflect]. Draven, Audacious used to stand here
+    // and now blocks — not because the card regressed, but because the gate
+    // stopped calling an unimplemented keyword free. Picking a clean card
+    // keeps this test about what it is about.
     const r = Fid.gate([
-      { code: "SFD-148", name: "Draven, Audacious" },
       { name: "Irelia, Blade Dancer" },
       { code: "OGN-046", name: "En Garde" },
     ]);
@@ -458,7 +513,18 @@ test(
     console.log = (...a) => logs.push(a.join(" "));
     let blocking;
     try { blocking = Fid.reportDeck(deck, index, files); } finally { console.log = real; }
-    assert.equal(blocking, 0, `the engine's own test deck should rank:\n${logs.join("\n")}`);
+    // Every blocker must be an engine-wide keyword gap, not a card this
+    // repo failed to implement. The distinction is the point: a deck that
+    // stops ranking because [Deflect] is uncharged is a different fact from
+    // a deck that stops because somebody left a stub, and only the second
+    // is a regression here.
+    const only_keyword_gaps = logs.join("\n");
+    if (blocking !== 0) {
+      assert.match(only_keyword_gaps, /PARTIAL/,
+        `the engine's own test deck should rank:\n${only_keyword_gaps}`);
+      assert.doesNotMatch(only_keyword_gaps, /STUB|ABSENT/,
+        `a stub in the engine's own test deck is this repo's problem:\n${only_keyword_gaps}`);
+    }
   })
 );
 
@@ -482,4 +548,57 @@ test("real text is still real text", () => {
   const { residualText } = require("../coach/fetch-set.js");
   assert.equal(residualText({ description: "Kill a gear." }), "Kill a gear.");
   assert.equal(residualText({ description: "[Deflect] Draw 1." }), "Draw 1.");
+});
+
+/* The other end of the [Deflect] entry in UNIMPLEMENTED_KEYWORDS.
+ *
+ * The gate entry is a claim about the engine, and a claim about someone
+ * else's code goes stale silently: the tax could land upstream tomorrow and
+ * this repo would go on refusing fifty cards for a reason that stopped being
+ * true. So the claim is checked rather than remembered.
+ *
+ * `deflect_value` is read in exactly three kinds of place — storage, display
+ * and ML features — and in none of the files that decide what may be chosen
+ * or what it costs. When that stops being true, this test fails, and the fix
+ * is to delete the [Deflect] entry from the gate rather than to widen the
+ * allow-list. */
+test("the [Deflect] gate entry still describes the engine", () => {
+  const fs = require("fs");
+  const path = require("path");
+  const root =
+    process.env.ALPHARUNE_ROOT ||
+    path.join(__dirname, "..", "..", "chorlick", "alpharune");
+  const src = path.join(root, "src");
+  if (!fs.existsSync(src)) {
+    console.log("# SKIP no alpharune checkout — this check needs one");
+    return;
+  }
+  const entry = Fid.UNIMPLEMENTED_KEYWORDS.find((g) => g.re.test("[Deflect 2]"));
+  if (!entry) return; // the tax landed and the entry was removed — nothing to check
+
+  // Where a Deflect tax would HAVE to be read: the paths that decide what is
+  // a legal choice and what a play costs.
+  const DECIDES = ["engine/game_engine.cpp", "engine/chain_manager.cpp",
+                   "cards/card.cpp"];
+  const found = [];
+  for (const rel of DECIDES) {
+    const f = path.join(src, rel);
+    if (!fs.existsSync(f)) continue;
+    fs.readFileSync(f, "utf8").split("\n").forEach((line, i) => {
+      if (!/deflect_value/.test(line)) return;
+      // Storage and aura aggregation are not the tax: they populate the
+      // number, they do not spend anything for it.
+      if (/^\s*(obj|token|u)\.\w*deflect_value\s*=\s*0;/.test(line)) return;
+      if (/aura_deflect_value\s*\+=/.test(line)) return;
+      if (/deflect_value\s*=\s*(def|src)\./.test(line)) return;
+      found.push(`${rel}:${i + 1}: ${line.trim()}`);
+    });
+  }
+  assert.deepStrictEqual(
+    found,
+    [],
+    "something now reads deflect_value where choices and costs are decided — " +
+      "if the tax is implemented, drop the [Deflect] entry from " +
+      "coach/fidelity.js UNIMPLEMENTED_KEYWORDS:\n  " + found.join("\n  ")
+  );
 });

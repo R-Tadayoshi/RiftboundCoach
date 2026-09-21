@@ -382,18 +382,31 @@ needs its own change with its own tests, and Shadow Fiend and Serene Ascetic
 wait for it rather than shipping as cards that are quietly worth less than
 they read.
 
-## selfCostReduction is energy-only
+## selfCostReduction was energy-only — fixed
 
-`Card::selfCostReduction(state, player)` returns an `int` — energy. Several
-VEN cards reduce a POWER cost as well:
+`Card::selfCostReduction(state, player)` returns an `int`, and that int was
+always energy. Keeper of Law ("I cost [2][Order] less if you control a
+battlefield with exactly two units there") needs both halves, and returning
+2 covered the energy while silently dropping the `[Order]`: the card would
+read as discounted on the board and still ask for the rune at payment time.
 
-- Keeper of Law: "I cost [2][Order] less if you control a battlefield with
-  exactly two units there."
+Fixed with a companion hook, `Card::selfPowerCostReduction(state, player)`,
+consulted in both places `selfCostReduction` already was — `canAfford` and
+`beginCostPayment` — and clamped at 0 the same way.
 
-Returning 2 covers the energy and silently drops the `[Order]`, which makes
-the card cost one power more than printed — the safe direction for a search,
-but still wrong, and invisible. Left unwritten rather than shipped at the
-wrong price.
+Split rather than folded into one number because the two halves are PAID
+differently (CR 164.2: energy exhausts a ready rune, power recycles an
+exhausted one), so a single return value could not say which it meant.
+
+The same distinction produced a second helper. Cards that offer an optional
+payment mid-effect go through `payEnergyFromRunes`, and there was no power
+equivalent — so Baccai Reaper ("you may pay [Fury] to give me [Assault 2]")
+had nowhere to go. `payPowerFromRunes(ctx, count, domains)` mirrors the
+engine's own power step: recycle to the top of the rune deck, spend
+already-exhausted runes first (a ready one can still pay energy), and count
+the payment towards `power_spent_this_turn`, which Sivir, Mercenary reads.
+`canPayPowerFromRunes` is the look-before-you-offer half, so the agent is
+never shown a payment it cannot make.
 
 ## The generator's keyword artifacts, five shapes
 
@@ -403,17 +416,60 @@ of the printed text and cannot see what the sentence around them does.
 | shape | card | what the stub claimed |
 |---|---|---|
 | behind an `[Empowered]` gate | 19 cards | keyword it only has while Empowered — **fixed in the generator** |
+| the card GRANTS it | 25 cards | keyword it gives to something else — **fixed in the generator** |
 | behind another condition | Oasis Raider | `[Ganking]` it only has while behind on runes |
 | the card IGNORES it | Dune Surfer | `[Tank]`, where the card lets you ignore Tank |
 | the card IGNORES it | Decree of Insight | `[Deflect]`, same inversion |
-| the card GRANTS it | Gust Monk | `[Assault 2]`, which it gives to another unit |
 
-Only the first is fixed in the generator, and only the first is covered by
-the scan in `test/gen-cards.test.js`. The other four are hand-written
-correctly in `engine/cards/`, which survives regeneration — but a newly
-generated card of those shapes would arrive wrong and nothing would catch
-it. Widening the generator needs it to understand "ignore", "give" and
-arbitrary conditions, which is a parser, not a regex.
+### The grant shape, and why it was bigger than it looked
+
+Found by writing Baccai Reaper — "When I attack, you may pay [Fury] to give
+me [Assault 2] this turn" — and noticing the generated CardDef already
+carried `keywords.set(Keyword::Assault)` and `assault_value = 2`. The card
+is a 3-cost 4-Might that was attacking as a 6 for free.
+
+Scanning the whole engine for the shape found **25 cards**, most of them
+predating this generator. The ones that change a game:
+
+| card | claimed | printed |
+|---|---|---|
+| Jayce, Hammer in Hand | `[Assault 2]`, `[Deflect 2]`, `[Ganking]` | *chooses one* on becoming ready |
+| Baccai Reaper | `[Assault 2]` | only if you pay `[Fury]` |
+| Yuumi, Magical Cat | `[Tank]` | gives Tank to another unit |
+| Lord Broadmane | `[Assault]` | gives Assault to its other units |
+| Chakram Dancer | `[Shield]` | gives Shield to its other units |
+| Gem Jammer, Megatusk, Udyr Wildman | `[Ganking]` | grant it |
+| Eye of Twilight, Bounty Hunter, Purifier, Heart of the Tempest | `[Tank]`/`[Ganking]`/`[Assault]` | grant it |
+| Fortified Position | `[Shield]` | a battlefield, granting on defence |
+
+Plus seven spells (Cleave, Block, Blood Rush, Vault Breaker, Square Up,
+Perfect Execution) carrying unit keywords they cannot have at all.
+
+Two separate defects, and the second was hiding behind the first: the
+numeric rider travelled independently of the keyword, so a card could be
+denied `[Assault]` and still be handed `assault_value = 1` from the clause
+that grants it. That is how Lord Broadmane and Chakram Dancer got theirs.
+
+The rule in `grantedAt()` takes the window FROM THE START OF THE SENTENCE to
+the keyword, because the two ends pull opposite ways:
+
+- **Jayce** reads "choose one to give me this turn —[Assault 2] … [Deflect 2]
+  … [Ganking]" — one "give" governing three keywords with no punctuation
+  between them, so proximity is not enough.
+- **Poppy, Paragon** reads "[Deflect] (reminder) … give …" — stripping the
+  parenthesised reminder leaves the printed keyword in the same sentence as
+  a later grant, so dropping the whole sentence would lose the half of the
+  card you actually play.
+
+A keyword printed once and granted once keeps it: the printed occurrence has
+no grant verb ahead of it, and that is enough.
+
+`test/gen-cards.test.js` covers both fixed shapes twice over — against the
+generator, and as a scan over the whole engine checkout, so a card edited by
+hand is covered too. The remaining three shapes are hand-written correctly in
+`engine/cards/`, which survives regeneration; a newly generated card of those
+shapes would still arrive wrong. Covering "ignore" and arbitrary conditions
+needs a parser, not a regex.
 
 ## Cost shapes ActivationCost cannot express
 
@@ -448,14 +504,14 @@ So this needs the event to carry its participants, the same way
 per-object "dealt damage this turn" flag — which is another turn-stamped
 counter of the kind three cards have already needed.
 
-## A card can only make one resolve-time choice
+## A card could only make one resolve-time choice — fixed
 
 `Card::pickTarget` reserves resume points 6/7/8 and `resume_data[2]`;
-`pickTargetPair` reserves 9..14 and `resume_data[3..4]`; `pickMode` 3/4/5 and
-`pickXAmount` 0/1/2. Each is a fixed reservation, so a card gets **one** of
-each per `onResolve` and cannot, for instance, call `pickTarget` twice.
+`pickTargetPair` reserves 9..13 and `resume_data[3..4]`; `pickMode` 3/4/5 and
+`pickXAmount` 0/1/2. Each is a FIXED reservation, so a card got **one** of
+each per `onResolve` and could not, for instance, call `pickTarget` twice.
 
-That is what blocks the "choose several" cards, not anything about their
+That is what blocked the "choose several" cards, not anything about their
 effects:
 
 | card | what it wants |
@@ -465,16 +521,174 @@ effects:
 | Cataclysmic Duel | "**Each player** chooses a unit they control" |
 | Defender of Tomorrow (Empowered) | "Ready **2** gear" |
 
-Defender of Tomorrow ships with a fixed rule — ready the two most expensive —
-because there is no choice worth publishing when two or fewer gear are
-exhausted, and because that legend is in a deck being played. The others
-wait: a made-up rule for "any number with total Might 5 or less" is a
-different card, and the search would rank it confidently.
+### `Card::pickTargets`
 
-The fix is a repeatable picker: a reservation allocated per call rather than
-per method, so a card can ask N times. It is the single change that unlocks
-the most remaining cards, and it is in the resume machinery, which is the
-part of the engine where a mistake is least visible.
+A reservation allocated per SLOT rather than per method. Slot *k* uses resume
+points `20 + 2k` (publish) and `21 + 2k` (consume), stashes its pick in
+`resume_data[7 + k]`, the running count in `resume_data[5]` and a finished
+flag in `resume_data[6]`. So the reservation grows with N instead of with the
+number of distinct picker methods.
+
+```cpp
+std::optional<std::vector<GameObjectId>> pickTargets(
+    CardContext& ctx, const std::string& label,
+    const std::function<std::vector<GameObjectId>(
+        const std::vector<GameObjectId>& picked_so_far)>& legal_fn,
+    int max_count, bool optional);
+```
+
+`legal_fn` is called before every prompt with what has been picked so far, so
+a card can exclude earlier picks, narrow by a running total (Decree of
+Discord's "total Might 5 or less"), or stop early by returning nothing.
+
+`nullopt` means suspended and the caller MUST return, exactly as with
+`pickTarget`'s `kInvalidId`. A value means picking finished, and it may
+legitimately be empty.
+
+Three decisions that are not obvious from the signature:
+
+- **The stop option is on EVERY prompt when `optional`, the first included.**
+  "Up to 2" means zero is a legal answer, and that is not a dead option:
+  Shadows of the Past returns units from *both* trashes, so declining can be
+  right. It is encoded as a `MakeChoice` with empty `chosen_objects` —
+  `action_vocab` slot 0, distinct from every card-keyed slot, so the policy
+  head can tell stopping apart from any particular pick. `chosen_value` is
+  deliberately left unset: setting it would move the option into the
+  int-coded range where it could alias a `pickXAmount` answer.
+- **A finished flag, not just a count.** Without it a re-entry after picking
+  stopped early would land back on an unconsumed publish point and prompt
+  again.
+- **It must be the LAST picker a card calls**, because it takes every point
+  from 20 up. `pickTarget` after it would read its own points as already
+  past and return stale data — the same constraint that already held between
+  `pickTargetPair` and `pickTarget`.
+
+One call per resolution: the count and the flag are single slots, so a card
+needing two independent multi-picks is still not expressible.
+
+Tested in `tests/cards/test_pick_targets.cpp` against a probe card rather
+than any real card's behaviour — the probe records what the picker returned
+and every choice set it published on the way. Ten cases: exact count,
+running out early, no legal targets at all, the stop option's presence and
+absence, stopping at the first prompt and after one pick, exclusion via
+`legal_fn`, a running total narrowing later prompts, re-entry after
+finishing, and the no-chain escape hatch.
+
+Defender of Tomorrow still ships with its fixed rule — ready the two most
+expensive gear — because there is no choice worth publishing when two or
+fewer gear are exhausted. Revisiting it is now a matter of preference rather
+than of what the engine can express.
+
+## [Deflect] is stored, rendered, and never charged
+
+**Found: 2026-09-21.** The largest thing found in this repo so far, and it
+was found sideways: writing Nasus, Ascended meant reading how `[Deflect 2]`
+reaches the CardDef, and there was nothing on the other end.
+
+`[Deflect N]` reads "Opponents must pay [A]xN to choose me with a spell or
+ability." In the engine, `deflect_value` is:
+
+- set on the `CardDef` from the set data (`card_db.h`),
+- copied onto the `GameObject` when a card resolves (`game_engine.cpp:4758`),
+- added to by `giveTemporaryKeyword` (`effect_executor.cpp:403`),
+- aggregated from auras into `aura_deflect_value` (`game_engine.cpp:4418`),
+- rendered as "Dfl" in `state_renderer.cpp`,
+- and handed to the ML feature extractor as unit feature 2.
+
+Grep the whole engine for `deflect_value` outside `src/cards/`. **Every use is
+storage, display, or features.** No targeting path, action generator or
+cost-payment step reads it. The tax is never levied, so a Deflect unit is
+exactly as cheap to choose as one without it.
+
+Fifty cards print it. Both decklists at the table hold some — Irelia,
+Fervent, Draven, Audacious and Vex, Apathetic in one; Gutter Palace in the
+other — and every one of them was verdicting **OK**.
+
+### Why this is the bad kind of wrong
+
+The search does not fail; it succeeds and answers. Removal aimed at a
+Deflect unit is priced at zero when it costs two runes, and a line that
+"spends" runes it never had is the first thing a search finds, because it is
+free. The model then explains that line back to the player as reasoning.
+
+Nothing throws. Nothing looks wrong on the board. This is the same shape as
+the four silent-underperformance bugs found by writing cards — activation
+power never charged, aura keyword magnitudes dropped, discard-for-effect
+never offered, keywords wrongly unconditional — except that those made cards
+weaker than printed and this one makes them weaker to DEFEND, which is the
+direction a search exploits.
+
+### What was done about it now
+
+`coach/fidelity.js` gained `UNIMPLEMENTED_KEYWORDS`. A card printing
+`[Deflect]` verdicts **PARTIAL**, whatever its file looks like, because the
+gap is in the engine and not in the card. The check runs BEFORE the
+"keywords only, so no behaviour needed" shortcut — which was the branch
+calling these cards OK, since that shortcut is a claim about the engine and
+that claim was false.
+
+The visible consequence is that both decklists now stop ranking:
+
+```
+irelia-blade-dancer.txt — 31 distinct card(s)
+  3 card(s) block ranking:
+     1x Irelia, Fervent              PARTIAL
+     2x Draven, Audacious            PARTIAL
+     2x Vex, Apathetic               PARTIAL
+```
+
+That is a loss of capability and it is the correct state. The ranking was
+not previously working on these boards; it was previously reporting that it
+was. A missing answer costs a turn.
+
+Four tests had used Deflect cards as their example of "a fully implemented
+card" and now use clean ones. That is worth noticing in itself: the cards
+that looked safest to pick as fixtures were carrying the gap.
+
+### What levying it actually needs
+
+Not written here, because it belongs in the resume/cost machinery and goes
+in with its own build and its own tests, like the picker did:
+
+- **Play-time targeting** — the tax is an additional power cost on the play,
+  priced in `canAfford` and charged in `beginCostPayment`, so a player who
+  cannot pay cannot choose that target.
+- **Resolve-time targeting** (`pickTarget`, `pickTargets`, `pickTargetPair`)
+  — the cost was already paid by the time the choice is published, so either
+  the picker filters unaffordable Deflect targets out of `legal_fn`, or the
+  tax is charged at selection. Filtering is the honest one: an option the
+  agent cannot pay for should not be on the prompt.
+- **Activated abilities** that choose.
+- **Heisho, Shell of the World** ("Players ignore [Deflect] while paying for
+  spells and abilities choosing something here") is the exemption, and
+  `PlayerState::ignores_deflect_at` mirrors the existing `ignores_tank_at`
+  for it. Writing Heisho before the tax exists would be implementing an
+  exemption from nothing.
+
+Until then the gate refuses and says why.
+
+## What the remaining stubs are actually blocked on
+
+With the picker and the power-cost hooks in, the remaining VEN stubs are not
+a long tail of hard cards — they cluster on six missing pieces. Recorded
+here so the next batch is a choice rather than a rediscovery.
+
+| missing piece | cards it blocks |
+|---|---|
+| **Cost modifiers for OTHER cards are energy-only.** `PlayerState::CostModifier` carries `energy_reduction` / `energy_increase` / `min_cost` and nothing for power, and `canAfford` never consults it for power. `selfPowerCostReduction` fixed a card's own cost; this is the same gap one step out. | Applied Researchers, Helm of Suppression, Risen Altar, Sandswept Tomb, Mystic Vortex, Stargazer |
+| **No destination picker.** "Move a unit" with a free choice of where. `moveToBattlefield` takes a `BattlefieldId`, and every card that moves something today derives the destination from another chosen OBJECT (Stormbringer moves to where its anchor is). A location is not a `GameObjectId`, so the pickers cannot publish one. | Twilight Step, Shuriken Flip, Shadow Dash, Resonating Strike, Corrupted Dragon |
+| **The pickers are controller-only.** Every one publishes its choice to `ctx.controller`. | Cataclysmic Duel ("each player chooses a unit they control"), Minah Swiftfoot ("each player discards 1") |
+| **"Base Might becomes N this turn."** Nothing sets a base Might with a turn-scoped revert — `temp_*` fields are all additive bonuses. | Dragon Form, Dame the Despoiler |
+| **Missing triggers.** "When you banish a card you own", "when my Might becomes 10 or more", "when you play a card from anywhere other than your hand", "when a combat that I was in ends". | Master of Shadows, Renekton Brute, Heart of the Tempest, Mournful Witness, Affectionate Poro |
+| **`ActivationCost` shapes** — typed discard, sacrifice. Unchanged from the section above. Rainbow power symbols turned out NOT to be a gap: `Domain::Count` already reads as universal in `availableActivationPower`. | Sky Cruiser, Escaped Grayback, Mel Defiant Soul |
+| **Tokens cannot carry printed abilities.** `createToken` takes a name, Might, tags and keywords — there is no way to give the token a Card class, so the Shadow Clone's "When I attack, you may banish a unit from your trash…" has nowhere to live. Making the token without its ability would be a silent underperformance, which is worse than a stub because the card looks implemented. | Zed From the Shadows, Zed Without a Sound, Death Mark |
+| **A move does not record where it came from.** `GameEngine::moveUnit` overwrites `location`; `last_location` is set only by `killObject`. So "a battlefield I moved to or from" cannot be answered after the fact. | Akali Deadly Weapon |
+| **Replacement effects on being chosen.** "If a spell that chooses me would stun me, give me -[M], or return me to hand, give me +3 [M] instead" needs the effect intercepted before it applies. | Gangplank Naval, Otterpus (scoring replacement) |
+| **The latch is a bool.** "I can be [Empowered] up to three times" needs a count, and `is_empowered` is a flag. | Kayle Justified |
+
+About a third of what is left is reprints of the cards above, which
+`coach/port-reprint.js` fills in once the base printing works — so the list
+of distinct problems is shorter than the stub count suggests.
 
 ## Two things scoped and deliberately NOT built
 

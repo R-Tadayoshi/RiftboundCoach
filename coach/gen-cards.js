@@ -87,6 +87,39 @@ function ungatedKeywordText(description) {
   return at < 0 ? bare : bare.slice(0, at);
 }
 
+/* A keyword the card GIVES is not one the card HAS.
+ *
+ * The [Empowered] gate was one way a keyword reached a CardDef with no claim
+ * to it; the grant clause is the other. "When I attack, you may pay [Fury]
+ * to give me [Assault 2] this turn" starts without Assault and may buy it.
+ * Read off the text unconditionally, Baccai Reaper becomes a 3-cost 4-Might
+ * that attacks as a 6 for free — the same silent overperformance as the
+ * gate, in the same direction a search finds first. Twenty-five cards in the
+ * engine were carrying one, most of them from before this generator existed.
+ *
+ * The window is FROM THE START OF THE SENTENCE to the keyword, not the
+ * sentence as a whole, because the two ends of the rule pull opposite ways:
+ *
+ *   Jayce, Hammer in Hand: "choose one to give me this turn —[Assault 2]
+ *   ...[Deflect 2] ...[Ganking]" — one "give" governs three keywords with
+ *   no punctuation between them, so proximity is not enough.
+ *
+ *   Poppy, Paragon: "[Deflect] (reminder) ... give ..." — stripping the
+ *   reminder leaves the printed keyword in the same sentence as a later
+ *   grant, so dropping the whole sentence would lose a keyword the card
+ *   genuinely has.
+ *
+ * A keyword printed once and granted once keeps it: the printed occurrence
+ * has no grant verb ahead of it and that is enough. */
+const GRANT_VERB = /\b(gives?|gains?|grants?|granted)\b/i;
+
+function grantedAt(text, index) {
+  const before = String(text).slice(0, index);
+  const cut = Math.max(before.lastIndexOf("."), before.lastIndexOf("!"),
+                       before.lastIndexOf("?"));
+  return GRANT_VERB.test(before.slice(cut + 1));
+}
+
 /** Keywords the card declares, as engine enum names. */
 function keywordsOf(card) {
   const found = new Set();
@@ -97,7 +130,9 @@ function keywordsOf(card) {
   const ungated = ungatedKeywordText(card.description);
   for (const m of ungated.matchAll(/\[([A-Za-z][A-Za-z ]{1,24}?)(?:\s+\d+)?\]/g)) {
     const key = m[1].toLowerCase().replace(/[^a-z]/g, "");
-    if (KEYWORDS.has(key)) found.add(key);
+    if (!KEYWORDS.has(key)) continue;
+    if (grantedAt(ungated, m.index)) continue;
+    found.add(key);
   }
   return [...found].map((k) => k.charAt(0).toUpperCase() + k.slice(1))
     .map((k) => (k === "Quickdraw" ? "QuickDraw" : k));
@@ -145,8 +180,13 @@ function generate(card, id) {
   d(`d.rarity = Rarity::${RARITY[String(card.rarity || "common").toLowerCase()] || "Common"};`);
 
   for (const k of kws) d(`d.keywords.set(Keyword::${k});`);
+  // Only for a keyword the card actually has. Reading the value off the raw
+  // text regardless is how Lord Broadmane ended up with assault_value = 1
+  // and Chakram Dancer with shield_value = 1 from clauses that grant those
+  // keywords to their OTHER units.
   for (const [kw, field] of [["Assault", "assault_value"], ["Shield", "shield_value"], ["Deflect", "deflect_value"]]) {
-    const v = keywordValue(text, kw);
+    if (!kws.includes(kw)) continue;
+    const v = keywordValue(ungatedKeywordText(text), kw);
     if (v) d(`d.${field} = ${v};`);
   }
 

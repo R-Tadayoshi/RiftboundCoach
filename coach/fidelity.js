@@ -70,7 +70,7 @@ const BEHAVIOUR_HOOKS = [
   "isReactionAbility", "hasLegalTargets",
   // Added after each was found missing by a card it wrongly called a stub.
   "canBeChosenByEnemy", "canBeCountered", "flowCost", "grantedPlayOption",
-  "selfCostReduction", "entersReadyOnPlay",
+  "selfCostReduction", "selfPowerCostReduction", "entersReadyOnPlay",
   "levelThreshold", "minTurnToScore", "playableAsReactionToAttack",
   "requiresLegion", "requiresLevel", "suppressesTemporaryTriggersHere",
 ];
@@ -151,6 +151,41 @@ const COVERED_RE = /^[ \t]*(?:\/\/+|\/\*+|\*)[ \t]*COVERAGE-OK\b/m;
 const PARTIAL_RE =
   /^[ \t]*(?:\/\/+|\/\*+|\*)[ \t]*(?:PARTIAL|ENGINE GAP|NOT IMPLEMENTED|TODO: implement)\b/m;
 
+/* Keywords the gate must NOT treat as free.
+ *
+ * "No behaviour needed (vanilla or keywords only)" is a claim about the
+ * ENGINE, not about the card: it says the engine implements those keywords
+ * centrally, so a file with no hooks is still a working card. That claim was
+ * true of every keyword until it was checked, and [Deflect] is where it
+ * breaks.
+ *
+ * [Deflect N] reads "Opponents must pay [A]xN to choose me with a spell or
+ * ability". The engine stores `deflect_value` on the CardDef and the
+ * GameObject, renders it, recomputes it through auras, and feeds it to the
+ * ML feature extractor — and never charges it. Grep the engine for
+ * `deflect_value` outside src/cards: every use is storage, display or
+ * features. Nothing in targeting, action generation or cost payment reads
+ * it. So a Deflect unit is currently as easy to remove as one without it.
+ *
+ * Fifty cards print it, including cards in both decklists at the table, and
+ * every one of them was verdicting OK. A search over that board is not
+ * wrong by a little: removal on a Deflect unit is priced at zero when it
+ * costs two runes, which is exactly the sort of line a search finds first.
+ *
+ * So they are PARTIAL until the tax is levied — the gate refuses, and says
+ * why, rather than reporting a confidence it does not have. Delete the entry
+ * when the mechanic lands; the test in test/fidelity.test.js pins both ends. */
+const UNIMPLEMENTED_KEYWORDS = [
+  {
+    re: /\[Deflect\b/i,
+    why:
+      "prints [Deflect], and the engine never charges its cost — " +
+      "`deflect_value` is stored, rendered and fed to the feature extractor, " +
+      "but no targeting or cost-payment path reads it, so a Deflect unit is " +
+      "as cheap to choose as one without it",
+  },
+];
+
 /** OK | STUB | PARTIAL | ABSENT, with the reason. */
 function verdictFor(card, files) {
   if (!card) return { verdict: "ABSENT", why: "no card in the engine" };
@@ -158,6 +193,13 @@ function verdictFor(card, files) {
   if (!impl) return { verdict: "ABSENT", why: `no C++ file for ${card.id}` };
 
   const text = (card.ability_text || "") + " " + (card.effect_text || "");
+
+  // Checked BEFORE the keywords-only shortcut, which is the branch that was
+  // calling these cards OK.
+  for (const gap of UNIMPLEMENTED_KEYWORDS) {
+    if (gap.re.test(text)) return { verdict: "PARTIAL", why: `${card.name} ${gap.why}` };
+  }
+
   const needs = !!residualText({ description: text });
   if (!needs) return { verdict: "OK", why: "no behaviour needed (vanilla or keywords only)" };
   if (impl.partial) {
@@ -241,6 +283,19 @@ function main() {
     process.exit(reportDeck(process.argv[deckFlag + 1], index, files) ? 1 : 0);
   }
 
+  // --stubs prints the whole remaining queue with its printed text, which is
+  // what you actually need to pick the next card to write: the summary's
+  // "first few stubs" was a teaser, and re-deriving the list by hand each
+  // time invited working from a stale copy of it.
+  if (process.argv.includes("--stubs")) {
+    for (const card of index.rows) {
+      if (verdictFor(card, files).verdict !== "STUB") continue;
+      const text = (card.ability_text || "").replace(/\s+/g, " ").trim();
+      console.log(`${card.public_code}\t${card.name}\t${text}`);
+    }
+    return;
+  }
+
   const counts = { OK: 0, PARTIAL: 0, STUB: 0, ABSENT: 0 };
   const stubs = [];
   for (const card of index.rows) {
@@ -270,4 +325,5 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, hooksFromHeader, PARTIAL_RE, COVERED_RE };
+module.exports = {
+  UNIMPLEMENTED_KEYWORDS, scanCardFiles, verdictFor, gate, reportDeck, BEHAVIOUR_HOOKS, hooksFromHeader, PARTIAL_RE, COVERED_RE };

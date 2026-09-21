@@ -859,3 +859,421 @@ index 0000000..e84756b
 +}
 +
 +}  // namespace
+diff --git a/tests/cards/test_pick_targets.cpp b/tests/cards/test_pick_targets.cpp
+new file mode 100644
+index 0000000..a20d925
+--- /dev/null
++++ b/tests/cards/test_pick_targets.cpp
+@@ -0,0 +1,412 @@
++/// @file test_pick_targets.cpp
++/// Unit tests for Card::pickTargets — the repeatable target picker.
++///
++/// This lives in the resume machinery, where a mistake is least visible: a
++/// picker that re-prompts, drops a pick, or silently returns the wrong slot
++/// does not throw, it just makes the card play differently from its printed
++/// text and the search rank a line that cannot happen. So it is tested
++/// against a probe card rather than against any real card's behaviour —
++/// the probe records exactly what the picker handed back and what choice
++/// sets it published along the way.
++
++#include "card_test_fixture.h"
++
++#include "cards/card.h"
++#include "core/game_state.h"
++#include "core/intent.h"
++#include "engine/effect_executor.h"
++
++#include <gtest/gtest.h>
++
++#include <functional>
++#include <optional>
++#include <string>
++#include <vector>
++
++namespace riftbound::test {
++namespace {
++
++/// A card that does nothing but call pickTargets once and keep the answer.
++class MultiPickProbe : public Card {
++public:
++    // What the probe was asked to do.
++    std::function<std::vector<GameObjectId>(const std::vector<GameObjectId>&)> legal_fn;
++    int  max_count = 2;
++    bool optional  = false;
++    /// Call pickTargets a second time after it returns, to pin the
++    /// one-call-per-resolution contract.
++    bool call_twice = false;
++
++    // What came back.
++    bool                      finished = false;
++    std::vector<GameObjectId> picks;
++    std::vector<GameObjectId> picks_second_call;
++    int                       resolve_entries = 0;
++
++    const CardDef& def() const override {
++        static CardDef d{};
++        return d;
++    }
++
++    void onResolve(CardContext& ctx, const std::vector<GameObjectId>&) override {
++        ++resolve_entries;
++        auto got = pickTargets(ctx, "probe", legal_fn, max_count, optional);
++        if (!got.has_value()) return;   // suspended — caller must return
++        finished = true;
++        picks = *got;
++        if (call_twice) {
++            auto again = pickTargets(ctx, "probe", legal_fn, max_count, optional);
++            picks_second_call = again.has_value() ? *again
++                                                  : std::vector<GameObjectId>{};
++        }
++    }
++};
++
++/// Drive a probe through the requestChoice / takeChoice loop, recording
++/// every choice set it published. `picker` gets (prompt#, legal) and
++/// returns the Intent the agent would send back.
++struct ProbeRun {
++    std::vector<std::vector<Intent>> published;
++};
++
++ProbeRun driveProbe(GameState& state, EventBus& events, EffectExecutor& exec,
++                    MultiPickProbe& probe, PlayerId controller,
++                    const std::function<Intent(int, const std::vector<Intent>&)>& picker) {
++    ProbeRun run;
++
++    ChainItem ri;
++    ri.id = state.chain.allocateId();
++    ri.controller = controller;
++    ri.is_spell = true;
++    ri.resume_point = 0;
++    state.chain.resuming = ri;
++
++    CardContext ctx{state, events, exec, controller, kInvalidId};
++    probe.onResolve(ctx, {});
++    while (exec.hasPendingChoice()) {
++        auto pending = exec.consumePendingChoice();
++        run.published.push_back(pending.legal);
++        Intent picked = picker
++            ? picker(static_cast<int>(run.published.size()) - 1, pending.legal)
++            : (pending.legal.empty() ? Intent{} : pending.legal.front());
++        exec.recordChoice(picked);
++        probe.onResolve(ctx, {});
++    }
++
++    state.chain.resuming.reset();
++    return run;
++}
++
++/// The stop option is the one with no chosen_objects (action_vocab slot 0).
++bool isStopOption(const Intent& i) { return i.chosen_objects.empty(); }
++
++int countStopOptions(const std::vector<Intent>& legal) {
++    int n = 0;
++    for (const auto& i : legal) if (isStopOption(i)) ++n;
++    return n;
++}
++
++/// Pick the offered option whose chosen_objects[0] == want. Falls back to
++/// the stop option so a test that asks for something not on offer fails
++/// loudly on the pick count rather than silently taking legal[0].
++Intent pickObject(const std::vector<Intent>& legal, GameObjectId want) {
++    for (const auto& i : legal) {
++        if (!i.chosen_objects.empty() && i.chosen_objects[0] == want) return i;
++    }
++    Intent stop;
++    stop.type = IntentType::MakeChoice;
++    return stop;
++}
++
++Intent stopIntent() {
++    Intent stop;
++    stop.type = IntentType::MakeChoice;
++    return stop;
++}
++
++class PickTargetsTest : public CardTestFixture {
++protected:
++    /// legal_fn that offers everything in `pool` that has not been picked.
++    std::function<std::vector<GameObjectId>(const std::vector<GameObjectId>&)>
++    excluding(const std::vector<GameObjectId>& pool) {
++        return [pool](const std::vector<GameObjectId>& so_far) {
++            std::vector<GameObjectId> out;
++            for (auto id : pool) {
++                if (std::find(so_far.begin(), so_far.end(), id) == so_far.end()) {
++                    out.push_back(id);
++                }
++            }
++            return out;
++        };
++    }
++};
++
++// ── The plain shape: pick exactly N ────────────────────────────────────────
++
++TEST_F(PickTargetsTest, PicksMaxCountWhenEnoughTargetsAreLegal) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++    auto c = addUnit(PlayerId::Player1, kInvalidId, 3);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b, c});
++    probe.max_count = 2;
++    probe.optional = false;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1,
++        [&](int n, const std::vector<Intent>& legal) {
++            return pickObject(legal, n == 0 ? b : c);
++        });
++
++    EXPECT_TRUE(probe.finished);
++    ASSERT_EQ(probe.picks.size(), 2u) << "max_count=2 with 3 legal targets";
++    EXPECT_EQ(probe.picks[0], b);
++    EXPECT_EQ(probe.picks[1], c) << "picks must come back in the order chosen";
++    EXPECT_EQ(run.published.size(), 2u) << "one prompt per pick";
++}
++
++TEST_F(PickTargetsTest, StopsWhenTheTargetsRunOutBelowMaxCount) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a});
++    probe.max_count = 3;
++    probe.optional = false;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1, nullptr);
++
++    EXPECT_TRUE(probe.finished);
++    ASSERT_EQ(probe.picks.size(), 1u)
++        << "one legal target, so 'up to 3' is 1 — not a hang and not a "
++           "prompt with nothing on it";
++    EXPECT_EQ(probe.picks[0], a);
++    EXPECT_EQ(run.published.size(), 1u);
++}
++
++TEST_F(PickTargetsTest, NoLegalTargetsAtAllResolvesToAnEmptyPickWithoutPrompting) {
++    EffectExecutor exec(state, events, card_db);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({});
++    probe.max_count = 2;
++    probe.optional = false;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1, nullptr);
++
++    EXPECT_TRUE(probe.finished) << "must return a value, not suspend forever";
++    EXPECT_TRUE(probe.picks.empty());
++    EXPECT_TRUE(run.published.empty())
++        << "never publish a choice that cannot be acted on";
++}
++
++// ── "Up to N" — the stop option ────────────────────────────────────────────
++
++TEST_F(PickTargetsTest, OptionalOffersStopOnEveryPromptIncludingTheFirst) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b});
++    probe.max_count = 2;
++    probe.optional = true;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1,
++        [&](int n, const std::vector<Intent>& legal) {
++            return pickObject(legal, n == 0 ? a : b);
++        });
++
++    ASSERT_EQ(run.published.size(), 2u);
++    EXPECT_EQ(countStopOptions(run.published[0]), 1)
++        << "'up to 2' means 0 is a legal answer, so the first prompt must "
++           "offer stopping too";
++    EXPECT_EQ(countStopOptions(run.published[1]), 1);
++    EXPECT_EQ(probe.picks.size(), 2u);
++}
++
++TEST_F(PickTargetsTest, NotOptionalNeverOffersStop) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b});
++    probe.max_count = 2;
++    probe.optional = false;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1, nullptr);
++
++    ASSERT_EQ(run.published.size(), 2u);
++    for (const auto& legal : run.published) {
++        EXPECT_EQ(countStopOptions(legal), 0)
++            << "'choose 2' is not 'choose up to 2' — no opting out";
++    }
++}
++
++TEST_F(PickTargetsTest, StoppingOnTheFirstPromptPicksNothing) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b});
++    probe.max_count = 2;
++    probe.optional = true;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1,
++        [](int, const std::vector<Intent>&) { return stopIntent(); });
++
++    EXPECT_TRUE(probe.finished);
++    EXPECT_TRUE(probe.picks.empty()) << "declined at once";
++    EXPECT_EQ(run.published.size(), 1u) << "no second prompt after stopping";
++}
++
++TEST_F(PickTargetsTest, StoppingAfterOnePickKeepsThatPick) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++    auto c = addUnit(PlayerId::Player1, kInvalidId, 3);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b, c});
++    probe.max_count = 3;
++    probe.optional = true;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1,
++        [&](int n, const std::vector<Intent>& legal) {
++            return n == 0 ? pickObject(legal, c) : stopIntent();
++        });
++
++    EXPECT_TRUE(probe.finished);
++    ASSERT_EQ(probe.picks.size(), 1u);
++    EXPECT_EQ(probe.picks[0], c) << "the pick made before stopping survives";
++    EXPECT_EQ(run.published.size(), 2u);
++}
++
++// ── legal_fn sees what has been picked ─────────────────────────────────────
++
++TEST_F(PickTargetsTest, EarlierPicksAreVisibleToLegalFnSoTheyCanBeExcluded) {
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++
++    std::vector<std::vector<GameObjectId>> seen;
++    MultiPickProbe probe;
++    auto pool = excluding({a, b});
++    probe.legal_fn = [&seen, pool](const std::vector<GameObjectId>& so_far) {
++        seen.push_back(so_far);
++        return pool(so_far);
++    };
++    probe.max_count = 2;
++    probe.optional = false;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1,
++        [&](int n, const std::vector<Intent>& legal) {
++            return pickObject(legal, n == 0 ? a : b);
++        });
++
++    ASSERT_GE(seen.size(), 2u);
++    EXPECT_TRUE(seen[0].empty()) << "nothing picked before the first prompt";
++    ASSERT_EQ(seen[1].size(), 1u) << "the first pick must be visible by the second";
++    EXPECT_EQ(seen[1][0], a);
++
++    ASSERT_EQ(run.published.size(), 2u);
++    EXPECT_EQ(run.published[1].size(), 1u)
++        << "an excluded target must not be offered twice";
++    ASSERT_EQ(probe.picks.size(), 2u);
++    EXPECT_NE(probe.picks[0], probe.picks[1]);
++}
++
++TEST_F(PickTargetsTest, ARunningTotalCanNarrowLaterPrompts) {
++    // The "any number of units with total Might 5 or less" shape: the
++    // second prompt must only offer what still fits under the cap.
++    EffectExecutor exec(state, events, card_db);
++    auto m4 = addUnit(PlayerId::Player1, kInvalidId, 4);
++    auto m3 = addUnit(PlayerId::Player1, kInvalidId, 3);
++    auto m1 = addUnit(PlayerId::Player1, kInvalidId, 1);
++
++    MultiPickProbe probe;
++    GameState* st = &state;
++    probe.legal_fn = [st, m4, m3, m1](const std::vector<GameObjectId>& so_far) {
++        int used = 0;
++        for (auto id : so_far) used += st->getObject(id).current_might;
++        std::vector<GameObjectId> out;
++        for (auto id : {m4, m3, m1}) {
++            if (std::find(so_far.begin(), so_far.end(), id) != so_far.end()) continue;
++            if (used + st->getObject(id).current_might <= 5) out.push_back(id);
++        }
++        return out;
++    };
++    probe.max_count = 3;
++    probe.optional = false;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1,
++        [&](int n, const std::vector<Intent>& legal) {
++            return n == 0 ? pickObject(legal, m4) : legal.front();
++        });
++
++    ASSERT_GE(run.published.size(), 2u);
++    EXPECT_EQ(run.published[0].size(), 3u) << "all three fit on their own";
++    ASSERT_EQ(run.published[1].size(), 1u)
++        << "after Might 4, only the Might 1 unit still fits under 5";
++    EXPECT_EQ(run.published[1][0].chosen_objects[0], m1);
++
++    ASSERT_EQ(probe.picks.size(), 2u) << "and then nothing else fits";
++    EXPECT_EQ(probe.picks[0], m4);
++    EXPECT_EQ(probe.picks[1], m1);
++}
++
++// ── Re-entry ───────────────────────────────────────────────────────────────
++
++TEST_F(PickTargetsTest, ASecondCallInTheSameResolutionReturnsTheSamePicks) {
++    // One call per resolution: the count and the finished flag are single
++    // slots. A second call must hand back the first call's answer rather
++    // than re-prompt — a re-prompt here would let a card return the same
++    // unit twice, or hang the chain.
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b});
++    probe.max_count = 2;
++    probe.optional = false;
++    probe.call_twice = true;
++
++    auto run = driveProbe(state, events, exec, probe, PlayerId::Player1, nullptr);
++
++    EXPECT_EQ(run.published.size(), 2u) << "two prompts total, not four";
++    EXPECT_EQ(probe.picks, probe.picks_second_call);
++}
++
++// ── Outside the chain ──────────────────────────────────────────────────────
++
++TEST_F(PickTargetsTest, DirectInvocationTakesTheFirstLegalTargetEachStep) {
++    // Same escape hatch the other pickers use, for tests and any call path
++    // that bypasses the resume machinery. It must terminate and it must not
++    // repeat a target the legal_fn excluded.
++    EffectExecutor exec(state, events, card_db);
++    auto a = addUnit(PlayerId::Player1, kInvalidId, 1);
++    auto b = addUnit(PlayerId::Player1, kInvalidId, 2);
++
++    MultiPickProbe probe;
++    probe.legal_fn = excluding({a, b});
++    probe.max_count = 5;
++    probe.optional = false;
++
++    ASSERT_FALSE(state.chain.resuming.has_value());
++    CardContext ctx{state, events, exec, PlayerId::Player1, kInvalidId};
++    probe.onResolve(ctx, {});
++
++    EXPECT_TRUE(probe.finished);
++    ASSERT_EQ(probe.picks.size(), 2u)
++        << "max_count 5 but only 2 legal targets — must stop, not spin";
++    EXPECT_EQ(probe.picks[0], a);
++    EXPECT_EQ(probe.picks[1], b);
++    EXPECT_FALSE(exec.hasPendingChoice());
++}
++
++}  // namespace
++}  // namespace riftbound::test

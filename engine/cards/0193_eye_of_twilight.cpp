@@ -49,7 +49,6 @@ private:
         d.domains = {Domain::Calm, Domain::Order};
         d.rarity = Rarity::Rare;
         d.keywords.set(Keyword::Action);
-        d.keywords.set(Keyword::Tank);
         d.ability_text = R"RB([Action][>] :rb_exhaust:: Give a friendly unit [Tank] this turn.)RB";
         d.image_url = R"RB(https://cdn.riftscribe.gg/cards/originals/ven-193-166-da973c25f76678cd.png)RB";
         return d;
