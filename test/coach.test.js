@@ -126,11 +126,22 @@ test("coaches solo practice", () => {
   }
 });
 
-test("refuses a real match even if a snapshot reaches it", () => {
-  assert.equal(
-    shouldCoach({ sequence: "2", match: { mode: "multiplayer", isMyTurn: true }, connection: { state: "open" } }),
-    false
-  );
+/* Real matches are coached now — the tool's owner uses it for multiplayer,
+ * which is their call about their own account.
+ *
+ * What did NOT change is what a snapshot contains, and the pair of
+ * assertions is the point: the gate moved, the information boundary did not.
+ * test/visibility.test.js holds the other end — the opponent's hand is never
+ * readable in a real match, face-up or not. */
+test("a real match is coached, and the mode still rides along", () => {
+  const snap = {
+    sequence: "9",
+    match: { mode: "multiplayer", isMyTurn: true },
+    connection: { state: "open" },
+  };
+  assert.equal(shouldCoach(snap), true);
+  assert.ok(!SOLO_MODES.has("multiplayer"),
+    "multiplayer is still not solo practice — the label is what it feeds now");
 });
 
 test("holds off while the board may be stale", () => {

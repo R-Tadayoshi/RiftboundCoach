@@ -236,3 +236,27 @@ test("ordinary card backs raise no note at all", () => {
   assert.equal(s.zones.opponent.hand.hiddenCount, 4);
   assert.equal(s.warnings.filter((w) => w.startsWith("opponent.hand")).length, 0);
 });
+
+/* The gate moved; the boundary did not.
+ *
+ * Real matches are coached now. The thing that makes that defensible is that
+ * the extractor reads what is on the player's own screen and nothing else —
+ * so this asserts the multiplayer case directly rather than leaving it to the
+ * generic filter tests, because it is the case that now actually runs. */
+test("enabling live matches does not widen what a snapshot may contain", () => {
+  const Snapshot = require("../extension/src/snapshot.js");
+
+  // solo_lab shows both hands because both seats are yours. Nothing else does,
+  // and multiplayer least of all.
+  assert.ok(Snapshot.REVEALS_BOTH_HANDS.has("solo_lab"));
+  assert.ok(!Snapshot.REVEALS_BOTH_HANDS.has("multiplayer"),
+    "a real match must never be on the reveals-both-hands list");
+  assert.ok(!Snapshot.REVEALS_BOTH_HANDS.has("single_player"));
+
+  // And the wording differs, so an expected reveal is not reported with the
+  // same alarm as a client sending more than it should.
+  const expected = Snapshot.withholdNote("opponent", "hand", { unexpectedFaceUp: 1 }, "solo_lab");
+  const alarming = Snapshot.withholdNote("opponent", "hand", { unexpectedFaceUp: 1 }, "multiplayer");
+  assert.match(expected, /by design/);
+  assert.match(alarming, /more than it should/);
+});

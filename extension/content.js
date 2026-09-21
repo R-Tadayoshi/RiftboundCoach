@@ -9,16 +9,23 @@
   "use strict";
 
   const CONFIG = {
-    /* Capture only during solo practice: Goldfish (single_player) and
-     * Two-Sided Practice (solo_lab), where both seats are yours.
+    /* Capture during real matches as well as solo practice.
      *
-     * Live advice in a real match is assistance the other player doesn't have
-     * and didn't agree to, and Rift Atlas's terms ask users not to interfere
-     * with other users. Enforcing it here means no downstream consumer can
-     * quietly opt out of it.
+     * This started solo-only and the tool is now used for multiplayer, which
+     * is the owner's call about their own account. What it does NOT change is
+     * the information boundary, and that is worth being exact about, because
+     * the two questions get conflated:
      *
-     * Flip it knowing exactly what you are flipping. */
-    soloOnly: true,
+     *   The opponent's hand is structurally ABSENT from a snapshot, not
+     *   filtered out of one. `REVEALS_BOTH_HANDS` widens only for solo_lab,
+     *   where both seats are yours. In `multiplayer` the extractor reads
+     *   exactly what is on your screen — your hand, the public board, your
+     *   runes — and test/visibility.test.js asserts the opponent's hand is
+     *   never readable, face-up or not.
+     *
+     * So this flag governs WHEN the pipeline runs, never WHAT it may see.
+     * Setting it false restores solo-only capture. */
+    coachLiveMatches: true,
     /* How long the board must sit still before it is read. A drag, an
      * animation and a re-render all settle well inside this. */
     settleMs: 250,
@@ -118,11 +125,16 @@
       return;
     }
 
-    if (CONFIG.soloOnly && !root.RBCSnapshot.isSoloPractice(board)) {
+    const solo = root.RBCSnapshot.isSoloPractice(board);
+    if (!CONFIG.coachLiveMatches && !solo) {
       const mode = root.RBCBoard.mode(board) || "unknown mode";
       status(`paused — ${mode} is not solo practice (solo-only)`);
       return;
     }
+    // Which kind of game this is goes on the status pill either way. A tool
+    // that behaves differently in a real match should say when it is in one,
+    // rather than leaving you to infer it from the absence of a pause.
+    const kind = solo ? "practice" : "live";
 
     const seq = root.RBCBoard.sequence(board);
     if (seq !== null && seq === lastSequence) return; // nothing authoritative changed
@@ -139,7 +151,7 @@
     lastSequence = seq;
     const turn = snapshot.match.turnNumber ?? "?";
     send(snapshot).then((ok) => {
-      status(ok ? `turn ${turn}, seq ${seq ?? "?"}` : "sidecar not running");
+      status(ok ? `${kind} — turn ${turn}, seq ${seq ?? "?"}` : "sidecar not running");
     });
   }
 

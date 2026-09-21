@@ -13,7 +13,7 @@
   /* Bumped whenever the reading changes. It rides along in every snapshot so
    * a capture can be told apart from one taken by an older copy still alive in
    * the page — several can be, and they are not distinguishable by eye. */
-  const EXTRACTOR_VERSION = "0.5.1";
+  const EXTRACTOR_VERSION = "0.6.0";
 
   function playerBlock(board, side) {
     /* A champion still in its Champion Zone is a card that can be played from

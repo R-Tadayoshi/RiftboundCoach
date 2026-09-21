@@ -488,13 +488,29 @@ claiming a pass. `npm test` runs the same check and skips loudly.
 
 ## Solo-only, and why
 
-`content.js` sets `soloOnly: true`. When a second player is seated, capture
-pauses.
+`content.js` sets `coachLiveMatches: true`, so real matches are captured and
+coached. The status pill says which kind of game it is — `live — turn 4` or
+`practice — turn 4` — because a tool that behaves differently in a real match
+should say when it is in one. Set it `false`, or run the coach with
+`RBC_SOLO_ONLY=1`, to restore solo-only capture.
 
-The extractor is for goldfishing. Live advice in a real match is assistance the
-other player doesn't have and didn't agree to, and Rift Atlas's terms ask users
-not to interfere with other users. The guard lives in the extractor so nothing
-downstream can quietly opt out of it. Flip it knowing what you're flipping.
+**This governs WHEN the pipeline runs, never WHAT it may see**, and the two
+questions are easy to conflate. The opponent's hand is structurally absent
+from a snapshot rather than filtered out of one: `REVEALS_BOTH_HANDS` widens
+only for `solo_lab`, where both seats are yours, and
+`test/visibility.test.js` asserts the opponent's hand is never readable in a
+real match, face-up or not. The extractor reads your hand, the public board
+and your own runes — the same things a screenshot of your screen shows.
+
+What it is is real-time assistance, and that is a different question from
+information access. `docs/phase1-recon.md` records what was found of Rift
+Atlas's terms: "You may not use the site in a way that damages the service,
+interferes with other users, bypasses access controls, attempts unauthorized
+access, or violates applicable law." No clause specifically addressing
+automation surfaced, **and the terms were never read in full** — the page
+could not be fetched during recon and the follow-up never happened. Whether
+live coaching is within them is the operator's call to make, on their own
+account, and it is worth making deliberately rather than by default.
 
 ## What this is not
 

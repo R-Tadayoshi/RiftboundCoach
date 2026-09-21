@@ -89,6 +89,7 @@ const COMPARE_MODELS = (
  * thing being guarded: if a snapshot ever reaches this process from somewhere
  * else, the coach still will not run on a live match against another person. */
 const SOLO_MODES = new Set(["single_player", "solo_lab"]);
+const SOLO_ONLY = process.env.RBC_SOLO_ONLY === "1";
 
 let lastSequence = null;
 
@@ -104,8 +105,17 @@ function shouldCoach(snapshot) {
   if (snapshot.sequence !== null && snapshot.sequence === lastSequence) return false;
 
   const mode = snapshot.match?.mode;
-  if (!SOLO_MODES.has(mode)) {
-    console.log(`[coach] "${mode}" is not solo practice — standing down.`);
+  // Two gates guarded this, the extension's and this one, so that no
+  // downstream consumer could quietly opt out of the extension's. Both now
+  // default to running in real matches; set RBC_SOLO_ONLY=1 to restore the
+  // old behaviour on this side.
+  //
+  // What the mode still decides is what the snapshot CONTAINS: solo_lab
+  // carries both hands because both seats are yours, and multiplayer carries
+  // the opponent's hand as a count and nothing else. That is the extractor's
+  // job and this flag does not reach it.
+  if (SOLO_ONLY && !SOLO_MODES.has(mode)) {
+    console.log(`[coach] "${mode}" is not solo practice and RBC_SOLO_ONLY is set — standing down.`);
     return false;
   }
   if (snapshot.connection?.state && snapshot.connection.state !== "open") {
@@ -346,4 +356,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { shouldCoach, summarize, SOLO_MODES };
+module.exports = { shouldCoach, summarize, SOLO_MODES, SOLO_ONLY };
