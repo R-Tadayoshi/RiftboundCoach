@@ -65,6 +65,28 @@ const fileStem = (card) =>
   `${String(card.collector_number).padStart(4, "0")}_` +
   card.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 
+/* A keyword printed AFTER an [Empowered] gate is not one the card has.
+ *
+ * "[Empowered][>] I have [Assault 3]" means the card has Assault while a
+ * latch is set, and the latch starts clear. Put on the CardDef it is
+ * unconditional, so an un-Empowered Shadow Fiend attacks as a 5 for
+ * [2][Fury] — strictly better than the printed card, and wrong in the
+ * direction a search will find and exploit. Thirteen VEN cards were
+ * generated that way.
+ *
+ * Reminder text in parentheses is stripped first, or "(+3 Might while I'm an
+ * attacker.)" — which follows the gate and mentions nothing gated — would
+ * drag the next keyword in with it.
+ *
+ * The keyword is still in the printed text, so the card is still STUB and
+ * still needs a body; this only stops the DATA claiming something the card
+ * does not have. */
+function ungatedKeywordText(description) {
+  const bare = String(description || "").replace(/\([^()]*\)/g, "");
+  const at = bare.search(/\[Empowered\]/);
+  return at < 0 ? bare : bare.slice(0, at);
+}
+
 /** Keywords the card declares, as engine enum names. */
 function keywordsOf(card) {
   const found = new Set();
@@ -72,7 +94,8 @@ function keywordsOf(card) {
     const key = String(k).toLowerCase().replace(/[^a-z]/g, "");
     if (KEYWORDS.has(key)) found.add(key);
   }
-  for (const m of (card.description || "").matchAll(/\[([A-Za-z][A-Za-z ]{1,24}?)(?:\s+\d+)?\]/g)) {
+  const ungated = ungatedKeywordText(card.description);
+  for (const m of ungated.matchAll(/\[([A-Za-z][A-Za-z ]{1,24}?)(?:\s+\d+)?\]/g)) {
     const key = m[1].toLowerCase().replace(/[^a-z]/g, "");
     if (KEYWORDS.has(key)) found.add(key);
   }

@@ -219,3 +219,51 @@ test("porting keeps each printing's own CardDef and class name", () => {
   assert.match(parts.def, /d\.id = 1;/, "the id belongs to the CardDef half");
   assert.doesNotMatch(parts.cls, /d\.id/, "the id must not travel with the behaviour");
 });
+
+/* A keyword printed after an [Empowered] gate is not one the card has.
+ *
+ * "[Empowered][>] I have [Assault 3]" grants Assault while a latch is set,
+ * and the latch starts clear. Put on the CardDef it is unconditional, so an
+ * un-Empowered Shadow Fiend attacks as a 5 for [2][Fury] — strictly better
+ * than the printed card. Thirteen VEN cards were generated that way, and
+ * none of them errored; they were simply better than they read, in the
+ * direction a search finds first. */
+test("keywords gated on [Empowered] do not reach the CardDef", () => {
+  const { keywordsOf } = require("../coach/gen-cards.js");
+
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "[Empower] :rb_energy_2::rb_rune_fury: (Empower me. Use only if not " +
+        "Empowered.)[Empowered][>] I have [Assault 3]. (+3 :rb_might: while " +
+        "I'm an attacker.)",
+    }),
+    [],
+    "Shadow Fiend has no Assault until it is Empowered"
+  );
+
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "[Empower] :rb_energy_3: (Empower me.)[Empowered][>] I have " +
+        "[Deflect] and [Shield 3].",
+    }),
+    [],
+    "both of Serene Ascetic's keywords are behind the gate"
+  );
+});
+
+test("a keyword printed before the gate is still the card's own", () => {
+  const { keywordsOf } = require("../coach/gen-cards.js");
+  // Steel Paws prints [Deflect] outright and only its +7 Might is gated.
+  // Dropping everything after the first [Empowered] would lose the Deflect,
+  // which is the half of the card you play on turn one.
+  assert.deepStrictEqual(
+    keywordsOf({
+      description:
+        "[Deflect] (Opponents must pay :rb_rune_rainbow: to choose me.)" +
+        "[Empower] :rb_energy_7: (Empower me.)[Empowered][>] I have +7 :rb_might:.",
+    }),
+    ["Deflect"]
+  );
+});
