@@ -861,10 +861,10 @@ index 0000000..e84756b
 +}  // namespace
 diff --git a/tests/cards/test_pick_targets.cpp b/tests/cards/test_pick_targets.cpp
 new file mode 100644
-index 0000000..a20d925
+index 0000000..a8c3631
 --- /dev/null
 +++ b/tests/cards/test_pick_targets.cpp
-@@ -0,0 +1,412 @@
+@@ -0,0 +1,478 @@
 +/// @file test_pick_targets.cpp
 +/// Unit tests for Card::pickTargets — the repeatable target picker.
 +///
@@ -1273,6 +1273,72 @@ index 0000000..a20d925
 +    EXPECT_EQ(probe.picks[0], a);
 +    EXPECT_EQ(probe.picks[1], b);
 +    EXPECT_FALSE(exec.hasPendingChoice());
++}
++
++}  // namespace
++}  // namespace riftbound::test
++
++// ─── Intent::describe(state) ────────────────────────────────────────────
++//
++// The bare describe() prints "PlayCard card=2" and "StandardMove [1 units]".
++// That is enough to tell two intents apart in a debug log and nowhere near
++// enough for anything reading the ranking out loud: a real board ranked three
++// StandardMove rows at 97.7%, 0.0% and 0.0%, and printed all three the same
++// way. The ranking knew which move lost the game and the text could not say.
++
++namespace riftbound::test {
++namespace {
++
++class DescribeTest : public CardTestFixture {};
++
++TEST_F(DescribeTest, AMoveNamesTheUnitAndWhereItIsGoing) {
++    auto unit = addUnit(P1, kInvalidId, /*might=*/3, /*at_bf=*/0);
++    state.getObject(unit).name = "Stellacorn Herder";
++
++    Intent move;
++    move.type = IntentType::StandardMove;
++    move.player = P1;
++    move.units_to_move = {unit};
++    move.move_destination = BaseLocation{P1};
++
++    const std::string s = move.describe(state);
++    EXPECT_NE(s.find("Stellacorn Herder"), std::string::npos) << s;
++    EXPECT_NE(s.find("base"), std::string::npos) << s;
++
++    // The whole point: two moves of different units must not read alike.
++    auto other = addUnit(P1, kInvalidId, /*might=*/2, /*at_bf=*/0);
++    state.getObject(other).name = "Treasure Hunter";
++    Intent move2 = move;
++    move2.units_to_move = {other};
++    EXPECT_NE(move.describe(state), move2.describe(state));
++
++    // And the bare form still cannot tell them apart, which is why it is not
++    // the one the ranker calls.
++    EXPECT_EQ(move.describe(), move2.describe());
++}
++
++TEST_F(DescribeTest, APlayNamesTheCardRatherThanItsObjectId) {
++    auto card = addToHand(P1, kInvalidId);
++    state.getObject(card).name = "Tideturner";
++
++    Intent play;
++    play.type = IntentType::PlayCard;
++    play.player = P1;
++    play.card = card;
++
++    const std::string s = play.describe(state);
++    EXPECT_NE(s.find("Tideturner"), std::string::npos) << s;
++    EXPECT_EQ(s.find("card="), std::string::npos)
++        << "a raw object id is not something a reader can act on: " << s;
++}
++
++TEST_F(DescribeTest, AnObjectThatIsGoneIsSaidToBeGone) {
++    // Better a visible "#41" than a blank that reads like a card with no name.
++    Intent play;
++    play.type = IntentType::PlayCard;
++    play.player = P1;
++    play.card = 41;
++    EXPECT_NE(play.describe(state).find("#41"), std::string::npos);
 +}
 +
 +}  // namespace

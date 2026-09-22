@@ -997,6 +997,136 @@ index 9c5ca4e..9c11992 100644
      PlayerState& player(PlayerId id) {
          return players[playerIndex(id)];
      }
+diff --git a/src/core/intent.cpp b/src/core/intent.cpp
+index f60352a..b305770 100644
+--- a/src/core/intent.cpp
++++ b/src/core/intent.cpp
+@@ -1,4 +1,6 @@
+ #include "intent.h"
++#include "core/game_state.h"
++
+ #include <sstream>
+ 
+ namespace riftbound {
+@@ -29,4 +31,84 @@ std::string Intent::describe() const {
+     return ss.str();
+ }
+ 
++namespace {
++
++/// An object's name, or its id when there is nothing to name — a missing
++/// object is worth seeing rather than hiding behind a blank.
++std::string nameOf(const GameState& state, GameObjectId id) {
++    if (id == kInvalidId) return "?";
++    if (!state.objectExists(id)) return "#" + std::to_string(id);
++    const auto& name = state.getObject(id).name;
++    return name.empty() ? ("#" + std::to_string(id)) : name;
++}
++
++/// "their base", "battlefield Rockfall Path", "battlefield 1" — a
++/// battlefield is named by its card when it has one, because that is what
++/// the player is looking at on the table.
++std::string whereIs(const GameState& state, const LocationId& loc) {
++    if (const auto* b = std::get_if<BaseLocation>(&loc)) {
++        return std::string(toString(b->player)) + "'s base";
++    }
++    if (const auto* bf = std::get_if<BattlefieldLocation>(&loc)) {
++        for (const auto& b : state.battlefields) {
++            if (b.id != bf->id) continue;
++            const std::string n = nameOf(state, b.card_object_id);
++            if (!n.empty() && n[0] != '#' && n != "?") return "battlefield " + n;
++            break;
++        }
++        return "battlefield " + std::to_string(bf->id);
++    }
++    return "?";
++}
++
++}  // namespace
++
++std::string Intent::describe(const GameState& state) const {
++    std::ostringstream ss;
++    ss << toString(player) << ": " << toString(type);
++
++    switch (type) {
++        case IntentType::StandardMove: {
++            // Every field here matters and none of it was printed. Which
++            // unit, and to where, is the whole content of a move.
++            ss << " ";
++            for (size_t i = 0; i < units_to_move.size(); ++i) {
++                if (i) ss << " + ";
++                ss << nameOf(state, units_to_move[i]);
++            }
++            if (move_destination.has_value()) {
++                ss << " -> " << whereIs(state, *move_destination);
++            }
++            break;
++        }
++        case IntentType::MulliganDecision:
++            ss << " [" << cards_to_mulligan.size() << " cards]";
++            break;
++        case IntentType::AssignCombatDamage:
++            ss << " [" << damage_assignments.size() << " assignments]";
++            break;
++        case IntentType::PlayFirstDecision:
++            ss << " [" << (choose_first ? "first" : "second") << "]";
++            break;
++        default:
++            if (card != kInvalidId) ss << " " << nameOf(state, card);
++            if (ability_source != kInvalidId && ability_source != card) {
++                ss << " (" << nameOf(state, ability_source) << ")";
++            }
++            if (play_location.has_value()) {
++                ss << " to " << whereIs(state, *play_location);
++            }
++            if (!targets.empty()) {
++                ss << " on ";
++                for (size_t i = 0; i < targets.size(); ++i) {
++                    if (i) ss << ", ";
++                    ss << nameOf(state, targets[i]);
++                }
++            }
++            break;
++    }
++
++    return ss.str();
++}
++
+ } // namespace riftbound
+diff --git a/src/core/intent.h b/src/core/intent.h
+index 3935b4c..9daa357 100644
+--- a/src/core/intent.h
++++ b/src/core/intent.h
+@@ -16,6 +16,8 @@
+ 
+ namespace riftbound {
+ 
++struct GameState;
++
+ struct Intent {
+     IntentType type = IntentType::Concede;
+     PlayerId player = PlayerId::None;
+@@ -175,6 +177,20 @@ struct Intent {
+     /// Debug description
+     std::string describe() const;
+ 
++    /// The same, but with the board to hand, so objects are named instead of
++    /// numbered.
++    ///
++    /// The bare form prints "PlayCard card=2" and "StandardMove [1 units]",
++    /// which is enough to tell two intents apart in a debug log and not
++    /// nearly enough for anything reading the ranking. A board where three
++    /// StandardMove rows scored 97.7%, 0.0% and 0.0% printed all three
++    /// identically — the ranking knew which move was a disaster and the text
++    /// could not say so.
++    ///
++    /// Declared here and defined in the .cpp so this header does not have to
++    /// know what a GameState is.
++    std::string describe(const GameState& state) const;
++
+     /// Full structural equality. Used by serializers to locate the chosen
+     /// action's index within the legal-action list — a 4-field comparison
+     /// would conflate "twin" intents (same type/card/targets/ability_source
 diff --git a/src/effects/effect_types.h b/src/effects/effect_types.h
 index 69a10ce..845be0e 100644
 --- a/src/effects/effect_types.h

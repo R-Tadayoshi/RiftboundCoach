@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
                 here.legal.size());
 
     for (size_t i = 0; i < here.legal.size(); ++i) {
-        std::printf("  [%zu] %s\n", i, here.legal[i].describe().c_str());
+        std::printf("  [%zu] %s\n", i, here.legal[i].describe(position).c_str());
     }
     return rep.failed ? 1 : 0;
 }

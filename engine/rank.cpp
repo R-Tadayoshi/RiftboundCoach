@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
 
     std::vector<Ranked> out;
     for (size_t i = 0; i < here.legal.size(); ++i) {
-        Ranked r{static_cast<int>(i), here.legal[i].describe(), 0, 0, 0, 0};
+        Ranked r{static_cast<int>(i), here.legal[i].describe(position), 0, 0, 0, 0};
 
         for (int n = 0; n < rollouts; ++n) {
             const uint64_t seed = 0x9E3779B97F4A7C15ull * (i + 1) + n;
