@@ -8,6 +8,37 @@ and hands a structured snapshot to a local process. It never clicks, drags, or
 writes to the page.
 
 
+## Running it: one command, then a button
+
+```bash
+cp rbc.config.example.json rbc.config.json   # once — point it at your decks
+export OPENROUTER_API_KEY=sk-or-...
+npm start
+```
+
+Then open **http://127.0.0.1:8787** and press **Ask the coach** — or press
+**Ctrl+Shift+A** in the game tab without leaving it. The page shows the
+advice, the engine's ranking, and what the legality checker made of the
+answer.
+
+`npm start` runs the sidecar and the coach together and kills both when you
+Ctrl+C, which is the fix for a sidecar still holding port 8787 an hour after
+you closed the window it was printing to.
+
+### Why it waits to be asked
+
+The coach used to answer whenever the board's sequence moved. During your own
+turn that is every rune tap and every card — four actions meant four model
+calls, three of them about a board you were halfway through changing.
+
+So the trigger is a request now, not a change. The sidecar holds **one**
+pending ask: pressing the button again while you are thinking replaces it
+rather than queueing, because "what should I do here" is a question about the
+board as it is now, not about three boards ago.
+
+The old behaviour is still there when you want it — `node coach/index.js`
+watches and answers on your turns, `--every` on every change.
+
 ## Ranking your options with a real engine
 
 The coach reads the board and never proposes an illegal play, but nothing in

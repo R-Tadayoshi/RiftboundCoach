@@ -28,13 +28,31 @@ async function post(snapshot) {
   return true;
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== "rbc:snapshot") return undefined;
-
-  post(message.snapshot)
-    .then(() => sendResponse({ ok: true }))
-    .catch((err) => sendResponse({ ok: false, error: err.message }));
-
-  // Keeps the message channel open for the async reply.
+/* "Coach this board, now." Same loopback problem as the snapshot post, so it
+ * takes the same route through here rather than from the content script. */
+async function ask() {
+  const res = await fetch(`${SIDECAR}/ask`, { method: "POST", credentials: "omit" });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `sidecar answered ${res.status}`);
+  }
   return true;
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "rbc:snapshot") {
+    post(message.snapshot)
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;   // keeps the message channel open for the async reply
+  }
+
+  if (message?.type === "rbc:ask") {
+    ask()
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true;
+  }
+
+  return undefined;
 });

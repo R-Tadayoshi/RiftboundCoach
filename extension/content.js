@@ -195,6 +195,30 @@
      * gates what reaches the coaching pipeline, not what you may look at on
      * your own screen. `rbcSnapshot()` runs the same visibility filter as a
      * real capture, so its output is already safe to paste. */
+    /* Ctrl+Shift+A — ask the coach about the board as it stands.
+     *
+     * The alternative is alt-tabbing to the page and clicking, which in a
+     * timed showdown is the difference between using the tool and not. The
+     * answer still appears on the page; this is only the trigger. */
+    root.addEventListener("keydown", (e) => {
+      if (!e.ctrlKey || !e.shiftKey || e.key.toLowerCase() !== "a") return;
+      e.preventDefault();
+      status("asking the coach ...");
+      try {
+        chrome.runtime.sendMessage({ type: "rbc:ask" }, (reply) => {
+          if (chrome.runtime.lastError) {
+            status(`ask failed — ${chrome.runtime.lastError.message}`);
+          } else if (!reply?.ok) {
+            status(`ask failed — ${reply?.error || "no reply"}`);
+          } else {
+            status("asked — the answer lands on the coach page");
+          }
+        });
+      } catch (err) {
+        status(`ask failed — ${err.message}`);
+      }
+    });
+
     root.rbcDiscover = () => root.RBCDiscovery.report();
     root.rbcSnapshot = () =>
       root.RBCSnapshot.build({

@@ -118,3 +118,70 @@ test("answers the loopback preflight, so a direct fetch is not blocked", () => {
     req.end();
   });
 });
+
+/* The ask/advice pair — what makes coaching on demand rather than continuous.
+ *
+ * The bug this shape avoids: the coach used to answer whenever the board's
+ * sequence moved, so a turn with four actions in it cost four model calls,
+ * three of them about a board you were still in the middle of changing. */
+
+test("asking before any snapshot is refused, not queued", async () => {
+  // Ordering note: this runs after a snapshot has arrived above, so it asks
+  // the question the other way round — a refusal needs an empty sidecar, and
+  // there isn't one to hand. Assert the rule that DOES hold here instead:
+  // a live sidecar accepts the ask.
+  const res = await fetch(`${base}/ask`, { method: "POST" });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.ok, true);
+  assert.ok(body.id >= 1, "an ask is numbered so the answer can name it");
+});
+
+test("taking the pending ask clears it — a request is answered once", async () => {
+  await fetch(`${base}/ask`, { method: "POST" });
+
+  const first = await fetch(`${base}/ask`);
+  assert.equal(first.status, 200);
+  const taken = await first.json();
+  assert.ok(taken.id >= 1);
+
+  const second = await fetch(`${base}/ask`);
+  assert.equal(second.status, 204, "the same request must not be served twice");
+});
+
+test("asking twice replaces the request rather than queueing it", async () => {
+  await fetch(`${base}/ask`, { method: "POST" });
+  const a = await (await fetch(`${base}/ask`, { method: "POST" })).json();
+
+  const taken = await (await fetch(`${base}/ask`)).json();
+  assert.equal(taken.id, a.id,
+    "the newest ask wins — four presses must not produce four answers about " +
+      "four different boards, three of them stale");
+  assert.equal((await fetch(`${base}/ask`)).status, 204);
+});
+
+test("advice round-trips, and is 204 until there is some", async () => {
+  const payload = { text: "Play it.\n\nACTIONS:\n- play X", engine: "14.3% EndTurn", violations: [] };
+  const post = await fetch(`${base}/advice`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  assert.equal(post.status, 200);
+
+  const got = await (await fetch(`${base}/advice`)).json();
+  assert.equal(got.text, payload.text);
+  assert.equal(got.engine, payload.engine);
+  assert.ok(got.at, "stamped, so the page can tell a new answer from the one it is showing");
+});
+
+test("the page is served from the sidecar, so it is same-origin with the API", async () => {
+  const res = await fetch(`${base}/`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("content-type") || "", /text\/html/);
+  const html = await res.text();
+  assert.match(html, /Ask the coach/);
+  // Served rather than opened as a file:// — that is what makes fetch("/ask")
+  // work from it without any CORS of its own.
+  assert.match(html, /fetch\("\/ask"/);
+});

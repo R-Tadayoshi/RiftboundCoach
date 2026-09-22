@@ -14,3 +14,7 @@ engine/position
 # so a copy in git is stale for everyone who did not build it themselves, and
 # worse than absent because it looks current.
 engine/rank
+
+# Your decks and your model choice, not the repo's. Copy
+# rbc.config.example.json to rbc.config.json and edit it.
+rbc.config.json

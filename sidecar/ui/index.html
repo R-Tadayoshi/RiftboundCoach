@@ -1,0 +1,225 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Riftbound Coach</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #12131a; --panel: #1a1c26; --line: #2b2e3c;
+    --ink: #e6e8ef; --dim: #9aa0b4; --accent: #7aa2f7;
+    --ok: #7bd88f; --warn: #e0af68; --bad: #f7768e;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 20px; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  h1 { font-size: 15px; margin: 0; font-weight: 600; letter-spacing: .01em; }
+  #board { color: var(--dim); font: 13px/1 var(--mono); }
+  .spacer { flex: 1; }
+  button {
+    font: 600 14px/1 system-ui, sans-serif; color: #0e1016;
+    background: var(--accent); border: 0; border-radius: 7px;
+    padding: 11px 20px; cursor: pointer;
+  }
+  button:hover:not(:disabled) { filter: brightness(1.1); }
+  button:disabled { opacity: .45; cursor: default; }
+  #dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); flex: 0 0 auto; }
+  #dot.live { background: var(--ok); }
+  main { max-width: 900px; margin: 0 auto; padding: 22px 20px 64px; }
+  section { margin-bottom: 22px; }
+  h2 {
+    font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
+    color: var(--dim); margin: 0 0 9px; font-weight: 600;
+  }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .advice { white-space: pre-wrap; }
+  .advice strong { color: #fff; }
+  pre {
+    margin: 0; white-space: pre-wrap; word-break: break-word;
+    font: 13px/1.5 var(--mono); color: var(--dim);
+  }
+  .note { font-size: 13px; color: var(--dim); }
+  .bad { color: var(--bad); }
+  .warn { color: var(--warn); }
+  .ok { color: var(--ok); }
+  .empty { color: var(--dim); font-style: italic; }
+  footer { color: var(--dim); font-size: 12px; padding: 0 20px 28px; max-width: 900px; margin: 0 auto; }
+  kbd {
+    font: 11px var(--mono); border: 1px solid var(--line);
+    border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; color: var(--ink);
+  }
+</style>
+
+<header>
+  <span id="dot" title="sidecar"></span>
+  <h1>Riftbound Coach</h1>
+  <span id="board">connecting…</span>
+  <span class="spacer"></span>
+  <button id="ask">Ask the coach</button>
+</header>
+
+<main>
+  <section id="status-wrap" hidden>
+    <h2>Status</h2>
+    <div class="panel"><div id="status" class="note"></div></div>
+  </section>
+
+  <section>
+    <h2>Advice</h2>
+    <div class="panel"><div id="advice" class="advice empty">Nothing asked yet.</div></div>
+  </section>
+
+  <section id="engine-wrap" hidden>
+    <h2>Engine</h2>
+    <div class="panel"><pre id="engine"></pre></div>
+  </section>
+
+  <section id="checker-wrap" hidden>
+    <h2>Legality check</h2>
+    <div class="panel"><div id="checker" class="note"></div></div>
+  </section>
+</main>
+
+<footer>
+  Everything here is local — the page, the sidecar and your game state never
+  leave this machine. Press <kbd>A</kbd> to ask without reaching for the mouse.
+</footer>
+
+<script>
+"use strict";
+/* Polling, not websockets. The sidecar is a stdlib-only HTTP server by
+ * design, and a 1 s poll over loopback costs nothing measurable. */
+const $ = (id) => document.getElementById(id);
+let waiting = false;
+let lastAdviceAt = null;
+
+async function get(path) {
+  const r = await fetch(path, { cache: "no-store" });
+  if (r.status === 204) return null;
+  if (!r.ok) throw new Error(`${path} -> ${r.status}`);
+  return r.json();
+}
+
+function setStatus(html, cls) {
+  $("status-wrap").hidden = !html;
+  $("status").className = "note " + (cls || "");
+  $("status").innerHTML = html || "";
+}
+
+/* The model is told to end with an ACTIONS block; showing it bold is the
+ * difference between reading a paragraph and seeing the play. */
+function renderAdvice(text) {
+  const el = $("advice");
+  el.classList.remove("empty");
+  el.textContent = "";
+  const i = text.indexOf("ACTIONS:");
+  if (i < 0) { el.textContent = text; return; }
+  el.append(text.slice(0, i));
+  const b = document.createElement("strong");
+  b.textContent = text.slice(i);
+  el.append(b);
+}
+
+async function tick() {
+  let health = null;
+  try {
+    health = await get("/health");
+    $("dot").classList.add("live");
+  } catch (_) {
+    $("dot").classList.remove("live");
+    $("board").textContent = "sidecar not reachable";
+    return;
+  }
+
+  let state = null;
+  try { state = await get("/state"); } catch (_) {}
+  if (!state) {
+    $("board").textContent = "no snapshot yet — take an action in the game";
+  } else {
+    const m = state.match || {};
+    const turn = m.turnNumber ?? "?";
+    const whose = m.isMyTurn === true ? "your turn" : m.isMyTurn === false ? "their turn" : "turn ?";
+    const kind = m.mode === "multiplayer" ? "live" : (m.mode || "?");
+    $("board").textContent = `${kind} · turn ${turn} · ${m.turnStep ?? "?"} · ${whose}`;
+  }
+  $("ask").disabled = waiting || !state;
+
+  let advice = null;
+  try { advice = await get("/advice"); } catch (_) {}
+  if (!advice || advice.at === lastAdviceAt) return;
+  lastAdviceAt = advice.at;
+  waiting = false;
+  $("ask").disabled = !state;
+  $("ask").textContent = "Ask the coach";
+
+  if (advice.error) {
+    setStatus(`The coach could not answer: ${escapeHtml(advice.error)}`, "bad");
+    return;
+  }
+  setStatus(
+    `${escapeHtml(advice.model || "model")}` +
+      (advice.seconds ? ` · ${advice.seconds}s` : "") +
+      (advice.tokens ? ` · ${advice.tokens} tokens` : ""),
+    ""
+  );
+  renderAdvice(advice.text || "(empty answer)");
+
+  $("engine-wrap").hidden = !advice.engine;
+  if (advice.engine) $("engine").textContent = advice.engine;
+
+  const v = advice.violations || [];
+  $("checker-wrap").hidden = !v.length && !advice.uncheckedWarning;
+  if (v.length) {
+    $("checker").className = "note " + (advice.stillIllegal ? "bad" : "warn");
+    $("checker").innerHTML =
+      v.map((x) => `rejected: ${escapeHtml(x.action)} — ${escapeHtml(x.why)} (rule ${escapeHtml(x.rule)})`).join("<br>") +
+      "<br>" + (advice.stillIllegal
+        ? "<span class='bad'>the retry is STILL illegal — treat this answer with suspicion.</span>"
+        : "<span class='ok'>retried, and the second answer checks out.</span>");
+  } else if (advice.uncheckedWarning) {
+    $("checker").className = "note warn";
+    $("checker").textContent = advice.uncheckedWarning;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function ask() {
+  if (waiting) return;
+  waiting = true;
+  $("ask").disabled = true;
+  $("ask").textContent = "Thinking…";
+  setStatus("asked — waiting for the coach", "");
+  try {
+    const r = await fetch("/ask", { method: "POST" });
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${r.status}`);
+    }
+  } catch (err) {
+    waiting = false;
+    $("ask").disabled = false;
+    $("ask").textContent = "Ask the coach";
+    setStatus(escapeHtml(err.message), "bad");
+  }
+}
+
+$("ask").addEventListener("click", ask);
+addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "a" && !e.metaKey && !e.ctrlKey && !e.altKey) ask();
+});
+tick();
+setInterval(tick, 1000);
+</script>

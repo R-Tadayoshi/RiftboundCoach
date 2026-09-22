@@ -41,9 +41,40 @@ const COMPARE = args.has("--compare");
  * list instead of asking it to rank in its head. Needs both decklists: ours is
  * known, theirs is a guess, and a wrong guess means the opponent's unseen
  * cards get sampled from the wrong pool. So it is opt-in and explicit. */
-const RANK = args.has("--rank");
-const DECK_MINE = argValue("--deck-mine", "RBC_DECK_MINE");
-const DECK_THEIRS = argValue("--deck-theirs", "RBC_DECK_THEIRS");
+/* Settings you would otherwise retype every game.
+ *
+ * rbc.config.json beside package.json, all keys optional:
+ *   { "rank": true, "deckMine": "decks/a.txt", "deckTheirs": "decks/b.txt",
+ *     "model": "...", "rollouts": 200 }
+ *
+ * A flag beats the environment beats the file, so the file is a default and
+ * never a thing you have to fight. It is gitignored — a decklist path is
+ * yours, not the repo's. rbc.config.example.json is the copy to start from. */
+function loadConfig() {
+  const file = require("path").resolve(__dirname, "..", "rbc.config.json");
+  try {
+    return JSON.parse(require("fs").readFileSync(file, "utf8"));
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.warn(`[coach] ignoring ${file}: ${err.message}`);
+    }
+    return {};
+  }
+}
+const CONFIG = loadConfig();
+
+/* Resolved relative to the repo, not to wherever you happened to be standing.
+ * A config file that only works from one directory is a config file that will
+ * be wrong the first time you run it from somewhere else. */
+function configPath(v) {
+  return v ? require("path").resolve(__dirname, "..", v) : undefined;
+}
+
+const RANK = args.has("--rank") || CONFIG.rank === true;
+const DECK_MINE = argValue("--deck-mine", "RBC_DECK_MINE") || configPath(CONFIG.deckMine);
+const DECK_THEIRS = argValue("--deck-theirs", "RBC_DECK_THEIRS") || configPath(CONFIG.deckTheirs);
+/* --serve waits to be asked instead of answering every change. */
+const SERVE = args.has("--serve");
 
 /* Whether a bigger model — or a harder think — is worth it here is a question
  * about THIS prompt on YOUR boards, and no amount of arguing about it
@@ -141,6 +172,9 @@ function banner(snapshot) {
 
 async function coach(snapshot) {
   lastSequence = snapshot.sequence;
+  // Collected as it goes, so --serve can post the same thing the terminal
+  // shows rather than a second, differently-assembled version of it.
+  const out = { sequence: snapshot.sequence ?? null };
 
   const summary = summarize(snapshot);
 
@@ -165,11 +199,13 @@ async function coach(snapshot) {
     if (!r.ok) {
       console.log(`no.\n  [engine] ${r.why}`);
       console.log("  [engine] answering without it — the advice below is the model's alone.");
+      out.engine = `The engine could not rank this board.\n${r.why}\n\nThe advice is the model's alone.`;
     } else {
       const secs = ((Date.now() - started) / 1000).toFixed(0);
       const block = engine.rankingBlock(r.ranking, r.caveats);
       console.log(`done (${secs}s)\n`);
       console.log(block + "\n");
+      out.engine = block;
       user = `${user}\n\n---\n${block}\n\nExplain the engine's answer. It ranked ` +
         `these lines by playing this board out; you did not. Where it separates ` +
         `an option, lead with that one and say why it is good in Riftbound terms. ` +
@@ -180,7 +216,7 @@ async function coach(snapshot) {
 
   if (DRY_RUN) {
     console.log("\n[system]\n" + SYSTEM + "\n\n[user]\n" + user);
-    return;
+    return { ...out, text: "(dry run — nothing was sent)" };
   }
 
   /* Ask, then check what came back. A provably illegal action is handed
@@ -237,7 +273,7 @@ async function coach(snapshot) {
     }
   }
 
-  if (COMPARE) {
+  if (COMPARE) {   // eslint-disable-line no-constant-condition
     // Sequential, not parallel: the point is to read them side by side, and a
     // rate limit hit halfway through a race tells you nothing.
     for (const { model, effort, label } of COMPARE_MODELS) {
@@ -261,6 +297,7 @@ async function coach(snapshot) {
     return;
   }
 
+  const started = Date.now();
   try {
     const result = await askChecked({ system: SYSTEM, user });
     const { text, model, usage, truncated } = result;
@@ -272,11 +309,24 @@ async function coach(snapshot) {
     console.log(
       `  — ${model}${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tokens` : ""}`
     );
+    Object.assign(out, {
+      text, model, truncated: !!truncated,
+      seconds: ((Date.now() - started) / 1000).toFixed(1),
+      tokens: usage ? usage.prompt_tokens + usage.completion_tokens : null,
+      violations: result.violations || [],
+      retried: !!result.retried,
+      stillIllegal: !!(result.stillIllegal && result.stillIllegal.length),
+      uncheckedWarning: result.checked
+        ? null
+        : "no ACTIONS block in that answer — nothing was checked.",
+    });
   } catch (err) {
     console.error("[coach] " + err.message);
+    out.error = err.message;
   }
 
   for (const w of snapshot.warnings || []) console.error("[coach] board warning: " + w);
+  return out;
 }
 
 /* `quiet` keeps the polling loop from repeating itself every second and a
@@ -320,6 +370,63 @@ async function tick(quiet) {
   return true;
 }
 
+/* Wait to be asked.
+ *
+ * The watching loop answers whenever the board's sequence moves, and during
+ * your own turn that is every rune tap and every card — several model calls
+ * per turn, most of them about a board you were halfway through changing.
+ * Coaching is a thing you want at a moment you choose, so here the trigger is
+ * a request rather than a change.
+ *
+ * The answer goes back to the sidecar as well as to the terminal, because the
+ * page is the point: the terminal becomes something you never have to look
+ * at. A failure still posts, with `error` set — a button that goes quiet is
+ * worse than one that says what went wrong. */
+async function serve() {
+  console.log(`[coach] on demand — open http://127.0.0.1:8787 and press Ask`);
+  let complained = false;
+  for (;;) {
+    let pending = null;
+    try {
+      const res = await fetch(`${SIDECAR}/ask`, { cache: "no-store" });
+      pending = res.status === 204 ? null : await res.json();
+      complained = false;
+    } catch (err) {
+      if (!complained) {
+        console.error(`[coach] cannot reach the sidecar at ${SIDECAR} — is it running? (${err.message})`);
+        complained = true;
+      }
+    }
+
+    if (pending) {
+      let payload;
+      try {
+        const snapshot = await readState();
+        if (!snapshot) {
+          payload = { error: "the sidecar holds no snapshot — take an action in the game first" };
+        } else {
+          payload = (await coach(snapshot)) || { error: "the coach produced nothing" };
+        }
+      } catch (err) {
+        console.error("[coach] " + err.message);
+        payload = { error: err.message };
+      }
+      payload.askId = pending.id;
+      try {
+        await fetch(`${SIDECAR}/advice`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch (err) {
+        console.error(`[coach] could not post the answer back: ${err.message}`);
+      }
+    }
+
+    await new Promise((r) => setTimeout(r, 700));
+  }
+}
+
 async function main() {
   console.log(`[coach] watching ${SIDECAR}`);
   console.log(
@@ -331,7 +438,20 @@ async function main() {
         : DEFAULT_MODEL
     }`
   );
-  console.log(`[coach] ${EVERY ? "coaching every change" : "coaching on my turns"}\n`);
+  console.log(
+    `[coach] ${
+      SERVE ? "waiting to be asked" : EVERY ? "coaching every change" : "coaching on my turns"
+    }`
+  );
+  if (RANK) {
+    console.log(`[coach] engine ranking on, decks: ${DECK_MINE || "?"} vs ${DECK_THEIRS || "?"}`);
+  }
+  console.log("");
+
+  if (SERVE) {
+    await serve();
+    return;
+  }
 
   if (ONCE || COMPARE) {
     await tick(false);

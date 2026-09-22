@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "test": "node --test test/*.test.js",
-    "sidecar": "node sidecar/server.js"
+    "sidecar": "node sidecar/server.js",
+    "start": "node scripts/start.js"
   },
   "devDependencies": {
     "jsdom": "^24.1.0"

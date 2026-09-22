@@ -10,6 +10,17 @@
  *   GET  /state    the newest snapshot, or 204 when there isn't one yet
  *   GET  /history  the last N snapshots held in memory
  *   GET  /health   liveness plus a little about what has been seen
+ *
+ * And the ask/advice pair, which is what makes coaching ON DEMAND rather than
+ * continuous. The coach used to poll /state and answer whenever the sequence
+ * moved, which meant a model call per rune tap — several per turn, most of
+ * them unwanted. Now a request has to be made:
+ *
+ *   POST /ask      queue one request (the page's button, or Ctrl+Shift+A)
+ *   GET  /ask      the coach takes the pending request, clearing it
+ *   POST /advice   the coach posts what it came back with
+ *   GET  /advice   the page reads the newest answer
+ *   GET  /         the page itself
  */
 "use strict";
 
@@ -35,6 +46,16 @@ let received = 0;
  * persists, and a revealed hand persists for a whole match. Printing them per
  * snapshot buried the snapshot lines they were attached to. */
 let lastWarnings = "";
+
+/* One pending request at a time, deliberately.
+ *
+ * A queue would let you press the button four times while thinking and then
+ * watch four answers arrive about four different boards, the first three of
+ * them stale. Asking again before the first answer lands replaces the
+ * request, which is what "ask about the board as it is now" means. */
+let pendingAsk = null;
+let latestAdvice = null;
+let asked = 0;
 
 function persist(snapshot) {
   try {
@@ -147,7 +168,71 @@ const server = http.createServer(async (req, res) => {
       held: history.length,
       stateFile: STATE_FILE,
       newestAt: latest?.capturedAt ?? null,
+      asked,
+      askPending: pendingAsk !== null,
+      adviceAt: latestAdvice?.at ?? null,
     });
+    return;
+  }
+
+  // ── Ask / advice ──────────────────────────────────────────────────────
+  if (req.method === "POST" && url.pathname === "/ask") {
+    if (!latest) {
+      json(res, 409, { error: "no snapshot yet — take an action in the game first" });
+      return;
+    }
+    asked += 1;
+    // Stamped with the sequence it was asked about, so the answer can say
+    // which board it is about and the page can tell a stale one.
+    pendingAsk = { id: asked, at: new Date().toISOString(), sequence: latest.sequence ?? null };
+    console.log(`[rbc] ask #${asked} queued (seq ${pendingAsk.sequence ?? "?"})`);
+    json(res, 200, { ok: true, ...pendingAsk });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/ask") {
+    if (!pendingAsk) {
+      res.writeHead(204).end();
+      return;
+    }
+    const taken = pendingAsk;
+    pendingAsk = null;   // one-shot: taking it is what clears it
+    json(res, 200, taken);
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/advice") {
+    try {
+      latestAdvice = { ...JSON.parse(await readBody(req)), at: new Date().toISOString() };
+    } catch (err) {
+      json(res, 400, { error: err.message });
+      return;
+    }
+    json(res, 200, { ok: true });
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/advice") {
+    if (!latestAdvice) {
+      res.writeHead(204).end();
+      return;
+    }
+    json(res, 200, latestAdvice);
+    return;
+  }
+
+  // ── The page ──────────────────────────────────────────────────────────
+  // Served from here rather than opened as a file:// so it is same-origin
+  // with the endpoints above and needs no CORS of its own.
+  if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
+    let html;
+    try {
+      html = fs.readFileSync(path.join(__dirname, "ui", "index.html"));
+    } catch (err) {
+      json(res, 500, { error: `the page is missing: ${err.message}` });
+      return;
+    }
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" }).end(html);
     return;
   }
 
