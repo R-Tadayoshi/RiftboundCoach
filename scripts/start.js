@@ -56,11 +56,66 @@ function stop(code) {
 process.on("SIGINT", () => stop(0));
 process.on("SIGTERM", () => stop(0));
 
-run("sidecar", [path.join(ROOT, "sidecar", "server.js")], "36");
+/* Is a sidecar already up, and is it ours?
+ *
+ * Starting one unconditionally meant that a sidecar left over from a previous
+ * session — which is easy to do, since it is a server and outlives the
+ * terminal that printed to it — killed this command with a raw EADDRINUSE
+ * stack trace. That names the symptom and not one useful thing to do about
+ * it.
+ *
+ * A running sidecar is not a problem, it is a sidecar. So: probe it, and if
+ * it answers like ours, use it. `stateFile` is the tell — nothing else on
+ * this machine answers /health with that.
+ *
+ * Something else on 8787 IS a problem, and gets said plainly rather than
+ * being reported as a port number. */
+const PORT = Number(process.env.RBC_PORT || 8787);
+const SIDECAR = `http://127.0.0.1:${PORT}`;
 
-// A moment's head start, so the coach's first poll does not print a "cannot
-// reach the sidecar" line that is true for 200 ms and confusing for longer.
-setTimeout(() => {
+async function existingSidecar() {
+  let body;
+  try {
+    const res = await fetch(`${SIDECAR}/health`, { signal: AbortSignal.timeout(1500) });
+    if (!res.ok) return { other: `answered ${res.status}` };
+    body = await res.json();
+  } catch (_) {
+    return null;   // nothing there — ours to start
+  }
+  if (body && typeof body.stateFile === "string") return { ours: body };
+  return { other: "answered, but not like the Riftbound sidecar" };
+}
+
+function startCoach() {
   run("coach", [path.join(ROOT, "coach", "index.js"), "--serve", ...passthrough], "35");
-  console.log("\n  Open \x1b[4mhttp://127.0.0.1:8787\x1b[0m — or press Ctrl+Shift+A in the game tab.\n");
-}, 400);
+  console.log(`\n  Open \x1b[4m${SIDECAR}\x1b[0m — or press Ctrl+Shift+A in the game tab.\n`);
+}
+
+(async () => {
+  const found = await existingSidecar();
+
+  if (found?.other) {
+    console.error(
+      `\n  Something is already on port ${PORT}, and it is not the sidecar — it ${found.other}.\n` +
+        `  Free the port, or run with a different one:  RBC_PORT=8788 npm start\n` +
+        `  (the extension posts to 8787, so changing it means changing the extension too)\n`
+    );
+    process.exit(1);
+  }
+
+  if (found?.ours) {
+    // Left running on purpose or by accident, either way it works. Not killed
+    // on exit below, because this process did not start it.
+    console.log(
+      `\x1b[36m[sidecar]\x1b[0m already running on ${SIDECAR} — using it ` +
+        `(${found.ours.received} snapshot(s) seen)`
+    );
+    startCoach();
+    return;
+  }
+
+  run("sidecar", [path.join(ROOT, "sidecar", "server.js")], "36");
+  // A moment's head start, so the coach's first poll does not print a "cannot
+  // reach the sidecar" line that is true for 200 ms and confusing for longer.
+  setTimeout(startCoach, 400);
+})();

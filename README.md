@@ -22,8 +22,10 @@ advice, the engine's ranking, and what the legality checker made of the
 answer.
 
 `npm start` runs the sidecar and the coach together and kills both when you
-Ctrl+C, which is the fix for a sidecar still holding port 8787 an hour after
-you closed the window it was printing to.
+Ctrl+C. If a sidecar is already up — easy to do, since it is a server and
+outlives the terminal that printed to it — it reuses that one rather than
+dying with an `EADDRINUSE` stack trace, which names the symptom and nothing
+you can do about it. Something else on 8787 gets said plainly instead.
 
 ### Why it waits to be asked
 
