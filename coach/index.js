@@ -214,8 +214,15 @@ async function coach(snapshot) {
    * percentage attached to a board the engine could not faithfully build. */
   if (RANK) {
     const started = Date.now();
-    process.stdout.write("  [engine] ranking this board ... ");
-    const r = engine.rankBoard(summary, { deck1: DECK_MINE, deck2: DECK_THEIRS });
+    process.stdout.write(
+      `  [engine] ${engine.searcher().kind === "search" ? "searching" : "ranking"} this board ... `
+    );
+    const r = engine.rankBoard(summary, {
+      deck1: DECK_MINE,
+      deck2: DECK_THEIRS,
+      ...(CONFIG.sims ? { sims: Number(CONFIG.sims) } : {}),
+      ...(CONFIG.worlds ? { worlds: Number(CONFIG.worlds) } : {}),
+    });
     if (!r.ok) {
       console.log(`no.\n  [engine] ${r.why}`);
       console.log("  [engine] answering without it — the advice below is the model's alone.");

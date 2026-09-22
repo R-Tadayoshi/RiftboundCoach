@@ -1,5 +1,7 @@
 {
   "rank": true,
   "deckMine": "decks/irelia-blade-dancer.txt",
-  "deckTheirs": "decks/jayce-defender-of-tomorrow.txt"
+  "deckTheirs": "decks/jayce-defender-of-tomorrow.txt",
+  "sims": 1200,
+  "worlds": 12
 }

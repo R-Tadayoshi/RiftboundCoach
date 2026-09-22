@@ -25,8 +25,21 @@ const ALPHARUNE =
   process.env.ALPHARUNE_ROOT || path.join(__dirname, "..", "..", "chorlick", "alpharune");
 
 /** Why the engine cannot be used right now, or null if it can. */
+/* The tree search when it is there, the rollout ranker when it is not.
+ *
+ * `search` answers a strictly larger question — it chooses the continuation
+ * instead of rolling it, so it can report a LINE — but `rank` is the known
+ * quantity, and a checkout built before the search existed should degrade to
+ * it rather than refuse. Whichever ran is named in the output, because "which
+ * engine produced this number" is not a detail when the two disagree. */
+function searcher() {
+  const tree = path.join(ENGINE_DIR, "search");
+  if (fs.existsSync(tree)) return { bin: tree, kind: "search" };
+  return { bin: path.join(ENGINE_DIR, "rank"), kind: "rank" };
+}
+
 function unavailable() {
-  const bin = path.join(ENGINE_DIR, "rank");
+  const bin = searcher().bin;
   if (!fs.existsSync(bin)) return `${bin} is not built — run engine/build.sh`;
   if (!fs.existsSync(path.join(ALPHARUNE, "cards"))) {
     return `no alpharune checkout at ${ALPHARUNE} — set ALPHARUNE_ROOT`;
@@ -50,12 +63,26 @@ function parseRanking(stdout) {
       });
     }
   }
+  /* The line, when a tree produced one. Numbered steps under "THE LINE",
+   * stopping at the blank line that ends the block — parsed rather than
+   * re-formatted at the source for the same reason the rows are: the
+   * human-readable report is the thing that gets checked by eye. */
+  const line = [];
+  const lineBlock = /^THE LINE[^\n]*\n([\s\S]*?)(?:\n\s*\n|$)/m.exec(stdout);
+  if (lineBlock) {
+    for (const l of lineBlock[1].split("\n")) {
+      const m = /^\s*\d+\.\s+(.+?)\s*$/.exec(l);
+      if (m) line.push(m[1]);
+    }
+  }
+
   const tooClose = /TOO CLOSE TO CALL: the top (\d+)/.exec(stdout);
   const clear = /^CLEAR: "(.+?)" is ahead/m.exec(stdout);
   const worst = /Worst: "(.+?)" at ([\d.]+)%/.exec(stdout);
 
   return {
     rows,
+    line,
     tiedAtTop: tooClose ? Number(tooClose[1]) : clear ? 1 : rows.length,
     best: clear ? clear[1] : null,
     worst: worst ? { action: worst[1], rate: Number(worst[2]) / 100 } : null,
@@ -116,6 +143,25 @@ function checkAgainstDecks(script, deck1, deck2, index) {
  * is a fast answer that says TOO CLOSE TO CALL. */
 const DEFAULT_ROLLOUTS = Number(process.env.RBC_ROLLOUTS || 1200);
 
+/* The tree search's budget, measured rather than guessed — the same way the
+ * rollout ranker's 1200 was.
+ *
+ * On a real board (turn 11, an Elder Dragon in their base, seven cards they
+ * could hold) the leader CHANGED between 600 playouts and 2400, and from 2400
+ * up the order held: Tideturner, Treasure Hunter, Irelia Fervent, Guardian
+ * Angel. By 8000 the leader had separated — 78.4% against 73.2% — where at
+ * 2400 the top three sat within three points of each other.
+ *
+ * 1200 x 12 is 14,400 playouts, roughly 70 seconds. That is nothing against a
+ * turn you get minutes to think about, and it buys the difference between an
+ * order that is stable and one that changes if you run it twice.
+ *
+ * Both are overridable, and sims matter more than worlds: sims deepen the
+ * tree, worlds average over hands they might hold. Too few worlds and the
+ * search is confident about one deal. */
+const DEFAULT_SIMS = Number(process.env.RBC_SIMS || 1200);
+const DEFAULT_WORLDS = Number(process.env.RBC_WORLDS || 12);
+
 /* Rewrite a decklist into the names the ENGINE knows, and refuse rather than
  * guess.
  *
@@ -159,7 +205,13 @@ function toEngineNames(deckPath, index) {
   return out;
 }
 
-function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeoutMs = 900000 } = {}) {
+function rankBoard(summary, {
+  deck1, deck2,
+  rollouts = DEFAULT_ROLLOUTS,
+  sims = DEFAULT_SIMS,
+  worlds = DEFAULT_WORLDS,
+  timeoutMs = 900000,
+} = {}) {
   const why = unavailable();
   if (why) return { ok: false, why };
   if (!deck1 || !deck2) {
@@ -221,20 +273,26 @@ function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeout
   );
   fs.writeFileSync(file, built.script);
 
+  const engine = searcher();
+  const args = engine.kind === "search"
+    ? [engineDecks[0], engineDecks[1], file, String(sims), String(worlds)]
+    : [engineDecks[0], engineDecks[1], file, String(rollouts)];
+
   let stdout;
   try {
-    stdout = execFileSync(
-      path.join(ENGINE_DIR, "rank"),
-      [engineDecks[0], engineDecks[1], file, String(rollouts)],
-      { cwd: ALPHARUNE, env: { ...process.env, RIFTBOUND_ROOT: "." }, timeout: timeoutMs, encoding: "utf8" }
-    );
+    stdout = execFileSync(engine.bin, args, {
+      cwd: ALPHARUNE,
+      env: { ...process.env, RIFTBOUND_ROOT: "." },
+      timeout: timeoutMs,
+      encoding: "utf8",
+    });
   } catch (err) {
-    return { ok: false, why: `the ranker failed: ${(err.stderr || err.message).trim().split("\n")[0]}` };
+    return { ok: false, why: `the ${engine.kind}er failed: ${(err.stderr || err.message).trim().split("\n")[0]}` };
   }
 
   const ranking = parseRanking(stdout);
-  if (!ranking.rows.length) return { ok: false, why: "the ranker returned no rows" };
-  return { ok: true, ranking, caveats: built.caveats, positionFile: file };
+  if (!ranking.rows.length) return { ok: false, why: `the ${engine.kind} returned no rows` };
+  return { ok: true, ranking, kind: engine.kind, caveats: built.caveats, positionFile: file };
 }
 
 /* How the ranking enters the prompt.
@@ -304,6 +362,25 @@ function rankingBlock(ranking, caveats = []) {
     );
   }
 
+  /* The line, when a tree produced one.
+   *
+   * This is the thing rollouts could not give: after the first move the
+   * continuation is CHOSEN rather than rolled, so there is something to show.
+   * It goes in with its limits attached, because a numbered list of moves
+   * reads as a plan and it is not one — inside a determinization the search
+   * knows their hand, so a line that only works because it knew will look
+   * better here than it is. */
+  if (ranking.line && ranking.line.length > 1) {
+    lines.push(`\nTHE LINE the search kept returning to, after the first move:`);
+    ranking.line.forEach((step, i) => lines.push(`  ${i + 1}. ${step}`));
+    lines.push(
+      `This is one line it explored under ONE sampling of their hidden cards, ` +
+        `not a prediction and not a plan to read out. Use it to say what the ` +
+        `first move is FOR — what it sets up and what it needs next turn — and ` +
+        `say plainly that the continuation assumes they cooperate.`
+    );
+  }
+
   if (caveats.length) {
     lines.push(`\nHow the simulated board differs from the real one:`);
     for (const c of caveats) lines.push(`  - ${c}`);
@@ -311,4 +388,4 @@ function rankingBlock(ranking, caveats = []) {
   return lines.join("\n");
 }
 
-module.exports = { rankBoard, toEngineNames, parseRanking, rankingBlock, unavailable, checkAgainstDecks, DEFAULT_ROLLOUTS };
+module.exports = { rankBoard, searcher, toEngineNames, parseRanking, rankingBlock, unavailable, checkAgainstDecks, DEFAULT_ROLLOUTS };

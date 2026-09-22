@@ -56,28 +56,76 @@ const summary = (over = {}) => ({
   fieldsUnread: [],
 });
 
+/* Whichever engine is built. `search` (tree) and `rank` (rollouts) answer the
+ * same question with different budgets and different row arithmetic, so the
+ * assertions have to know which one ran — asserting the rollout ranker's
+ * shape against a tree is how a passing test stops meaning anything. */
 test(
   "a summary becomes a ranking, through the real translator and engine",
   live(() => {
-    const r = E.rankBoard(summary(), { deck1: D1, deck2: D2, rollouts: 25, timeoutMs: 300000 });
+    const kind = E.searcher().kind;
+    const budget = kind === "search"
+      ? { sims: 30, worlds: 2, timeoutMs: 300000 }
+      : { rollouts: 25, timeoutMs: 300000 };
+    const r = E.rankBoard(summary(), { deck1: D1, deck2: D2, ...budget });
     assert.equal(r.ok, true, r.why);
+    assert.equal(r.kind, kind);
     assert.ok(r.ranking.rows.length >= 2, `expected several actions:\n${r.ranking.raw}`);
 
+    // A cap either way: a tree cannot visit a root child more often than it
+    // ran simulations, and a rollout ranker cannot decide more games than it
+    // played. Both catch a row whose counts came from somewhere else.
+    const cap = kind === "search" ? 30 * 2 : 25;
     for (const row of r.ranking.rows) {
       assert.ok(row.rate >= 0 && row.rate <= 1);
-      assert.ok(row.wins + row.losses <= 25, "more results than rollouts");
+      assert.ok(row.wins + row.losses <= cap,
+        `row reports more results than the budget allowed:\n${r.ranking.raw}`);
     }
-    // Passing the turn is the one ordering stable at any rollout count.
-    assert.match(r.ranking.worst.action, /EndTurn/, r.ranking.raw);
+    /* Passing the turn is the one ordering stable at any budget — so assert
+     * the ORDER, not the verdict. At this budget nothing is statistically
+     * separated and the engine correctly declines to name a worst; requiring
+     * `worst` here would have been requiring it to overclaim. */
+    const lowest = r.ranking.rows.reduce((a, b) => (a.rate <= b.rate ? a : b));
+    assert.match(lowest.action, /EndTurn/, r.ranking.raw);
+    if (r.ranking.worst) assert.match(r.ranking.worst.action, /EndTurn/, r.ranking.raw);
+  })
+);
+
+/* The line is what the tree buys over rollouts. Skipped loudly on a checkout
+ * that only has the rollout ranker, because "no line" is the correct answer
+ * there and silence would read as a missing feature. */
+test(
+  "the tree search reports a line, not just a first move",
+  live(() => {
+    if (E.searcher().kind !== "search") {
+      console.log("# SKIP no engine/search built — the rollout ranker has no line to give");
+      return;
+    }
+    const r = E.rankBoard(summary(), {
+      deck1: D1, deck2: D2, sims: 120, worlds: 2, timeoutMs: 600000,
+    });
+    assert.equal(r.ok, true, r.why);
+    assert.ok(Array.isArray(r.ranking.line), "a line field, even when empty");
+    for (const step of r.ranking.line) {
+      assert.doesNotMatch(step, /PassPriority/,
+        "priority passes are procedure, not moves — they bury the line");
+      assert.doesNotMatch(step, /card=\d/,
+        "the line must name cards, not object ids");
+    }
   })
 );
 
 test(
   "the opponent's hand crosses as a count and is sampled, never as cards",
   live(() => {
-    const r = E.rankBoard(summary(), { deck1: D1, deck2: D2, rollouts: 10 });
+    const r = E.rankBoard(summary(), {
+      deck1: D1, deck2: D2, rollouts: 10, sims: 20, worlds: 2, timeoutMs: 300000,
+    });
     assert.equal(r.ok, true, r.why);
-    assert.match(r.ranking.raw, /hidden cards sampled per rollout: P1 0, P2 4/);
+    // Wording differs by engine — "per rollout" for rollouts, "per
+    // determinization" for the tree — but the COUNTS are the claim: ours
+    // known, four of theirs unknown and resampled rather than invented once.
+    assert.match(r.ranking.raw, /hidden cards (sampled per rollout|dealt fresh per determinization): P1 0, P2 4/);
     assert.ok(r.caveats.some((c) => /sampled fresh per rollout/.test(c)));
   })
 );

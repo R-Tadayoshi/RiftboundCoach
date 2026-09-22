@@ -41,6 +41,72 @@ board as it is now, not about three boards ago.
 The old behaviour is still there when you want it — `node coach/index.js`
 watches and answers on your turns, `--every` on every change.
 
+## The line, not just the move
+
+`engine/rank` answers "which single action scores best" by taking each legal
+action and then playing on **at random**. Honest, and shallow: after the first
+move nothing is chosen, so there is no line to report. Zarkhil put the limit
+plainly — *"the engine only gives the next card to play but not a sequence of
+cards to play that would help."*
+
+`engine/search` builds a tree instead. The continuation after the first move
+is chosen rather than rolled, so the most-visited path is a line the search
+actually believes in:
+
+```
+  77.2%  P1: PlayCard Tideturner to P1's base        (7612-2253, 9865 visits)
+  72.1%  P1: PlayCard Treasure Hunter to P1's base   (3904-1512, 5416 visits)
+
+THE LINE the search kept coming back to:
+  1. P1: PlayCard Tideturner to P1's base   [3104 visits]
+  2. P1: PlayCard Treasure Hunter to P1's base   [812 visits, after 2 pass(es)]
+```
+
+The coach uses it when it is built and falls back to `rank` when it is not,
+naming which ran.
+
+### Why not alpharune's own MCTS
+
+Two reasons, both read out of its source rather than its README:
+
+- `MctsAgent` rebuilds its OpenSpiel state by replaying `action_history`. Our
+  position is **built by editing a state** — that is what a position script
+  is — and its own header says "StateEditor god-mode edits do NOT participate
+  in MCTS". It would plan against a different board and not say so.
+- Its ISMCTS resampler is a `Clone()`, so the search reads the opponent's real
+  hand. Fine for self-play where the engine holds both. Useless here.
+
+So the tree is built directly over `GameState` clones, and hidden cards are
+handled by **determinization**: deal a plausible hand from what is left of
+their deck, search that world, repeat, pool the results.
+
+That is Perfect-Information Monte Carlo, and its weakness bounds what the
+output may claim. Inside one determinization the search knows their hand, so
+it can find lines that only work because it knew — strategy fusion. Pooling
+blunts it; it does not remove it. The line is therefore reported as *a line
+the search explored*, never as what will happen.
+
+### The budget, measured rather than guessed
+
+On a real board (turn 11, an Elder Dragon in their base, seven cards they
+could hold):
+
+| playouts | leader | second |
+|---|---|---|
+| 600 | Treasure Hunter 69.5% | Tideturner 68.5% |
+| 2,400 | **Tideturner** 73.6% | Treasure Hunter 70.8% |
+| 8,000 | Tideturner 78.4% | Treasure Hunter 73.2% |
+| 24,000 | Tideturner 77.2% | Treasure Hunter 72.1% |
+
+The leader **changes** between 600 and 2,400. From 2,400 the order holds, and
+by 8,000 the leader has separated. The default is 1,200 sims x 12
+determinizations — 14,400 playouts, about 70 seconds — which sits inside the
+converged range. `sims` and `worlds` in `rbc.config.json` override it, as do
+`RBC_SIMS` / `RBC_WORLDS`.
+
+Sims matter more than worlds: sims deepen the tree, worlds average over hands
+they might hold. Too few worlds and the search is confident about one deal.
+
 ## Ranking your options with a real engine
 
 The coach reads the board and never proposes an illegal play, but nothing in
