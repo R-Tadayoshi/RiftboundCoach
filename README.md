@@ -100,7 +100,7 @@ could hold):
 
 The leader **changes** between 600 and 2,400. From 2,400 the order holds, and
 by 8,000 the leader has separated. The default is 1,200 sims x 12
-determinizations — 14,400 playouts, about 70 seconds — which sits inside the
+determinizations — 14,400 playouts, 1m18s measured — which sits inside the
 converged range. `sims` and `worlds` in `rbc.config.json` override it, as do
 `RBC_SIMS` / `RBC_WORLDS`.
 

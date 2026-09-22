@@ -998,7 +998,7 @@ index 9c5ca4e..9c11992 100644
          return players[playerIndex(id)];
      }
 diff --git a/src/core/intent.cpp b/src/core/intent.cpp
-index f60352a..b305770 100644
+index f60352a..fc7949f 100644
 --- a/src/core/intent.cpp
 +++ b/src/core/intent.cpp
 @@ -1,4 +1,6 @@
@@ -1008,7 +1008,7 @@ index f60352a..b305770 100644
  #include <sstream>
  
  namespace riftbound {
-@@ -29,4 +31,84 @@ std::string Intent::describe() const {
+@@ -29,4 +31,105 @@ std::string Intent::describe() const {
      return ss.str();
  }
  
@@ -1071,6 +1071,27 @@ index f60352a..b305770 100644
 +        case IntentType::PlayFirstDecision:
 +            ss << " [" << (choose_first ? "first" : "second") << "]";
 +            break;
++        case IntentType::MakeChoice: {
++            /* A bare "MakeChoice" is the same failure as "card=2": it names a
++             * decision without saying what was decided. Two of the five steps
++             * in the first real line this search produced were exactly that.
++             *
++             * choice_label is what the card's own picker wrote for a person to
++             * read, so it wins when present; the objects and the integer are
++             * the fallbacks for choices published without one. */
++            if (!choice_label.empty()) { ss << " " << choice_label; break; }
++            if (!chosen_objects.empty()) {
++                ss << " ";
++                for (size_t i = 0; i < chosen_objects.size(); ++i) {
++                    if (i) ss << ", ";
++                    ss << nameOf(state, chosen_objects[i]);
++                }
++                break;
++            }
++            if (chosen_value.has_value()) { ss << " = " << *chosen_value; break; }
++            ss << " (decline)";   // empty objects is the "stop here" option
++            break;
++        }
 +        default:
 +            if (card != kInvalidId) ss << " " << nameOf(state, card);
 +            if (ability_source != kInvalidId && ability_source != card) {

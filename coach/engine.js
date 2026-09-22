@@ -152,9 +152,14 @@ const DEFAULT_ROLLOUTS = Number(process.env.RBC_ROLLOUTS || 1200);
  * Angel. By 8000 the leader had separated — 78.4% against 73.2% — where at
  * 2400 the top three sat within three points of each other.
  *
- * 1200 x 12 is 14,400 playouts, roughly 70 seconds. That is nothing against a
- * turn you get minutes to think about, and it buys the difference between an
- * order that is stable and one that changes if you run it twice.
+ * 1200 x 12 is 14,400 playouts, measured at 1m18s. That is affordable against
+ * a turn you get minutes to think about, and it buys the difference between
+ * an order that is stable and one that changes if you run it twice.
+ *
+ * Worth knowing when tuning: a tree playout is NOT a rollout playout. Each
+ * simulation re-seats the engine from the root and walks down, so the cost
+ * per playout grows with tree depth — extrapolating from a small run
+ * underestimates a large one.
  *
  * Both are overridable, and sims matter more than worlds: sims deepen the
  * tree, worlds average over hands they might hold. Too few worlds and the
