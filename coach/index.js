@@ -50,6 +50,26 @@ const COMPARE = args.has("--compare");
  * A flag beats the environment beats the file, so the file is a default and
  * never a thing you have to fight. It is gitignored — a decklist path is
  * yours, not the repo's. rbc.config.example.json is the copy to start from. */
+/* The domains a decklist can produce, as a short phrase. Returns null when
+ * there is no list or nothing resolves — an absent line is better than a
+ * confident empty one. */
+function deckDomains(file) {
+  if (!file) return null;
+  try {
+    const { loadIndex, resolve, parseDeckNames } = require("./alpharune.js");
+    const fs2 = require("fs");
+    const index = loadIndex();
+    const found = new Set();
+    for (const { name } of parseDeckNames(fs2.readFileSync(file, "utf8"))) {
+      const r = resolve(index, { name });
+      for (const d of r.card?.domains || []) found.add(d);
+    }
+    return found.size ? [...found].sort().join(", ") : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function loadConfig() {
   const file = require("path").resolve(__dirname, "..", "rbc.config.json");
   try {
@@ -227,6 +247,25 @@ async function coach(snapshot) {
     }
   }
 
+  /* What their deck CAN hold, from the list already supplied to the engine.
+   *
+   * The decklist went to the ranker and not to the model, so the model
+   * speculated about cards the opponent cannot own — on a Body/Mind deck it
+   * warned about Defy, which is Calm. Their domains are three or four words
+   * and rule out whole categories of trick, which is a better return per
+   * token than anything else in this prompt.
+   *
+   * The card LIST is deliberately not included: 40 lines for a marginal gain
+   * over knowing the domains, and the hard rule against reasoning about
+   * specific cards in their hand still stands either way. */
+  const theirDomains = deckDomains(DECK_THEIRS);
+  if (theirDomains) {
+    user = `${user}\n\nTHEIR DECK'S DOMAINS: ${theirDomains}.\n` +
+      `From the decklist supplied for them, so it is what their cards CAN be. ` +
+      `A reaction or trick outside these domains is one they cannot hold — do ` +
+      `not warn about it. This says nothing about what is in their hand right now.`;
+  }
+
   if (DRY_RUN) {
     console.log("\n[system]\n" + SYSTEM + "\n\n[user]\n" + user);
     return { ...out, text: "(dry run — nothing was sent)" };
@@ -319,8 +358,15 @@ async function coach(snapshot) {
     if (truncated) {
       console.warn("  [cut off before the end — raise RBC_MAX_TOKENS]");
     }
+    /* Cache reads printed alongside the totals, because "is caching on" is a
+     * question with a measurable answer and it was previously unanswerable
+     * from the output. A zero here on the second turn onwards means something
+     * before the breakpoint is varying. */
+    const cached = usage?.prompt_tokens_details?.cached_tokens ??
+                   usage?.cache_read_input_tokens ?? null;
     console.log(
-      `  — ${model}${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tokens` : ""}`
+      `  — ${model}${usage ? `, ${usage.prompt_tokens}+${usage.completion_tokens} tokens` : ""}` +
+        (cached ? ` (${cached} cached)` : usage ? " (nothing cached)" : "")
     );
     Object.assign(out, {
       text, model, truncated: !!truncated,

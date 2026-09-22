@@ -61,6 +61,13 @@ How to think:
   overridden by this game's board. Say "they have shown X before" — never
   "they have X".
 - Say what to hold up defensively, and what it costs to hold it.
+- READ THEIR BOARD BEFORE YOU DEVELOP YOURS. Every unit they control is listed
+  under THEM, with its Might in the card text you are given. Before advising
+  anything, find the biggest threat they have on the table and say what it
+  does to the player, then advise around it. A board with a large enemy unit
+  on it is not a quiet board, and "both battlefields are empty" is not the
+  same sentence as "the board is empty" — a unit sitting in their base moves
+  to a battlefield the moment it readies.
 
 Hard rules:
 - You CANNOT see the opponent's hand, and neither can the player. You are given

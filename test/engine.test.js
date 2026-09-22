@@ -196,3 +196,45 @@ test("a name the engine cannot place is refused, not passed through", () => {
   // Passing it through would be the same throw one step later, phrased worse.
   assert.throws(() => toEngineNames(src, index), /not in the engine's card database/);
 });
+
+/* The absolute level, which the ordering alone hides.
+ *
+ * On a real board every option scored 3-17% while the player was AHEAD on
+ * points, because the opponent had a 12-Might Elder Dragon in their base. The
+ * engine knew the position was losing and said so in every row; the block
+ * showed only the order, and the model went on to call the board quiet. */
+test("a board where everything loses says so, not just which loses least", () => {
+  const { rankingBlock } = require("../coach/engine.js");
+  const rows = [
+    { rate: 0.167, action: "P1: PlayCard Tideturner", wins: 20, losses: 100 },
+    { rate: 0.034, action: "P1: EndTurn", wins: 4, losses: 114 },
+  ];
+  const block = rankingBlock({ rows, tiedAtTop: 1, best: rows[0].action, worst: null });
+
+  assert.match(block, /LOSING whatever is played/);
+  assert.match(block, /least\s+bad option/);
+  assert.match(block, /Do not describe this board as quiet/);
+});
+
+test("a winning board does not manufacture urgency", () => {
+  const { rankingBlock } = require("../coach/engine.js");
+  const rows = [
+    { rate: 0.95, action: "P1: PlayCard A", wins: 114, losses: 6 },
+    { rate: 0.91, action: "P1: PlayCard B", wins: 109, losses: 11 },
+  ];
+  const block = rankingBlock({ rows, tiedAtTop: 2, best: null, worst: null });
+  assert.match(block, /position is winning/);
+  assert.doesNotMatch(block, /LOSING/);
+});
+
+/* A rate over 19 decided rollouts read exactly like one over 1100. */
+test("each row carries how many rollouts actually decided it", () => {
+  const { rankingBlock } = require("../coach/engine.js");
+  const block = rankingBlock({
+    rows: [{ rate: 0.5, action: "P1: EndTurn", wins: 6, losses: 6 }],
+    tiedAtTop: 1, best: null, worst: null,
+  });
+  assert.match(block, /\[6W-6L of 12 decided\]/);
+  assert.match(block, /rollouts that REACHED AN END/,
+    "the denominator has to be stated or the number reads as a forecast");
+});

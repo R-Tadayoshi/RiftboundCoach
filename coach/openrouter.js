@@ -129,10 +129,31 @@ async function ask({
     );
   }
 
+  /* The system prompt is ~5k tokens, byte-identical every turn, and was being
+   * paid for in full on every single call — about 90% of the bill for a
+   * message whose actual content is a 300-token board.
+   *
+   * cache_control marks it as a cacheable prefix: the first call writes the
+   * cache at ~1.25x, every call after reads it at ~0.1x. Caching is a PREFIX
+   * match, so what matters is that nothing before the breakpoint varies — no
+   * timestamp, no per-turn id — and the system prompt is assembled from
+   * static files, so it does not.
+   *
+   * It is sent as a content-block array rather than a bare string because
+   * that is the only shape cache_control can attach to. Providers that do not
+   * understand the field ignore it; the request is still valid without it.
+   *
+   * Whether it is working is not a matter of opinion: usage.cache_read_input_tokens
+   * comes back non-zero from the second call on, and reportUsage() prints it. */
   const body = {
     model,
     messages: [
-      { role: "system", content: system },
+      {
+        role: "system",
+        content: [
+          { type: "text", text: system, cache_control: { type: "ephemeral" } },
+        ],
+      },
       { role: "user", content: user },
     ],
     max_tokens: MAX_TOKENS,

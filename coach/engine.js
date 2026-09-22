@@ -244,9 +244,47 @@ function rankBoard(summary, { deck1, deck2, rollouts = DEFAULT_ROLLOUTS, timeout
  * model a false ordering is how a confident wrong line gets written up
  * persuasively — the failure mode this project keeps meeting. */
 function rankingBlock(ranking, caveats = []) {
-  const lines = ["ENGINE RANKING — rollouts from this exact board, not opinion:"];
+  const lines = [
+    "ENGINE RANKING — rollouts from this exact board, not opinion.",
+    "The % is wins / (wins+losses+draws) over rollouts that REACHED AN END.",
+    "It is a comparison between these lines, not a forecast for the game.",
+    "",
+  ];
   for (const r of ranking.rows) {
-    lines.push(`  ${(r.rate * 100).toFixed(1)}%  ${r.action}`);
+    // The counts were parsed and then thrown away, so a rate over 19 decided
+    // rollouts read exactly like one over 1100. They are the difference
+    // between a finding and a coin-flip, so they travel with it.
+    const decided = r.wins + r.losses;
+    lines.push(
+      `  ${(r.rate * 100).toFixed(1)}%  ${r.action}` +
+        `   [${r.wins}W-${r.losses}L of ${decided} decided]`
+    );
+  }
+
+  /* An absolute reading, which the ordering alone hides.
+   *
+   * On a real board every option scored between 3% and 17% while the player
+   * was AHEAD on points — because the opponent had a 12-Might Elder Dragon in
+   * their base. The engine knew the position was losing and said so in every
+   * row; presenting only the order threw that away, and the model went on to
+   * describe the board as quiet.
+   *
+   * So the level gets stated. What to do about it is the model's job; that
+   * there is something to do about it is the engine's. */
+  const best = ranking.rows.length ? Math.max(...ranking.rows.map((r) => r.rate)) : null;
+  if (best !== null && best < 0.35) {
+    lines.push(
+      `\nEVERY line here is under ${(best * 100).toFixed(0)}%. The search says this ` +
+        `position is LOSING whatever is played — the ranking is picking the least ` +
+        `bad option, not a good one. Say so, and say what on the board is doing ` +
+        `it: name the enemy threat, and what would have to happen to answer it. ` +
+        `Do not describe this board as quiet or even.`
+    );
+  } else if (best !== null && best > 0.8) {
+    lines.push(
+      `\nEvery line here is strong. The position is winning; the ranking is ` +
+        `choosing between good options, so do not manufacture urgency.`
+    );
   }
 
   if (ranking.tiedAtTop > 1) {
