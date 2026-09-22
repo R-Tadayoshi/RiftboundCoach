@@ -206,11 +206,24 @@ async function coach(snapshot) {
       console.log(`done (${secs}s)\n`);
       console.log(block + "\n");
       out.engine = block;
-      user = `${user}\n\n---\n${block}\n\nExplain the engine's answer. It ranked ` +
-        `these lines by playing this board out; you did not. Where it separates ` +
-        `an option, lead with that one and say why it is good in Riftbound terms. ` +
-        `Where it does not separate them, say they are equivalent rather than ` +
-        `picking one.`;
+      user = `${user}\n\n---\n${block}\n\n` +
+        `Explain the engine's answer. It ranked these lines by playing this ` +
+        `board out; you did not, so do not argue with it.\n\n` +
+        `WHEN IT SEPARATES AN OPTION: lead with that one and say why it is ` +
+        `good in Riftbound terms.\n\n` +
+        `WHEN IT DOES NOT — when the block says the top rows are within the ` +
+        `noise — then it has not found a best play and you must not supply ` +
+        `one. Saying "play X" there is inventing a verdict and attributing it ` +
+        `to the engine. Instead:\n` +
+        `  - Say plainly that these plays are equivalent as far as the search ` +
+        `can tell.\n` +
+        `  - Lead with what it DID separate. A row far below the others is a ` +
+        `real finding: name that line and say what goes wrong with it. Often ` +
+        `the only thing the engine knows about a board is which move loses.\n` +
+        `  - Then, clearly marked as your own judgement and not the engine's, ` +
+        `say what would make you prefer one of the tied plays.\n` +
+        `Still give an ACTIONS block — the player has to do something — but ` +
+        `the prose must not dress a coin-flip up as a conclusion.`;
     }
   }
 
